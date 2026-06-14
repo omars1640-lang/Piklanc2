@@ -226,29 +226,29 @@
       .form-row { grid-template-columns:1fr; }
     }
   </style>
+  <link rel="stylesheet" href="css/site-header.css">
 </head>
 <body>
-  <nav class="navbar">
-    <div class="container">
-      <a href="index.html" class="logo">
-        <div class="logo-icon">P</div>
-        <div class="logo-text">Pik<span>Lance</span></div>
+  <header class="site-header" id="navbar">
+    <div class="site-header-inner">
+      <a class="site-header-brand" href="index.html" aria-label="PikLance home">
+        <span class="site-header-brand-mark">P</span>
+        <strong>Pik<span>Lance</span></strong>
       </a>
-      <ul class="nav-links">
-        <li><a href="services.html">الخدمات</a></li>
-        <li><a href="freelancers.html">المستقلون</a></li>
-        <li><a href="how-it-works.html">كيف تعمل</a></li>
-        <li><a href="about.html">عن المنصة</a></li>
-        <li><a href="blog.html">المدونة</a></li>
-        <li><a href="contact.html" class="active">تواصل</a></li>
-      </ul>
-      <div style="display:flex; gap:1rem; align-items:center;">
-        <a href="login.html" class="btn btn-ghost">دخول</a>
-        <a href="register.html" class="btn btn-primary">انضم مجاناً</a>
-        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙</button>
+      <nav class="site-header-nav" id="siteHeaderNav" aria-label="التنقل الرئيسي">
+        <a href="index.html">الرئيسية</a>
+        <a href="services.html">الخدمات</a>
+        <a href="freelancers.html">المستقلون</a>
+        <a href="how-it-works.html">كيف تعمل المنصة</a>
+      </nav>
+      <div class="site-header-actions" id="siteHeaderActions">
+        <button class="site-header-theme" id="themeToggle" type="button" aria-label="تبديل المظهر">☾</button>
+        <a class="site-header-button ghost" href="login.html">دخول</a>
+        <a class="site-header-button primary" href="register.html">انضم مجاناً</a>
       </div>
+      <button class="site-header-mobile" id="siteHeaderMobile" type="button" aria-controls="siteHeaderNav" aria-expanded="false" aria-label="فتح القائمة">☰</button>
     </div>
-  </nav>
+  </header>
 
   <section class="page-header">
     <div class="container">
@@ -416,5 +416,6 @@
       icon.textContent = answer.classList.contains('active') ? '▲' : '▼';
     }
   </script>
+  <script type="module" src="js/site-header.js"></script>
 </body>
 </html>

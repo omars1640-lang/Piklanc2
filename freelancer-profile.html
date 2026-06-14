@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/freelancer-profile.css">
+  <link rel="stylesheet" href="css/site-header.css">
 </head>
 <body>
   <div class="page-loader" id="pageLoader">
@@ -16,24 +17,24 @@
     <p>جاري تحميل ملف المستقل...</p>
   </div>
 
-  <header class="navbar">
-    <div class="container nav-inner">
-      <a class="brand" href="index.html">
-        <span class="brand-mark">P</span>
+  <header class="site-header" id="navbar">
+    <div class="site-header-inner">
+      <a class="site-header-brand" href="index.html" aria-label="PikLance home">
+        <span class="site-header-brand-mark">P</span>
         <strong>Pik<span>Lance</span></strong>
       </a>
-      <nav class="nav-links" aria-label="التنقل الرئيسي">
+      <nav class="site-header-nav" id="siteHeaderNav" aria-label="التنقل الرئيسي">
+        <a href="index.html">الرئيسية</a>
         <a href="services.html">الخدمات</a>
-        <a class="active" href="freelancers.html">المستقلون</a>
-        <a href="how-it-works.html">كيف تعمل</a>
-        <a href="about.html">عن المنصة</a>
+        <a href="freelancers.html">المستقلون</a>
+        <a href="how-it-works.html">كيف تعمل المنصة</a>
       </nav>
-      <div class="nav-actions">
-        <button class="theme-button" id="themeButton" type="button" aria-label="تبديل المظهر">☾</button>
-        <a class="button button-ghost" href="login.html" id="loginLink">دخول</a>
-        <a class="button button-primary" href="register.html" id="joinLink">انضم مجاناً</a>
+      <div class="site-header-actions" id="siteHeaderActions">
+        <button class="site-header-theme" id="themeToggle" type="button" aria-label="تبديل المظهر">☾</button>
+        <a class="site-header-button ghost" href="login.html">دخول</a>
+        <a class="site-header-button primary" href="register.html">انضم مجاناً</a>
       </div>
-      <button class="mobile-nav-button" id="mobileNavButton" type="button" aria-label="فتح القائمة">☰</button>
+      <button class="site-header-mobile" id="siteHeaderMobile" type="button" aria-controls="siteHeaderNav" aria-expanded="false" aria-label="فتح القائمة">☰</button>
     </div>
   </header>
 
@@ -208,5 +209,6 @@
 
   <div class="toast" id="toast" role="status"></div>
   <script type="module" src="js/freelancer-profile.js"></script>
+  <script type="module" src="js/site-header.js"></script>
 </body>
 </html>

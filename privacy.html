@@ -1,10 +1,36 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>سياسة الخصوصية - PikLance</title></head>
-<body style="font-family:Arial,sans-serif;line-height:1.8;max-width:800px;margin:3rem auto;padding:1rem">
-  <a href="index.html">← الرئيسية</a>
-  <h1>سياسة الخصوصية</h1>
-  <p>تُستخدم بيانات الحساب لتسجيل الدخول وتشغيل ميزات المنصة. بيانات الهوية خاصة، ويقتصر الوصول إليها على صاحب الحساب والمدير المصرح له.</p>
-  <p>لا تشارك كلمات المرور مع الموقع مباشرة؛ تتم إدارتها عبر Firebase Authentication.</p>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>سياسة الخصوصية - PikLance</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/site-header.css">
+</head>
+<body>
+  <header class="site-header" id="navbar">
+    <div class="site-header-inner">
+      <a class="site-header-brand" href="index.html" aria-label="PikLance home">
+        <span class="site-header-brand-mark">P</span>
+        <strong>Pik<span>Lance</span></strong>
+      </a>
+      <nav class="site-header-nav" id="siteHeaderNav" aria-label="التنقل الرئيسي">
+        <a href="index.html">الرئيسية</a>
+        <a href="services.html">الخدمات</a>
+        <a href="freelancers.html">المستقلون</a>
+        <a href="how-it-works.html">كيف تعمل المنصة</a>
+      </nav>
+      <div class="site-header-actions" id="siteHeaderActions">
+        <button class="site-header-theme" id="themeToggle" type="button" aria-label="تبديل المظهر">☾</button>
+        <a class="site-header-button ghost" href="login.html">دخول</a>
+        <a class="site-header-button primary" href="register.html">انضم مجاناً</a>
+      </div>
+      <button class="site-header-mobile" id="siteHeaderMobile" type="button" aria-controls="siteHeaderNav" aria-expanded="false" aria-label="فتح القائمة">☰</button>
+    </div>
+  </header>
+  <main class="site-simple-page">
+    <a href="index.html">← الرئيسية</a>
+    <h1>سياسة الخصوصية</h1>
+    <p>تُستخدم بيانات الحساب لتسجيل الدخول وتشغيل ميزات المنصة. بيانات الهوية خاصة، ويقتصر الوصول إليها على صاحب الحساب والمدير المصرح له.</p>
+    <p>لا تشارك كلمات المرور مع الموقع مباشرة؛ تتم إدارتها عبر Firebase Authentication.</p>
+  </main>
+  <script type="module" src="js/site-header.js"></script>
 </body>
 </html>
