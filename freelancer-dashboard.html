@@ -1,302 +1,357 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="لوحة تحكم المستقل في PikLance">
   <title>لوحة تحكم المستقل - PikLance</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: 'Cairo', sans-serif; background: #F4F6FA; display: flex; min-height: 100vh; }
-    .sidebar {
-      width: 250px; background: #1E1E2D; color: #fff; padding: 1.5rem;
-      position: fixed; top:0; bottom:0; right:0;
-    }
-    .sidebar h2 { font-size: 1.4rem; margin-bottom: 2rem; }
-    .sidebar h2 span { color: #6C5CE7; }
-    .sidebar a {
-      display: block; color: rgba(255,255,255,0.7); text-decoration: none;
-      padding: 0.7rem 0; font-weight: 600; cursor: pointer;
-    }
-    .sidebar a:hover, .sidebar a.active { color: #fff; }
-    .main { margin-right: 250px; padding: 2rem; flex: 1; }
-    .card {
-      background: #fff; border-radius: 16px; padding: 1.5rem;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 1.5rem;
-    }
-    .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 1.5rem; }
-    .stat-box { background: #fff; padding: 1.2rem; border-radius: 12px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-    .stat-num { font-size: 2rem; font-weight: 800; color: #6C5CE7; }
-    .btn {
-      padding: 0.7rem 1.5rem; background: #6C5CE7; color: #fff; border: none;
-      border-radius: 10px; font-weight: 700; cursor: pointer; font-family: 'Cairo', sans-serif;
-    }
-    .section { display: none; }
-    .section.active { display: block; }
-    table { width: 100%; border-collapse: collapse; }
-    th { background: #F8F9FD; padding: 0.8rem; text-align: right; }
-    td { padding: 0.8rem; border-bottom: 1px solid #eee; }
-    input, select, textarea {
-      width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px;
-      font-family: 'Cairo', sans-serif; margin-bottom: 0.8rem;
-    }
-    textarea { resize: vertical; }
-  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/freelancer-dashboard.css">
 </head>
 <body data-account-type="freelancer">
-  <div class="sidebar">
-    <h2>Pik<span>Lance</span></h2>
-    <p style="opacity:0.7; margin-bottom:1.5rem;">👤 <span id="freelancerName">أحمد</span></p>
-    <a class="active" onclick="showTab('dashboard', this)">📊 لوحة المعلومات</a>
-    <a onclick="showTab('services', this)">🎨 خدماتي</a>
-    <a onclick="showTab('wallet', this)">💰 المحفظة</a>
-    <a onclick="showTab('withdrawals', this)">💵 طلبات السحب</a>
-    <a onclick="showTab('reviews', this)">⭐ التقييمات</a>
-    <a onclick="showTab('profile', this)">👤 ملفي</a>
-    <a href="index.html" style="margin-top:2rem; color:#FF6B6B;">🚪 خروج</a>
+  <div class="loading-screen" id="loadingScreen">
+    <div class="loading-mark">P</div>
+    <p>جاري تجهيز مساحة عملك...</p>
   </div>
 
-  <div class="main">
-    <!-- Dashboard -->
-    <div class="section active" id="tab-dashboard">
-      <h2 style="margin-bottom:1rem;">📊 لوحة المعلومات</h2>
-      <div class="stats">
-        <div class="stat-box"><div class="stat-num" id="myServicesCount">0</div>خدماتي</div>
-        <div class="stat-box"><div class="stat-num" style="color:#10B981;" id="mySales">0</div>مبيعات</div>
-        <div class="stat-box"><div class="stat-num" style="color:#FFD93D;">⭐ <span id="myRating">0</span></div>تقييمي</div>
-      </div>
-      <div class="card">
-        <h3>💰 رصيدي: <span id="myBalance">0</span> ل.س</h3>
-      </div>
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="PikLance الرئيسية">
+      <span class="brand-mark">P</span>
+      <span>Pik<span>Lance</span></span>
+    </a>
+
+    <button class="mobile-menu-button" id="mobileMenuButton" type="button" aria-label="فتح القائمة" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+
+    <nav class="top-links" aria-label="التنقل الرئيسي">
+      <a href="services.html">استكشف الخدمات</a>
+      <a href="messages.html">الرسائل</a>
+      <a href="how-it-works.html">مركز المساعدة</a>
+    </nav>
+
+    <div class="top-actions">
+      <button class="icon-button" id="themeButton" type="button" aria-label="تبديل المظهر">☾</button>
+      <a class="icon-button notification-button" href="messages.html" aria-label="الرسائل">
+        <span>✉</span><span class="notification-dot"></span>
+      </a>
+      <button class="account-menu" id="accountMenu" type="button">
+        <span class="avatar" id="topAvatar">م</span>
+        <span class="account-copy">
+          <strong id="topName">مستقل PikLance</strong>
+          <small>حساب مستقل</small>
+        </span>
+        <span class="chevron">⌄</span>
+      </button>
     </div>
+  </header>
 
-    <!-- Services -->
-    <div class="section" id="tab-services">
-      <h2 style="margin-bottom:1rem;">🎨 خدماتي</h2>
-      <button class="btn" onclick="addMyService()">+ إضافة خدمة</button>
-      <div class="card" style="margin-top:1rem;">
-        <table>
-          <thead><tr><th>العنوان / الفئة</th><th>السعر</th><th>التسليم</th><th>المبيعات</th><th>حذف</th></tr></thead>
-          <tbody id="myServicesTable"></tbody>
-        </table>
-        <p id="noMyServices" style="text-align:center; padding:2rem;">لا توجد خدمات بعد</p>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-profile">
+        <span class="avatar avatar-large" id="sidebarAvatar">م</span>
+        <div>
+          <strong id="sidebarName">مستقل PikLance</strong>
+          <span class="verified-label">حساب موثّق</span>
+        </div>
       </div>
-    </div>
 
-    <!-- Wallet -->
-    <div class="section" id="tab-wallet">
-      <h2 style="margin-bottom:1rem;">💰 المحفظة</h2>
-      <div class="card"><h3>رصيدي الحالي: <span id="walletBalance">0</span> ل.س</h3></div>
-      <div class="card" style="margin-top:1rem;">
-        <h3>سجل المعاملات</h3>
-        <table><thead><tr><th>التاريخ</th><th>النوع</th><th>المبلغ</th></tr></thead>
-        <tbody id="myTransactions"></tbody></table>
+      <nav class="side-nav" aria-label="أقسام لوحة التحكم">
+        <p class="nav-label">مساحة العمل</p>
+        <button class="side-link active" type="button" data-section="overview">
+          <span class="nav-icon">⌂</span><span>نظرة عامة</span>
+        </button>
+        <button class="side-link" type="button" data-section="projects">
+          <span class="nav-icon">▣</span><span>الخدمات والمشاريع</span>
+          <span class="nav-count" id="servicesNavCount">0</span>
+        </button>
+        <a class="side-link" href="messages.html">
+          <span class="nav-icon">✉</span><span>الرسائل</span>
+        </a>
+        <button class="side-link" type="button" data-section="reviews">
+          <span class="nav-icon">★</span><span>التقييمات</span>
+        </button>
+
+        <p class="nav-label">الحساب المالي</p>
+        <button class="side-link" type="button" data-section="finance">
+          <span class="nav-icon">◈</span><span>الأرباح والمعاملات</span>
+        </button>
+        <button class="side-link" type="button" data-section="withdraw">
+          <span class="nav-icon">⇩</span><span>سحب الأرباح</span>
+        </button>
+
+        <p class="nav-label">الإعدادات</p>
+        <button class="side-link" type="button" data-section="profile">
+          <span class="nav-icon">○</span><span>الملف الشخصي</span>
+        </button>
+        <button class="side-link" type="button" data-section="settings">
+          <span class="nav-icon">⚙</span><span>الإعدادات</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="index.html">العودة للموقع</a>
+        <button id="logoutButton" type="button">تسجيل الخروج</button>
       </div>
-    </div>
+    </aside>
 
-    <!-- Withdrawals -->
-    <div class="section" id="tab-withdrawals">
-      <h2 style="margin-bottom:1rem;">💵 طلب سحب</h2>
-      <div class="card">
-        <label>المبلغ (الحد الأدنى 50,000 ل.س)</label>
-        <input type="number" id="withdrawAmount" placeholder="50000">
-        <label>رقم المحفظة</label>
-        <input type="text" id="withdrawWallet" placeholder="09xxxxxxxx">
-        <button class="btn" onclick="requestWithdraw()">تقديم الطلب</button>
-      </div>
-      <div class="card" style="margin-top:1rem;">
-        <h3>طلباتي السابقة</h3>
-        <table><thead><tr><th>التاريخ</th><th>المبلغ</th><th>الحالة</th></tr></thead>
-        <tbody id="myWithdrawals"></tbody></table>
-      </div>
-    </div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <!-- Reviews -->
-    <div class="section" id="tab-reviews">
-      <h2 style="margin-bottom:1rem;">⭐ تقييمات العملاء</h2>
-      <div class="card">
-        <p>⭐⭐⭐⭐⭐ "عمل ممتاز وسريع" - محمد</p>
-        <p style="margin-top:0.5rem;">⭐⭐⭐⭐☆ "جيد جداً" - سارة</p>
-      </div>
-    </div>
-
-    <!-- Profile -->
-    <div class="section" id="tab-profile">
-      <h2 style="margin-bottom:1rem;">👤 تعديل ملفي</h2>
-      <div class="card">
-        <label>الاسم</label><input type="text" id="editName">
-        <label>البريد</label><input type="email" id="editEmail">
-        <label>الهاتف</label><input type="text" id="editPhone">
-        <button class="btn" onclick="saveProfile()">حفظ</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    function showTab(tab, link) {
-      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-      document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
-      document.getElementById('tab-' + tab).classList.add('active');
-      link.classList.add('active');
-    }
-
-    function loadMyServices() {
-      const services = JSON.parse(localStorage.getItem('myServices') || '[]');
-      const table = document.getElementById('myServicesTable');
-      table.replaceChildren();
-      services.forEach((service, index) => {
-        const row = document.createElement('tr');
-        const titleCell = document.createElement('td');
-        const title = document.createElement('strong');
-        title.textContent = service.title;
-        const category = document.createElement('small');
-        category.textContent = service.category;
-        category.style.color = '#636E72';
-        titleCell.append(title, document.createElement('br'), category);
-        row.appendChild(titleCell);
-        [
-          `${Number(service.price).toLocaleString()} ل.س ${service.negotiable ? '🟢' : ''}`,
-          `⏱️ ${service.delivery || 2} أيام`,
-          service.sales || 0
-        ].forEach(value => {
-          const cell = document.createElement('td');
-          cell.textContent = value;
-          row.appendChild(cell);
-        });
-        const actions = document.createElement('td');
-        const remove = document.createElement('button');
-        remove.type = 'button';
-        remove.className = 'btn';
-        remove.textContent = '🗑️';
-        remove.style.cssText = 'background:#FF6B6B;padding:.3rem .8rem';
-        remove.addEventListener('click', () => deleteMyService(index));
-        actions.appendChild(remove);
-        row.appendChild(actions);
-        table.appendChild(row);
-      });
-      document.getElementById('noMyServices').style.display = services.length ? 'none' : 'block';
-      document.getElementById('myServicesCount').textContent = services.length;
-    }
-
-    function addMyService() {
-      const modal = document.createElement('div');
-      modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:2000;';
-      modal.innerHTML = `
-        <div style="background:#fff; border-radius:20px; padding:2rem; width:600px; max-height:80vh; overflow-y:auto;">
-          <h3 style="margin-bottom:1rem;">🎨 إضافة خدمة جديدة</h3>
-          <label>عنوان الخدمة *</label>
-          <input type="text" id="svTitle" placeholder="مثال: تصميم شعار احترافي">
-          <label>الفئة *</label>
-          <select id="svCategory">
-            <option value="">اختر الفئة</option>
-            <option value="تصميم">تصميم</option>
-            <option value="برمجة">برمجة</option>
-            <option value="كتابة">كتابة</option>
-            <option value="تسويق">تسويق</option>
-            <option value="صوتيات">صوتيات</option>
-            <option value="فيديو">فيديو</option>
-          </select>
-          <label>وصف الخدمة *</label>
-          <textarea id="svDescription" rows="4" placeholder="اشرح بالتفصيل ماذا ستقدم..."></textarea>
-          <label>السعر (ل.س) *</label>
-          <input type="number" id="svPrice" placeholder="25000">
-          <label style="display:flex; align-items:center; gap:0.5rem;">
-            <input type="checkbox" id="svNegotiable"> السعر قابل للتفاوض
-          </label>
-          <label>مدة التسليم (بالأيام)</label>
-          <select id="svDelivery">
-            <option value="1">يوم واحد</option>
-            <option value="2" selected>يومان</option>
-            <option value="3">3 أيام</option>
-            <option value="5">5 أيام</option>
-            <option value="7">أسبوع</option>
-            <option value="14">أسبوعين</option>
-          </select>
-          <label>عدد التعديلات المسموحة</label>
-          <select id="svRevisions">
-            <option value="0">بدون تعديلات</option>
-            <option value="1" selected>تعديل واحد</option>
-            <option value="2">تعديلان</option>
-            <option value="3">3 تعديلات</option>
-            <option value="unlimited">غير محدود</option>
-          </select>
-          <label>الكلمات المفتاحية (لفصل بينها استخدم فاصلة ,)</label>
-          <input type="text" id="svKeywords" placeholder="مثال: شعار, هوية, تصميم, Logo">
-          <div style="display:flex; gap:1rem; margin-top:1rem;">
-            <button class="btn" onclick="saveNewService()" style="flex:1;">✅ حفظ الخدمة</button>
-            <button class="btn" style="flex:1; background:#636E72;" onclick="this.closest('[style*=fixed]').remove()">إلغاء</button>
+    <main class="workspace">
+      <section class="dashboard-section active" id="section-overview">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">لوحة المستقل</p>
+            <h1>مرحباً، <span id="welcomeName">مستقل</span></h1>
+            <p>تابع أعمالك، أرباحك، ونشاط حسابك من مكان واحد.</p>
+          </div>
+          <div class="heading-actions">
+            <a class="button button-secondary" href="freelancer-profile.html">عرض ملفي</a>
+            <button class="button button-primary" type="button" data-open-service-modal>+ إضافة خدمة</button>
           </div>
         </div>
-      `;
-      document.body.appendChild(modal);
-      modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
-    }
 
-    function saveNewService() {
-      const title = document.getElementById('svTitle').value.trim();
-      const category = document.getElementById('svCategory').value;
-      const description = document.getElementById('svDescription').value.trim();
-      const price = document.getElementById('svPrice').value;
-      const negotiable = document.getElementById('svNegotiable').checked;
-      const delivery = document.getElementById('svDelivery').value;
-      const revisions = document.getElementById('svRevisions').value;
-      const keywords = document.getElementById('svKeywords').value.trim();
+        <div class="notice-card">
+          <div class="notice-icon">✓</div>
+          <div class="notice-content">
+            <strong>أكمل ملفك لزيادة فرص الحصول على عمل</strong>
+            <p>أضف نبذة احترافية ونماذج أعمال ومهاراتك الأساسية.</p>
+          </div>
+          <div class="profile-progress">
+            <span><strong id="profileProgressValue">65%</strong> مكتمل</span>
+            <div class="progress-track"><span id="profileProgressBar"></span></div>
+          </div>
+          <button class="text-button" type="button" data-section-target="profile">إكمال الملف</button>
+        </div>
 
-      if (!title || !category || !description || !price) {
-        alert('يرجى ملء جميع الحقول المطلوبة (*)');
-        return;
-      }
+        <div class="stats-grid">
+          <article class="stat-card accent-purple">
+            <div class="stat-top"><span>الرصيد المتاح</span><span class="stat-icon">◈</span></div>
+            <strong><span id="availableBalance">0</span> <small>ل.س</small></strong>
+            <p>السحب متاح بعد ربط نظام الدفع</p>
+          </article>
+          <article class="stat-card accent-blue">
+            <div class="stat-top"><span>الخدمات النشطة</span><span class="stat-icon">▣</span></div>
+            <strong id="servicesCount">0</strong>
+            <p><span id="draftServicesCount">0</span> مسودة محفوظة على الجهاز</p>
+          </article>
+          <article class="stat-card accent-green">
+            <div class="stat-top"><span>المشاريع المكتملة</span><span class="stat-icon">✓</span></div>
+            <strong id="completedProjects">0</strong>
+            <p>ستظهر بعد تشغيل نظام الطلبات</p>
+          </article>
+          <article class="stat-card accent-orange">
+            <div class="stat-top"><span>متوسط التقييم</span><span class="stat-icon">★</span></div>
+            <strong><span id="averageRating">0.0</span><small>/5</small></strong>
+            <p>لا توجد تقييمات موثقة بعد</p>
+          </article>
+        </div>
 
-      const services = JSON.parse(localStorage.getItem('myServices') || '[]');
-      services.push({
-        title, category, description, price: parseInt(price),
-        negotiable, delivery, revisions, keywords,
-        sales: 0, rating: 0,
-        date: new Date().toLocaleDateString('ar')
-      });
-      localStorage.setItem('myServices', JSON.stringify(services));
-      
-      document.querySelector('[style*=fixed]').remove();
-      loadMyServices();
-      alert('تم حفظ المسودة محليًا على هذا الجهاز فقط. لم تُنشر الخدمة.');
-    }
+        <div class="dashboard-grid">
+          <section class="panel projects-panel">
+            <div class="panel-header">
+              <div><p class="panel-kicker">مساحة العمل</p><h2>الخدمات الحالية</h2></div>
+              <button class="text-button" type="button" data-section-target="projects">عرض الكل</button>
+            </div>
+            <div class="project-list" id="overviewServices"></div>
+            <div class="empty-state compact" id="overviewServicesEmpty">
+              <span>▣</span>
+              <strong>لم تضف أي خدمة بعد</strong>
+              <p>أنشئ أول خدمة لتبدأ باستقبال الطلبات.</p>
+              <button class="button button-primary button-small" type="button" data-open-service-modal>إضافة خدمة</button>
+            </div>
+          </section>
 
-    function deleteMyService(index) {
-      if (!confirm('هل أنت متأكد من حذف هذه الخدمة؟')) return;
-      const services = JSON.parse(localStorage.getItem('myServices') || '[]');
-      services.splice(index, 1);
-      localStorage.setItem('myServices', JSON.stringify(services));
-      loadMyServices();
-    }
+          <aside class="panel activity-panel">
+            <div class="panel-header">
+              <div><p class="panel-kicker">آخر التحديثات</p><h2>النشاط</h2></div>
+            </div>
+            <div class="timeline">
+              <div class="timeline-item">
+                <span class="timeline-dot purple"></span>
+                <div><strong>تم تفعيل حسابك كمستقل</strong><p>أصبح بإمكانك إعداد خدماتك وملفك.</p><small>حالة الحساب الحالية</small></div>
+              </div>
+              <div class="timeline-item">
+                <span class="timeline-dot green"></span>
+                <div><strong>حماية الحساب مفعّلة</strong><p>البريد الإلكتروني موثّق والحساب نشط.</p><small>الأمان</small></div>
+              </div>
+              <div class="timeline-item muted">
+                <span class="timeline-dot gray"></span>
+                <div><strong>بانتظار أول طلب</strong><p>سيظهر نشاط المشاريع هنا عند تشغيل الطلبات.</p><small>المشاريع</small></div>
+              </div>
+            </div>
+          </aside>
+        </div>
 
-    function requestWithdraw() {
-      alert('السحب غير مفعّل بعد. لم يتم إنشاء أي طلب مالي.');
-    }
+        <div class="dashboard-grid lower-grid">
+          <section class="panel performance-panel">
+            <div class="panel-header">
+              <div><p class="panel-kicker">آخر 30 يوماً</p><h2>أداء الحساب</h2></div>
+              <span class="status-pill neutral">بيانات أولية</span>
+            </div>
+            <div class="performance-chart" aria-label="مخطط أداء توضيحي">
+              <div class="chart-bars">
+                <span style="--bar:28%"></span><span style="--bar:40%"></span><span style="--bar:34%"></span>
+                <span style="--bar:58%"></span><span style="--bar:48%"></span><span style="--bar:66%"></span>
+                <span style="--bar:78%"></span><span style="--bar:62%"></span><span style="--bar:84%"></span>
+                <span style="--bar:72%"></span><span style="--bar:90%"></span><span style="--bar:82%"></span>
+              </div>
+              <div class="chart-labels"><span>الأسبوع 1</span><span>الأسبوع 2</span><span>الأسبوع 3</span><span>الأسبوع 4</span></div>
+            </div>
+            <p class="chart-note">سيتم ربط المخطط بالمشاهدات والطلبات عند إضافة نظام الخدمات.</p>
+          </section>
 
-    function loadMyWithdrawals() {
-      const withdrawals = JSON.parse(localStorage.getItem('myWithdrawals') || '[]');
-      const table = document.getElementById('myWithdrawals');
-      table.replaceChildren();
-      withdrawals.forEach(withdrawal => {
-        const row = document.createElement('tr');
-        [withdrawal.date, `${Number(withdrawal.amount).toLocaleString()} ل.س`, withdrawal.status].forEach(value => {
-          const cell = document.createElement('td');
-          cell.textContent = value;
-          row.appendChild(cell);
-        });
-        table.appendChild(row);
-      });
-    }
+          <aside class="panel quick-actions">
+            <div class="panel-header"><div><p class="panel-kicker">اختصارات</p><h2>إجراءات سريعة</h2></div></div>
+            <a href="messages.html"><span>✉</span><div><strong>فتح الرسائل</strong><small>تواصل مع العملاء</small></div><b>‹</b></a>
+            <button type="button" data-open-service-modal><span>＋</span><div><strong>خدمة جديدة</strong><small>احفظ مسودة خدمة</small></div><b>‹</b></button>
+            <button type="button" data-section-target="profile"><span>○</span><div><strong>تحديث الملف</strong><small>عدّل بياناتك الأساسية</small></div><b>‹</b></button>
+          </aside>
+        </div>
+      </section>
 
-    function saveProfile() {
-      const name = document.getElementById('editName').value;
-      if (name) document.getElementById('freelancerName').textContent = name;
-      alert('✅ تم حفظ التعديلات');
-    }
+      <section class="dashboard-section" id="section-projects">
+        <div class="page-heading">
+          <div><p class="eyebrow">إدارة العمل</p><h1>الخدمات والمشاريع</h1><p>أدر مسودات خدماتك وتابع حالتها من هنا.</p></div>
+          <button class="button button-primary" type="button" data-open-service-modal>+ إضافة خدمة</button>
+        </div>
+        <div class="panel">
+          <div class="toolbar">
+            <div class="search-field"><span>⌕</span><input id="serviceSearch" type="search" placeholder="ابحث في خدماتك..."></div>
+            <select id="serviceFilter"><option value="all">كل الخدمات</option><option value="draft">المسودات</option></select>
+          </div>
+          <div class="responsive-table">
+            <table>
+              <thead><tr><th>الخدمة</th><th>السعر</th><th>التسليم</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+              <tbody id="servicesTable"></tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="servicesEmpty">
+            <span>▣</span><strong>لا توجد خدمات مطابقة</strong><p>أضف خدمة جديدة أو غيّر خيارات البحث.</p>
+          </div>
+        </div>
+      </section>
 
-    loadMyServices();
-    loadMyWithdrawals();
-  </script>
-  <script type="module" src="js/require-auth.js"></script>
+      <section class="dashboard-section" id="section-finance">
+        <div class="page-heading"><div><p class="eyebrow">المالية</p><h1>الأرباح والمعاملات</h1><p>ملخص مالي واضح لأرباحك وحركة حسابك.</p></div></div>
+        <div class="finance-hero">
+          <div><span>إجمالي الأرباح</span><strong>0 <small>ل.س</small></strong><p>لم يتم تشغيل نظام الدفع بعد</p></div>
+          <div class="finance-breakdown">
+            <p><span>متاح للسحب</span><strong>0 ل.س</strong></p>
+            <p><span>قيد المعالجة</span><strong>0 ل.س</strong></p>
+            <p><span>إجمالي المسحوب</span><strong>0 ل.س</strong></p>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><div><p class="panel-kicker">السجل المالي</p><h2>آخر المعاملات</h2></div></div>
+          <div class="empty-state"><span>◈</span><strong>لا توجد معاملات بعد</strong><p>ستظهر المدفوعات والسحوبات هنا بعد تشغيل نظام الدفع.</p></div>
+        </div>
+      </section>
+
+      <section class="dashboard-section" id="section-withdraw">
+        <div class="page-heading"><div><p class="eyebrow">المالية</p><h1>سحب الأرباح</h1><p>قدّم طلب سحب بعد تفعيل بوابة الدفع.</p></div></div>
+        <div class="two-column">
+          <div class="panel form-panel">
+            <div class="panel-header"><div><p class="panel-kicker">طلب جديد</p><h2>بيانات السحب</h2></div></div>
+            <label>طريقة السحب<select disabled><option>اختر طريقة السحب</option></select></label>
+            <label>المبلغ<input type="number" placeholder="الحد الأدنى 50,000 ل.س" disabled></label>
+            <label>رقم المحفظة أو الحساب<input type="text" placeholder="سيُتاح بعد ربط بوابة الدفع" disabled></label>
+            <button class="button button-primary" id="withdrawButton" type="button">طلب سحب</button>
+          </div>
+          <aside class="panel info-panel">
+            <span class="large-icon">i</span>
+            <h2>السحب غير مفعّل حالياً</h2>
+            <p>لن يتم إرسال أي طلب مالي قبل ربط Backend وبوابة دفع موثوقة والتحقق من الأرصدة على الخادم.</p>
+          </aside>
+        </div>
+      </section>
+
+      <section class="dashboard-section" id="section-reviews">
+        <div class="page-heading"><div><p class="eyebrow">السمعة</p><h1>التقييمات</h1><p>تابع آراء العملاء وتقييمهم لخدماتك.</p></div></div>
+        <div class="review-summary panel">
+          <div class="rating-score"><strong>0.0</strong><span>☆☆☆☆☆</span><p>لا توجد تقييمات بعد</p></div>
+          <div class="rating-bars">
+            <p><span>5 نجوم</span><i><b style="width:0%"></b></i><small>0</small></p>
+            <p><span>4 نجوم</span><i><b style="width:0%"></b></i><small>0</small></p>
+            <p><span>3 نجوم</span><i><b style="width:0%"></b></i><small>0</small></p>
+            <p><span>2 نجوم</span><i><b style="width:0%"></b></i><small>0</small></p>
+            <p><span>نجمة</span><i><b style="width:0%"></b></i><small>0</small></p>
+          </div>
+        </div>
+        <div class="panel"><div class="empty-state"><span>★</span><strong>بانتظار أول تقييم</strong><p>بعد إكمال أول مشروع سيستطيع العميل تقييم تجربته معك.</p></div></div>
+      </section>
+
+      <section class="dashboard-section" id="section-profile">
+        <div class="page-heading"><div><p class="eyebrow">الحساب</p><h1>الملف الشخصي</h1><p>حدّث البيانات التي تظهر للعملاء وتساعدهم على التعرف إليك.</p></div></div>
+        <form class="profile-layout" id="profileForm">
+          <div class="panel profile-photo-card">
+            <span class="avatar profile-avatar" id="profileAvatar">م</span>
+            <h2 id="profileCardName">مستقل PikLance</h2>
+            <p id="profileCardSpecialty">مستقل محترف</p>
+            <span class="status-pill success">حساب نشط</span>
+          </div>
+          <div class="panel form-panel profile-fields">
+            <div class="panel-header"><div><p class="panel-kicker">المعلومات الأساسية</p><h2>بيانات الحساب</h2></div></div>
+            <div class="form-grid">
+              <label>الاسم الكامل<input id="profileName" type="text" maxlength="80" required></label>
+              <label>البريد الإلكتروني<input id="profileEmail" type="email" disabled></label>
+              <label>رقم الهاتف<input id="profilePhone" type="tel" maxlength="30"></label>
+              <label>التخصص
+                <select id="profileSpecialty">
+                  <option value="">اختر التخصص</option><option value="design">تصميم</option><option value="web">برمجة وتطوير</option>
+                  <option value="writing">كتابة وترجمة</option><option value="marketing">تسويق رقمي</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-actions">
+              <span class="form-message" id="profileMessage"></span>
+              <button class="button button-primary" id="saveProfileButton" type="submit">حفظ التعديلات</button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <section class="dashboard-section" id="section-settings">
+        <div class="page-heading"><div><p class="eyebrow">الحساب</p><h1>الإعدادات</h1><p>خصّص تجربة لوحة التحكم والتنبيهات.</p></div></div>
+        <div class="panel settings-list">
+          <label><span><strong>الوضع الداكن</strong><small>استخدم ألواناً مريحة في الإضاءة المنخفضة.</small></span><input id="darkModeSwitch" type="checkbox" role="switch"></label>
+          <label><span><strong>تنبيهات الرسائل</strong><small>إظهار علامة عند وصول رسائل جديدة.</small></span><input type="checkbox" role="switch" checked disabled></label>
+          <label><span><strong>تنبيهات المشاريع</strong><small>ستتوفر عند تشغيل نظام الطلبات.</small></span><input type="checkbox" role="switch" disabled></label>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal" id="serviceModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="serviceModalTitle">
+      <button class="modal-close" type="button" data-close-modal aria-label="إغلاق">×</button>
+      <p class="eyebrow">خدمة جديدة</p>
+      <h2 id="serviceModalTitle">أضف تفاصيل خدمتك</h2>
+      <p class="modal-description">ستُحفظ هذه الخدمة كمسودة محلية حتى يتم ربط نظام نشر الخدمات بقاعدة البيانات.</p>
+      <form id="serviceForm">
+        <label>عنوان الخدمة<input id="serviceTitle" type="text" maxlength="100" placeholder="مثال: تصميم هوية بصرية متكاملة" required></label>
+        <div class="form-grid">
+          <label>الفئة<select id="serviceCategory" required><option value="">اختر الفئة</option><option>تصميم</option><option>برمجة</option><option>كتابة</option><option>تسويق</option><option>صوتيات</option><option>فيديو</option></select></label>
+          <label>السعر<input id="servicePrice" type="number" min="1000" step="1000" placeholder="25000" required></label>
+        </div>
+        <label>وصف الخدمة<textarea id="serviceDescription" rows="4" maxlength="1000" placeholder="ما الذي سيحصل عليه العميل؟" required></textarea></label>
+        <div class="form-grid">
+          <label>مدة التسليم<select id="serviceDelivery"><option value="1">يوم</option><option value="2" selected>يومان</option><option value="3">3 أيام</option><option value="5">5 أيام</option><option value="7">أسبوع</option></select></label>
+          <label>عدد التعديلات<select id="serviceRevisions"><option value="0">بدون تعديلات</option><option value="1" selected>تعديل واحد</option><option value="2">تعديلان</option><option value="3">3 تعديلات</option></select></label>
+        </div>
+        <label>الكلمات المفتاحية<input id="serviceKeywords" type="text" maxlength="150" placeholder="شعار، هوية، تصميم"></label>
+        <div class="modal-actions">
+          <button class="button button-secondary" type="button" data-close-modal>إلغاء</button>
+          <button class="button button-primary" type="submit">حفظ كمسودة</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script type="module" src="js/freelancer-dashboard.js"></script>
 </body>
 </html>
