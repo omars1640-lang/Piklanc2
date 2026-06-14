@@ -67,7 +67,7 @@
   </div>
 
   <script type="module">
-    import { signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { sendEmailVerification, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { auth, db } from "./js/firebase.js";
 
@@ -88,8 +88,17 @@
           const userData = userDoc.data();
 
           if (!userCredential.user.emailVerified) {
+            let verificationSent = false;
+            try {
+              await sendEmailVerification(userCredential.user);
+              verificationSent = true;
+            } catch (verificationError) {
+              console.error('تعذر إرسال رسالة التحقق', verificationError);
+            }
             await signOut(auth);
-            alert('📧 تحقق من بريدك الإلكتروني قبل تسجيل الدخول.');
+            alert(verificationSent
+              ? '📧 أرسلنا رسالة تحقق جديدة إلى بريدك الإلكتروني.'
+              : '📧 تحقق من بريدك الإلكتروني قبل تسجيل الدخول، ثم حاول مجدداً لاحقاً.');
             return;
           }
           

@@ -11,11 +11,12 @@ service firebase.storage {
     }
 
     match /identity/{userId}/{fileName} {
-      allow write: if signedIn()
+      allow create, update: if signedIn()
         && request.auth.uid == userId
         && fileName in ["front", "back"]
         && request.resource.size <= 5 * 1024 * 1024
         && request.resource.contentType.matches("image/.*");
+      allow delete: if signedIn() && request.auth.uid == userId;
       allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
     }
 

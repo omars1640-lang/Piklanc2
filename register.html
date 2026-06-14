@@ -151,9 +151,9 @@
   </div>
 
   <script type="module">
-    import { createUserWithEmailAndPassword, sendEmailVerification, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { ref, uploadBytes } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+    import { createUserWithEmailAndPassword, deleteUser, sendEmailVerification, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { doc, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { deleteObject, ref, uploadBytes } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
     import { auth, db, storage } from "./js/firebase.js";
 
     const MAX_ID_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -164,6 +164,18 @@
 
     function validateImage(file) {
       return file && file.type.startsWith('image/') && file.size <= MAX_ID_IMAGE_SIZE;
+    }
+
+    async function createProfiles(uid, privateProfile, publicProfile) {
+      const batch = writeBatch(db);
+      batch.set(doc(db, "users", uid), privateProfile);
+      batch.set(doc(db, "publicProfiles", uid), publicProfile);
+      await batch.commit();
+    }
+
+    async function cleanupFailedRegistration(user, uploadedPaths = []) {
+      await Promise.allSettled(uploadedPaths.map(path => deleteObject(ref(storage, path))));
+      if (user) await deleteUser(user).catch(() => {});
     }
 
     window.selectType = function(type) {
@@ -178,24 +190,33 @@
       const password = document.getElementById('buyerPassword').value;
       if (!name || !email || !password) { alert('يرجى ملء جميع الحقول'); return; }
       if (!validatePassword(password)) { alert('كلمة المرور يجب أن تكون 8 أحرف على الأقل'); return; }
+      let createdUser = null;
+      let profilesCreated = false;
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await setDoc(doc(db, "users", userCredential.user.uid), {
+        createdUser = userCredential.user;
+        await createProfiles(userCredential.user.uid, {
           name,
           email,
           accountType: 'buyer',
           status: 'active',
           createdAt: serverTimestamp()
-        });
-        await setDoc(doc(db, "publicProfiles", userCredential.user.uid), {
+        }, {
           name,
           accountType: 'buyer'
         });
+        profilesCreated = true;
         await sendEmailVerification(userCredential.user);
         await signOut(auth);
         alert('✅ تم إنشاء الحساب - تحقق من بريدك الإلكتروني');
         window.location.href = 'login.html';
-      } catch (error) { alert('❌ ' + error.message); }
+      } catch (error) {
+        if (!profilesCreated) await cleanupFailedRegistration(createdUser);
+        else await signOut(auth).catch(() => {});
+        alert(profilesCreated
+          ? 'تم إنشاء الحساب، لكن تعذر إرسال رسالة التحقق. سجّل الدخول لاحقاً لإعادة إرسالها.'
+          : '❌ ' + error.message);
+      }
     };
 
     let freelancerStep = 1;
@@ -271,17 +292,25 @@
     return;
   }
 
+  let createdUser = null;
+  let profilesCreated = false;
+  const uploadedPaths = [];
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    createdUser = userCredential.user;
     const uid = userCredential.user.uid;
     const frontPath = `identity/${uid}/front`;
     const backPath = `identity/${uid}/back`;
-    await Promise.all([
-      uploadBytes(ref(storage, frontPath), frontFile, { contentType: frontFile.type }),
+    const uploadResults = await Promise.allSettled([
+      uploadBytes(ref(storage, frontPath), frontFile, { contentType: frontFile.type })
+        .then(() => uploadedPaths.push(frontPath)),
       uploadBytes(ref(storage, backPath), backFile, { contentType: backFile.type })
+        .then(() => uploadedPaths.push(backPath))
     ]);
+    const failedUpload = uploadResults.find(result => result.status === 'rejected');
+    if (failedUpload) throw failedUpload.reason;
 
-    await setDoc(doc(db, "users", uid), {
+    await createProfiles(uid, {
       name, email,
       phone,
       specialty,
@@ -292,17 +321,23 @@
       accountType: 'freelancer',
       status: 'pending',
       createdAt: serverTimestamp()
-    });
-    await setDoc(doc(db, "publicProfiles", uid), {
+    }, {
       name,
       accountType: 'freelancer'
     });
+    profilesCreated = true;
 
     await sendEmailVerification(userCredential.user);
     await signOut(auth);
     alert('✅ تم تقديم الطلب - تحقق من بريدك الإلكتروني');
     window.location.href = 'login.html';
-  } catch (error) { alert('❌ ' + error.message); }
+  } catch (error) {
+    if (!profilesCreated) await cleanupFailedRegistration(createdUser, uploadedPaths);
+    else await signOut(auth).catch(() => {});
+    alert(profilesCreated
+      ? 'تم تقديم الطلب، لكن تعذر إرسال رسالة التحقق. سجّل الدخول لاحقاً لإعادة إرسالها.'
+      : '❌ ' + error.message);
+  }
 };
   </script>
 </body>
