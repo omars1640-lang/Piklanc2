@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تفاصيل الخدمة - PikLance</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box}body{margin:0;font-family:Cairo,sans-serif;background:#f8f9fd;color:#2d3436}
+    main{max-width:850px;margin:4rem auto;padding:2rem;background:#fff;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+    a{color:#6c5ce7;text-decoration:none}.price{font-size:1.5rem;font-weight:800;color:#6c5ce7}
+    .notice{padding:1rem;background:#fff3cd;border-radius:10px;margin:1.5rem 0}
+  </style>
+</head>
+<body>
+  <main>
+    <a href="services.html">← العودة إلى الخدمات</a>
+    <h1 id="title">تفاصيل الخدمة</h1>
+    <p id="category"></p>
+    <p id="seller"></p>
+    <p class="price" id="price"></p>
+    <div class="notice">الطلب والدفع غير مفعّلين بعد. لن يتم خصم أي مبلغ من هذه الصفحة.</div>
+  </main>
+  <script>
+    const services = {
+      1:{title:'تصميم هوية بصرية كاملة',category:'تصميم',seller:'أحمد المصمم',price:25000},
+      2:{title:'تطوير متجر إلكتروني',category:'برمجة',seller:'سارة المبرمجة',price:150000},
+      3:{title:'كتابة محتوى SEO احترافي',category:'كتابة',seller:'خالد الكاتب',price:8000},
+      4:{title:'إدارة حملات إعلانية ممولة',category:'تسويق',seller:'ليلى المسوقة',price:35000},
+      5:{title:'تسجيل تعليق صوتي احترافي',category:'صوتيات',seller:'عماد الصوت',price:15000},
+      6:{title:'مونتاج فيديو احترافي',category:'فيديو',seller:'نور المنتجة',price:50000}
+    };
+    const service = services[new URLSearchParams(location.search).get('id')] || services[1];
+    document.getElementById('title').textContent = service.title;
+    document.getElementById('category').textContent = `الفئة: ${service.category}`;
+    document.getElementById('seller').textContent = `مقدم الخدمة: ${service.seller}`;
+    document.getElementById('price').textContent = `${service.price.toLocaleString('ar')} ل.س`;
+  </script>
+</body>
+</html>

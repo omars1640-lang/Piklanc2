@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تسجيل الدخول - PikLance</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: #F8F9FD;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-box {
+      background: #fff;
+      border-radius: 20px;
+      padding: 3rem;
+      width: 450px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+    .logo { text-align: center; font-size: 1.8rem; font-weight: 800; margin-bottom: 2rem; }
+    .logo span { color: #6C5CE7; }
+    h2 { text-align: center; margin-bottom: 1.5rem; color: #1E1E2D; }
+    .form-group { margin-bottom: 1.2rem; }
+    label { display: block; margin-bottom: 0.4rem; font-weight: 600; }
+    input {
+      width: 100%; padding: 0.8rem; border: 1px solid #ddd;
+      border-radius: 10px; font-family: 'Cairo', sans-serif; font-size: 1rem;
+    }
+    input:focus { outline: none; border-color: #6C5CE7; }
+    .btn {
+      width: 100%; padding: 0.8rem; background: #6C5CE7; color: #fff;
+      border: none; border-radius: 10px; font-size: 1.1rem; font-weight: 700;
+      cursor: pointer; font-family: 'Cairo', sans-serif; margin-top: 1rem;
+    }
+    .btn:hover { background: #5A4BD1; }
+    .links { text-align: center; margin-top: 1.5rem; }
+    .links a { color: #6C5CE7; text-decoration: none; font-weight: 600; }
+    .back-link { display: block; text-align: center; margin-top: 1rem; color: #636E72; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <div class="logo">Pik<span>Lance</span></div>
+    <h2>تسجيل الدخول</h2>
+    
+    <form onsubmit="event.preventDefault(); handleLogin()">
+      <div class="form-group">
+        <label>البريد الإلكتروني</label>
+        <input type="email" id="loginEmail" placeholder="example@email.com" required>
+      </div>
+      <div class="form-group">
+        <label>كلمة المرور</label>
+        <input type="password" id="loginPassword" placeholder="********" required>
+      </div>
+      <button type="submit" class="btn">دخول</button>
+    </form>
+
+    <div class="links">
+      <a href="register.html">ليس لديك حساب؟ انضم مجاناً</a>
+    </div>
+    <a href="index.html" class="back-link">← العودة للرئيسية</a>
+  </div>
+
+  <script type="module">
+    import { signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { auth, db } from "./js/firebase.js";
+
+    window.handleLogin = async function() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+
+      if (!email || !password) {
+        alert('يرجى ملء جميع الحقول');
+        return;
+      }
+
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+
+          if (!userCredential.user.emailVerified) {
+            await signOut(auth);
+            alert('📧 تحقق من بريدك الإلكتروني قبل تسجيل الدخول.');
+            return;
+          }
+          
+          if (userData.status === 'pending') {
+            await signOut(auth);
+            alert('⏳ حسابك قيد المراجعة. يرجى الانتظار.');
+            return;
+          }
+          
+          if (userData.status === 'rejected') {
+            await signOut(auth);
+            alert('❌ تم رفض حسابك. السبب: ' + (userData.rejectionReason || 'غير محدد'));
+            return;
+          }
+
+          alert('✅ تم تسجيل الدخول بنجاح');
+          window.location.href = 'index.html';
+        } else {
+          await signOut(auth);
+          alert('❌ بيانات الحساب غير مكتملة. تواصل مع الدعم.');
+        }
+      } catch (error) {
+        if (error.code === 'auth/invalid-credential') {
+          alert('❌ البريد الإلكتروني أو كلمة المرور غير صحيحة');
+        } else if (error.code === 'auth/user-not-found') {
+          alert('❌ لا يوجد حساب بهذا البريد');
+        } else {
+          alert('❌ خطأ: ' + error.message);
+        }
+      }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تواصل معنا - PikLance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #F8F9FD;
+      --bg-secondary: #FFFFFF;
+      --bg-tertiary: #F1F3F9;
+      --text-primary: #2D3436;
+      --text-secondary: #636E72;
+      --text-heading: #1E1E2D;
+      --border-color: #E2E8F0;
+      --shadow-color: rgba(0,0,0,0.08);
+      --shadow-lg: 0 25px 50px rgba(108, 92, 231, 0.15);
+      --card-bg: #FFFFFF;
+      --navbar-bg: rgba(255,255,255,0.95);
+      --footer-bg: #1E1E2D;
+      --footer-text: rgba(255,255,255,0.7);
+      --btn-ghost-border: #E2E8F0;
+      --primary: #6C5CE7;
+      --primary-dark: #5A4BD1;
+      --secondary: #FF6B6B;
+      --accent: #FFD93D;
+      --green: #10B981;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --form-bg: #FFFFFF;
+      --input-bg: #F8F9FD;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #121218;
+      --bg-secondary: #1E1E2D;
+      --bg-tertiary: #252536;
+      --text-primary: #E2E8F0;
+      --text-secondary: #A0AEC0;
+      --text-heading: #F7FAFC;
+      --border-color: #2D2D3F;
+      --shadow-color: rgba(0,0,0,0.4);
+      --shadow-lg: 0 25px 50px rgba(108, 92, 231, 0.25);
+      --card-bg: #1E1E2D;
+      --navbar-bg: rgba(18, 18, 24, 0.95);
+      --footer-bg: #0F0F1A;
+      --footer-text: rgba(255,255,255,0.5);
+      --btn-ghost-border: #2D2D3F;
+      --form-bg: #1E1E2D;
+      --input-bg: #252536;
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Cairo', 'Segoe UI', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      transition: background 0.3s, color 0.3s;
+    }
+    .container { width:90%; max-width:1240px; margin:0 auto; }
+
+    /* Navbar */
+    .navbar {
+      background: var(--navbar-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      padding: 1rem 0; position: sticky; top:0; z-index:1000;
+      border-bottom: 1px solid var(--border-color); transition: var(--transition);
+    }
+    .navbar .container { display:flex; justify-content:space-between; align-items:center; }
+    .logo { font-size:1.8rem; font-weight:800; text-decoration:none; display:flex; align-items:center; gap:0.3rem; }
+    .logo-icon {
+      width:40px; height:40px; background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius:12px; display:flex; align-items:center; justify-content:center;
+      color:#fff; font-size:1.3rem; font-weight:800; box-shadow:0 4px 15px rgba(108,92,231,0.3);
+    }
+    .logo-text { color: var(--text-heading); }
+    .logo-text span { color: var(--primary); }
+    .nav-links { display:flex; gap:2rem; list-style:none; }
+    .nav-links a {
+      text-decoration:none; color:var(--text-secondary); font-weight:600; font-size:0.95rem;
+      transition: var(--transition); position:relative; padding:0.3rem 0;
+    }
+    .nav-links a::after {
+      content:''; position:absolute; bottom:0; right:0; width:0; height:2px;
+      background:var(--primary); transition: var(--transition);
+    }
+    .nav-links a:hover::after, .nav-links a.active::after { width:100%; }
+    .nav-links a:hover, .nav-links a.active { color:var(--primary); }
+
+    .btn {
+      padding:0.7rem 1.8rem; border-radius:50px; font-weight:700; font-size:0.95rem;
+      cursor:pointer; border:none; transition:var(--transition); text-decoration:none;
+      display:inline-flex; align-items:center; gap:0.5rem; font-family: 'Cairo', sans-serif;
+    }
+    .btn-ghost { background:transparent; color:var(--text-primary); border:2px solid var(--btn-ghost-border); }
+    .btn-ghost:hover { border-color:var(--primary); color:var(--primary); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color:#fff; box-shadow:0 4px 15px rgba(108,92,231,0.4);
+    }
+    .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(108,92,231,0.5); }
+    .theme-toggle {
+      background:transparent; border:2px solid var(--border-color); width:42px; height:42px;
+      border-radius:50%; cursor:pointer; font-size:1.2rem; display:flex; align-items:center;
+      justify-content:center; transition:var(--transition); margin-right:1rem; color:var(--text-primary);
+    }
+    .theme-toggle:hover { border-color:var(--primary); background:var(--bg-tertiary); }
+
+    /* Page Header */
+    .page-header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color:#fff; padding:3.5rem 0; text-align:center; margin-bottom:2rem;
+    }
+    .page-header h1 { font-size:2.5rem; font-weight:800; margin-bottom:0.5rem; }
+    .page-header p { font-size:1.1rem; opacity:0.9; }
+
+    /* Contact Cards */
+    .contact-cards {
+      display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:1.5rem; margin:2rem 0;
+    }
+    .contact-card {
+      background:var(--card-bg); border-radius:20px; padding:2rem; text-align:center;
+      box-shadow:0 10px 30px var(--shadow-color); border:1px solid var(--border-color);
+      transition:var(--transition);
+    }
+    .contact-card:hover { transform:translateY(-5px); box-shadow:var(--shadow-lg); }
+    .contact-card .icon {
+      width:70px; height:70px; background:rgba(108,92,231,0.1);
+      border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-size:2rem; margin:0 auto 1rem; color:var(--primary);
+    }
+    .contact-card h3 { color:var(--text-heading); margin-bottom:0.5rem; }
+    .contact-card p { color:var(--text-secondary); }
+
+    /* Contact Form */
+    .contact-form-section {
+      background:var(--form-bg); border-radius:20px; padding:3rem;
+      box-shadow:0 10px 30px var(--shadow-color); border:1px solid var(--border-color);
+      margin:3rem 0;
+    }
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:2rem; align-items:start; }
+    .form-title { font-size:1.8rem; color:var(--text-heading); margin-bottom:1rem; }
+    .form-subtitle { color:var(--text-secondary); margin-bottom:2rem; }
+
+    .form-group { margin-bottom:1.5rem; }
+    .form-group label { display:block; margin-bottom:0.5rem; font-weight:600; color:var(--text-primary); }
+    .form-control {
+      width:100%; padding:0.8rem 1rem; border:1px solid var(--border-color);
+      border-radius:12px; background:var(--input-bg); color:var(--text-primary);
+      font-family:'Cairo', sans-serif; font-size:1rem; transition:var(--transition);
+    }
+    .form-control:focus { outline:none; border-color:var(--primary); }
+    textarea.form-control { min-height:150px; resize:vertical; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+
+    .contact-info-side {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      border-radius:20px; padding:2.5rem; color:#fff; height:fit-content;
+    }
+    .contact-info-side h3 { font-size:1.6rem; margin-bottom:1rem; }
+    .contact-info-side p { opacity:0.95; margin-bottom:1.5rem; }
+
+    .info-list { list-style:none; }
+    .info-list li { display:flex; align-items:center; gap:0.8rem; margin-bottom:1rem; }
+    .social-links { display:flex; gap:1rem; margin-top:1.5rem; }
+    .social-link {
+      width:40px; height:40px; background:rgba(255,255,255,0.15); border-radius:50%;
+      display:flex; align-items:center; justify-content:center; color:#fff; text-decoration:none;
+      transition:var(--transition);
+    }
+    .social-link:hover { background:rgba(255,255,255,0.3); }
+
+    /* Map */
+    .map-section { margin:2rem 0; }
+    .map-placeholder {
+      background:var(--bg-tertiary); border-radius:20px; height:300px;
+      display:flex; align-items:center; justify-content:center; color:var(--text-secondary);
+      border:1px solid var(--border-color);
+    }
+
+    /* FAQ */
+    .faq-section { margin:3rem 0; }
+    .faq-item {
+      background:var(--card-bg); border-radius:12px; padding:1.2rem;
+      margin-bottom:1rem; border:1px solid var(--border-color);
+      box-shadow:0 5px 15px var(--shadow-color); transition:var(--transition);
+    }
+    .faq-question {
+      font-weight:700; color:var(--text-heading); cursor:pointer;
+      display:flex; justify-content:space-between; align-items:center;
+    }
+    .faq-answer {
+      color:var(--text-secondary); margin-top:0.8rem; display:none; line-height:1.8;
+    }
+    .faq-answer.active { display:block; }
+
+    .modal {
+      display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+      background:rgba(0,0,0,0.5); z-index:2000; align-items:center; justify-content:center;
+    }
+    .modal.active { display:flex; }
+    .modal-content {
+      background:var(--card-bg); border-radius:20px; padding:2rem; max-width:400px;
+      text-align:center; width:90%;
+    }
+    .modal-icon { font-size:3rem; margin-bottom:1rem; }
+    .modal-title { font-size:1.4rem; color:var(--text-heading); margin-bottom:0.5rem; }
+    .modal-text { color:var(--text-secondary); margin-bottom:1.5rem; }
+
+    /* Footer */
+    .footer {
+      background:var(--footer-bg); color:#fff; padding:3rem 0 1.5rem; margin-top:3rem;
+    }
+    .footer-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:2rem; margin-bottom:2rem; }
+    .footer a { color:var(--footer-text); text-decoration:none; display:block; margin-bottom:0.5rem; transition:0.2s; }
+    .footer a:hover { color:#fff; padding-right:4px; }
+    .footer-bottom {
+      text-align:center; padding-top:1.5rem; border-top:1px solid rgba(255,255,255,0.1);
+      font-size:0.9rem; color:rgba(255,255,255,0.5);
+    }
+
+    @media (max-width:768px) {
+      .form-grid { grid-template-columns:1fr; }
+      .form-row { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container">
+      <a href="index.html" class="logo">
+        <div class="logo-icon">P</div>
+        <div class="logo-text">Pik<span>Lance</span></div>
+      </a>
+      <ul class="nav-links">
+        <li><a href="services.html">الخدمات</a></li>
+        <li><a href="freelancers.html">المستقلون</a></li>
+        <li><a href="how-it-works.html">كيف تعمل</a></li>
+        <li><a href="about.html">عن المنصة</a></li>
+        <li><a href="blog.html">المدونة</a></li>
+        <li><a href="contact.html" class="active">تواصل</a></li>
+      </ul>
+      <div style="display:flex; gap:1rem; align-items:center;">
+        <a href="login.html" class="btn btn-ghost">دخول</a>
+        <a href="register.html" class="btn btn-primary">انضم مجاناً</a>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙</button>
+      </div>
+    </div>
+  </nav>
+
+  <section class="page-header">
+    <div class="container">
+      <h1>تواصل معنا</h1>
+      <p>فريق الدعم جاهز للإجابة على استفساراتك على مدار الساعة</p>
+    </div>
+  </section>
+
+  <div class="container">
+    <div class="contact-cards">
+      <div class="contact-card">
+        <div class="icon">📍</div>
+        <h3>العنوان</h3>
+        <p>دمشق، سوريا<br>شارع الحمراء، بناء 12</p>
+      </div>
+      <div class="contact-card">
+        <div class="icon">📞</div>
+        <h3>الهاتف</h3>
+        <p dir="ltr">+963 99 912 3456</p>
+        <p style="font-size:0.9rem;">متاح 9 صباحاً - 9 مساءً</p>
+      </div>
+      <div class="contact-card">
+        <div class="icon">✉️</div>
+        <h3>البريد الإلكتروني</h3>
+        <p>support@piklance.sy</p>
+        <p style="font-size:0.9rem;">نرد خلال 24 ساعة</p>
+      </div>
+    </div>
+
+    <div class="contact-form-section">
+      <div class="form-grid">
+        <div>
+          <h2 class="form-title">أرسل لنا رسالة</h2>
+          <p class="form-subtitle">املأ النموذج وسنعود إليك في أقرب وقت</p>
+          <form onsubmit="event.preventDefault(); handleSubmit()">
+            <div class="form-row">
+              <div class="form-group">
+                <label>الاسم *</label>
+                <input type="text" class="form-control" id="name" placeholder="أدخل اسمك الكامل" required>
+              </div>
+              <div class="form-group">
+                <label>البريد الإلكتروني *</label>
+                <input type="email" class="form-control" id="email" placeholder="example@email.com" required>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>رقم الهاتف</label>
+                <input type="text" class="form-control" id="phone" placeholder="09xxxxxxxx">
+              </div>
+              <div class="form-group">
+                <label>الموضوع</label>
+                <select class="form-control" id="subject">
+                  <option>استفسار عام</option>
+                  <option>دعم فني</option>
+                  <option>مبيعات وشراكات</option>
+                  <option>شكوى أو ملاحظة</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>الرسالة *</label>
+              <textarea class="form-control" id="message" placeholder="اكتب رسالتك هنا..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">إرسال الرسالة</button>
+          </form>
+        </div>
+        <div class="contact-info-side">
+          <h3>نتطلع لسماعك!</h3>
+          <p>فريق الدعم جاهز لمساعدتك. يمكنك أيضاً التواصل عبر وسائل التواصل الاجتماعي.</p>
+          <ul class="info-list">
+            <li>⏱️ متوسط الرد: أقل من ساعتين</li>
+            <li>📱 واتساب: 0999123456</li>
+            <li>🌐 تابعنا للحصول على آخر التحديثات</li>
+          </ul>
+          <div class="social-links">
+            <a href="#" class="social-link">📘</a>
+            <a href="#" class="social-link">📷</a>
+            <a href="#" class="social-link">🐦</a>
+            <a href="#" class="social-link">📱</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="map-section">
+      <div class="map-placeholder">
+        <div style="text-align:center;">📍 خريطة تفاعلية - دمشق، سوريا</div>
+      </div>
+    </div>
+
+    <div class="faq-section">
+      <h2 style="text-align:center; color:var(--text-heading); margin-bottom:2rem;">أسئلة شائعة عن التواصل</h2>
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFAQ(this)">
+          كم يستغرق الرد على الرسائل؟
+          <span>▼</span>
+        </div>
+        <div class="faq-answer">نرد على جميع الاستفسارات خلال 24 ساعة، وغالباً خلال ساعات قليلة.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question" onclick="toggleFAQ(this)">
+          هل يمكن التواصل عبر الواتساب؟
+          <span>▼</span>
+        </div>
+        <div class="faq-answer">نعم، واتساب متاح على الرقم +963 99 912 3456 من 9 صباحاً حتى 9 مساءً.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="successModal">
+    <div class="modal-content">
+      <div class="modal-icon">✅</div>
+      <h3 class="modal-title">تم إرسال الرسالة</h3>
+      <p class="modal-text">شكراً لتواصلك. سنرد عليك قريباً.</p>
+      <button class="btn btn-primary" onclick="closeModal()">حسناً</button>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div><h4>PikLance</h4><p style="opacity:0.7;">منصة الخدمات الرقمية السورية</p></div>
+        <div><h4>تصفح</h4><a href="services.html">الخدمات</a><a href="freelancers.html">المستقلون</a><a href="how-it-works.html">كيف تعمل</a></div>
+        <div><h4>مساعدة</h4><a href="contact.html">تواصل</a><a href="faq.html">أسئلة شائعة</a></div>
+        <div><h4>قانوني</h4><a href="terms.html">شروط</a><a href="privacy.html">خصوصية</a></div>
+      </div>
+      <div class="footer-bottom">© 2025 PikLance. جميع الحقوق محفوظة.</div>
+    </div>
+  </footer>
+
+  <script>
+    const themeToggle = document.getElementById('themeToggle');
+    const htmlElement = document.documentElement;
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    htmlElement.setAttribute('data-theme', savedTheme);
+    themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    function toggleTheme() {
+      const current = htmlElement.getAttribute('data-theme');
+      const next = current === 'light' ? 'dark' : 'light';
+      htmlElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
+    }
+
+    function handleSubmit() {
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const message = document.getElementById('message').value.trim();
+      if (!name || !email || !message) {
+        alert('يرجى ملء الحقول المطلوبة');
+        return;
+      }
+      alert('نموذج الدعم غير مربوط بخدمة إرسال بعد. لم يتم إرسال الرسالة.');
+    }
+
+    function closeModal() {
+      document.getElementById('successModal').classList.remove('active');
+    }
+
+    function toggleFAQ(element) {
+      const answer = element.nextElementSibling;
+      const icon = element.querySelector('span');
+      answer.classList.toggle('active');
+      icon.textContent = answer.classList.contains('active') ? '▲' : '▼';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>المحفظة والرصيد - PikLance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #F8F9FD;
+      --bg-secondary: #FFFFFF;
+      --bg-tertiary: #F1F3F9;
+      --text-primary: #2D3436;
+      --text-secondary: #636E72;
+      --text-heading: #1E1E2D;
+      --border-color: #E2E8F0;
+      --shadow-color: rgba(0,0,0,0.08);
+      --shadow-lg: 0 25px 50px rgba(108, 92, 231, 0.15);
+      --card-bg: #FFFFFF;
+      --navbar-bg: rgba(255,255,255,0.95);
+      --footer-bg: #1E1E2D;
+      --footer-text: rgba(255,255,255,0.7);
+      --btn-ghost-border: #E2E8F0;
+      --primary: #6C5CE7;
+      --primary-dark: #5A4BD1;
+      --secondary: #FF6B6B;
+      --accent: #FFD93D;
+      --green: #10B981;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --wallet-header-bg: linear-gradient(135deg, #6C5CE7, #5A4BD1);
+      --input-bg: #F8F9FD;
+      --method-bg: #F8F9FD;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #121218;
+      --bg-secondary: #1E1E2D;
+      --bg-tertiary: #252536;
+      --text-primary: #E2E8F0;
+      --text-secondary: #A0AEC0;
+      --text-heading: #F7FAFC;
+      --border-color: #2D2D3F;
+      --shadow-color: rgba(0,0,0,0.4);
+      --shadow-lg: 0 25px 50px rgba(108, 92, 231, 0.25);
+      --card-bg: #1E1E2D;
+      --navbar-bg: rgba(18, 18, 24, 0.95);
+      --footer-bg: #0F0F1A;
+      --footer-text: rgba(255,255,255,0.5);
+      --btn-ghost-border: #2D2D3F;
+      --wallet-header-bg: linear-gradient(135deg, #4C3FD1, #3A2FB8);
+      --input-bg: #252536;
+      --method-bg: #252536;
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Cairo', 'Segoe UI', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      transition: background 0.3s, color 0.3s;
+    }
+    .container { width:90%; max-width:1240px; margin:0 auto; }
+
+    /* Navbar */
+    .navbar {
+      background: var(--navbar-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      padding: 1rem 0; position: sticky; top:0; z-index:1000;
+      border-bottom: 1px solid var(--border-color); transition: var(--transition);
+    }
+    .navbar .container { display:flex; justify-content:space-between; align-items:center; }
+    .logo { font-size:1.8rem; font-weight:800; text-decoration:none; display:flex; align-items:center; gap:0.3rem; }
+    .logo-icon {
+      width:40px; height:40px; background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius:12px; display:flex; align-items:center; justify-content:center;
+      color:#fff; font-size:1.3rem; font-weight:800; box-shadow:0 4px 15px rgba(108,92,231,0.3);
+    }
+    .logo-text { color: var(--text-heading); }
+    .logo-text span { color: var(--primary); }
+    .nav-links { display:flex; gap:2rem; list-style:none; }
+    .nav-links a {
+      text-decoration:none; color:var(--text-secondary); font-weight:600; font-size:0.95rem;
+      transition: var(--transition); position:relative; padding:0.3rem 0; white-space: nowrap;
+    }
+    .nav-links a::after {
+      content:''; position:absolute; bottom:0; right:0; width:0; height:2px;
+      background:var(--primary); transition: var(--transition);
+    }
+    .nav-links a:hover::after { width:100%; }
+    .nav-links a:hover { color:var(--primary); }
+
+    .btn {
+      padding:0.7rem 1.8rem; border-radius:50px; font-weight:700; font-size:0.95rem;
+      cursor:pointer; border:none; transition:var(--transition); text-decoration:none;
+      display:inline-flex; align-items:center; gap:0.5rem; font-family: 'Cairo', sans-serif;
+    }
+    .btn-ghost { background:transparent; color:var(--text-primary); border:2px solid var(--btn-ghost-border); }
+    .btn-ghost:hover { border-color:var(--primary); color:var(--primary); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color:#fff; box-shadow:0 4px 15px rgba(108,92,231,0.4);
+    }
+    .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(108,92,231,0.5); }
+    .btn-success {
+      background: var(--green); color:#fff; box-shadow:0 4px 15px rgba(16,185,129,0.3);
+    }
+    .btn-success:hover { background: #059669; }
+    .theme-toggle {
+      background:transparent; border:2px solid var(--border-color); width:42px; height:42px;
+      border-radius:50%; cursor:pointer; font-size:1.2rem; display:flex; align-items:center;
+      justify-content:center; transition:var(--transition); margin-right:1rem; color:var(--text-primary);
+    }
+    .theme-toggle:hover { border-color:var(--primary); background:var(--bg-tertiary); }
+
+    /* Wallet Header */
+    .wallet-header {
+      background: var(--wallet-header-bg);
+      padding: 2rem 0;
+      color: #fff;
+      text-align: center;
+      border-radius: 0 0 30px 30px;
+      margin-bottom: 2rem;
+    }
+    .balance-card {
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 2rem;
+      max-width: 400px;
+      margin: 0 auto;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .balance-label { font-size: 1rem; opacity: 0.9; }
+    .balance-amount { font-size: 3rem; font-weight: 800; margin: 0.5rem 0; }
+    .balance-sub { font-size: 0.9rem; opacity: 0.8; }
+
+    /* Main Grid */
+    .wallet-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin: 2rem 0;
+    }
+    .wallet-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: 0 10px 30px var(--shadow-color);
+      border: 1px solid var(--border-color);
+    }
+    .card-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text-heading);
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Payment Methods */
+    .methods-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.8rem;
+      margin-bottom: 1.5rem;
+    }
+    .method-item {
+      background: var(--method-bg);
+      border: 2px solid transparent;
+      border-radius: 12px;
+      padding: 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .method-item:hover { border-color: var(--primary); background: var(--bg-tertiary); }
+    .method-item.selected { border-color: var(--primary); background: rgba(108,92,231,0.05); }
+    .method-icon { font-size: 1.8rem; margin-bottom: 0.3rem; }
+    .method-name { font-weight: 700; }
+    .method-desc { font-size: 0.8rem; color: var(--text-secondary); }
+
+    .amount-input-wrapper {
+      display: flex;
+      align-items: center;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+    .amount-input-wrapper input {
+      flex: 1;
+      padding: 0.8rem;
+      border: none;
+      background: transparent;
+      color: var(--text-primary);
+      font-family: 'Cairo', sans-serif;
+    }
+    .amount-input-wrapper .currency {
+      padding: 0 1rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      border-right: 1px solid var(--border-color);
+    }
+    .quick-amounts {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .quick-amount {
+      flex: 1;
+      padding: 0.4rem;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+    .quick-amount:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    .info-box {
+      background: var(--bg-tertiary);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .info-box p { color: var(--text-secondary); }
+
+    /* Transactions */
+    .transactions-section {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: 0 10px 30px var(--shadow-color);
+      border: 1px solid var(--border-color);
+      margin: 2rem 0;
+    }
+    .filter-tabs {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .filter-tab {
+      padding: 0.5rem 1.2rem;
+      border-radius: 20px;
+      background: var(--bg-tertiary);
+      border: none;
+      color: var(--text-secondary);
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: 'Cairo', sans-serif;
+    }
+    .filter-tab.active { background: var(--primary); color: #fff; }
+    .transaction-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .transaction-info { display: flex; align-items: center; gap: 1rem; }
+    .transaction-icon {
+      width: 40px; height: 40px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+    }
+    .transaction-icon.deposit { background: rgba(16,185,129,0.15); color: #10B981; }
+    .transaction-icon.purchase { background: rgba(108,92,231,0.15); color: #6C5CE7; }
+    .transaction-icon.withdraw { background: rgba(255,107,107,0.15); color: #FF6B6B; }
+    .transaction-details h4 { color: var(--text-heading); font-size: 1rem; }
+    .transaction-date { font-size: 0.85rem; color: var(--text-secondary); }
+    .transaction-amount { font-weight: 700; font-size: 1.1rem; }
+    .positive { color: #10B981; }
+    .negative { color: #FF6B6B; }
+    .status-badge {
+      padding: 0.2rem 0.8rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600;
+    }
+    .status-completed { background: rgba(16,185,129,0.15); color: #10B981; }
+    .status-pending { background: rgba(255,193,7,0.15); color: #F59E0B; }
+
+    /* Footer */
+    .footer {
+      background: var(--footer-bg); color: #fff; padding: 3rem 0 1.5rem; margin-top: 3rem;
+    }
+    .footer-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:2rem; margin-bottom:2rem; }
+    .footer a { color:var(--footer-text); text-decoration:none; display:block; margin-bottom:0.5rem; transition:0.2s; }
+    .footer a:hover { color:#fff; padding-right:4px; }
+    .footer-bottom { text-align:center; padding-top:1.5rem; border-top:1px solid rgba(255,255,255,0.1); font-size:0.9rem; color:rgba(255,255,255,0.5); }
+
+    /* Modal */
+    .modal {
+      display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5);
+      z-index:2000; align-items:center; justify-content:center;
+    }
+    .modal.active { display:flex; }
+    .modal-content {
+      background:var(--card-bg); border-radius:20px; padding:2rem; max-width:400px; width:90%; text-align:center;
+    }
+    .modal-icon { font-size:3rem; margin-bottom:1rem; }
+    .modal-title { font-size:1.4rem; color:var(--text-heading); margin-bottom:0.5rem; }
+    .modal-text { color:var(--text-secondary); margin-bottom:1.5rem; }
+
+    @media (max-width:768px) {
+      .wallet-content { grid-template-columns: 1fr; }
+      .nav-links { display:none; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container">
+      <a href="index.html" class="logo">
+        <div class="logo-icon">P</div>
+        <div class="logo-text">Pik<span>Lance</span></div>
+      </a>
+      <ul class="nav-links">
+        <li><a href="services.html">الخدمات</a></li>
+        <li><a href="freelancers.html">المستقلون</a></li>
+        <li><a href="how-it-works.html">كيف تعمل</a></li>
+        <li><a href="about.html">عن المنصة</a></li>
+        <li><a href="blog.html">المدونة</a></li>
+        <li><a href="contact.html">تواصل</a></li>
+      </ul>
+      <div style="display:flex; gap:1rem; align-items:center;">
+        <a href="profile.html" class="btn btn-ghost">حسابي</a>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙</button>
+      </div>
+    </div>
+  </nav>
+
+  <section class="wallet-header">
+    <div class="container">
+      <div class="balance-card">
+        <div class="balance-label">رصيدك الحالي</div>
+        <div class="balance-amount" id="currentBalance">-- <small style="font-size:1rem;">ل.س</small></div>
+        <div class="balance-sub">سيظهر الرصيد بعد ربط نظام الدفع الآمن</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="container wallet-content">
+    <!-- شحن الرصيد -->
+    <div class="wallet-card">
+      <div class="card-title"><span>💰</span> شحن الرصيد</div>
+      <div class="methods-grid" id="depositMethods">
+        <div class="method-item selected" onclick="selectDepositMethod('mtn', this)">
+          <div class="method-icon">📱</div>
+          <div class="method-name">MTN Cash</div>
+          <div class="method-desc">شحن فوري</div>
+        </div>
+        <div class="method-item" onclick="selectDepositMethod('syriatel', this)">
+          <div class="method-icon">📞</div>
+          <div class="method-name">Syriatel Cash</div>
+          <div class="method-desc">شحن فوري</div>
+        </div>
+        <div class="method-item" onclick="selectDepositMethod('bank', this)">
+          <div class="method-icon">🏦</div>
+          <div class="method-name">تحويل بنكي</div>
+          <div class="method-desc">2-24 ساعة</div>
+        </div>
+        <div class="method-item" onclick="selectDepositMethod('card', this)">
+          <div class="method-icon">💳</div>
+          <div class="method-name">بطاقة شحن</div>
+          <div class="method-desc">شحن فوري</div>
+        </div>
+      </div>
+      <label style="font-weight:600; margin-bottom:0.5rem; display:block;">المبلغ</label>
+      <div class="amount-input-wrapper">
+        <input type="number" id="depositAmount" value="10000" min="1000" step="1000">
+        <span class="currency">ل.س</span>
+      </div>
+      <div class="quick-amounts">
+        <span class="quick-amount" onclick="setDepositAmount(5000)">5,000</span>
+        <span class="quick-amount" onclick="setDepositAmount(10000)">10,000</span>
+        <span class="quick-amount" onclick="setDepositAmount(25000)">25,000</span>
+        <span class="quick-amount" onclick="setDepositAmount(50000)">50,000</span>
+      </div>
+      <div id="mtnFields">
+        <input type="text" class="form-control" placeholder="رقم هاتف MTN Cash" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); border-radius:10px; background:var(--input-bg); color:var(--text-primary); margin-bottom:1rem;">
+      </div>
+      <div id="bankFields" style="display:none;">
+        <div class="info-box"><p>حساب بنكي: 1234-5678-9012 (سوريا الدولي الإسلامي)</p></div>
+        <input type="text" class="form-control" placeholder="رقم الإيصال" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); border-radius:10px; background:var(--input-bg); color:var(--text-primary); margin-bottom:1rem;">
+      </div>
+      <div id="cardFields" style="display:none;">
+        <input type="text" class="form-control" placeholder="رقم بطاقة الشحن" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); border-radius:10px; background:var(--input-bg); color:var(--text-primary); margin-bottom:0.5rem;">
+        <input type="password" class="form-control" placeholder="الرقم السري" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); border-radius:10px; background:var(--input-bg); color:var(--text-primary);">
+      </div>
+      <button class="btn btn-primary" style="width:100%; margin-top:1rem;" onclick="processDeposit()">شحن الرصيد</button>
+    </div>
+
+    <!-- سحب الأرباح -->
+    <div class="wallet-card">
+      <div class="card-title"><span>💵</span> سحب الأرباح</div>
+      <div class="info-box" style="background:rgba(16,185,129,0.1); border:1px solid #10B981;">
+        <p style="color:var(--text-heading); font-weight:700;">الرصيد القابل للسحب: 85,500 ل.س</p>
+        <p style="font-size:0.9rem;">الحد الأدنى 50,000 ل.س</p>
+      </div>
+      <label style="font-weight:600;">طريقة السحب</label>
+      <select class="form-control" id="withdrawMethod" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); border-radius:10px; background:var(--input-bg); color:var(--text-primary); margin-bottom:1rem;">
+        <option value="mtn">MTN Cash</option>
+        <option value="syriatel">Syriatel Cash</option>
+        <option value="bank">تحويل بنكي</option>
+      </select>
+      <label style="font-weight:600;">المبلغ</label>
+      <div class="amount-input-wrapper" style="margin-bottom:1rem;">
+        <input type="number" id="withdrawAmount" value="50000" min="50000" step="5000">
+        <span class="currency">ل.س</span>
+      </div>
+      <input type="text" class="form-control" placeholder="رقم المحفظة / الحساب" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); border-radius:10px; background:var(--input-bg); color:var(--text-primary); margin-bottom:1rem;">
+      <button class="btn btn-success" style="width:100%;" onclick="processWithdraw()">طلب سحب</button>
+    </div>
+  </div>
+
+  <!-- سجل المعاملات -->
+  <div class="container transactions-section">
+    <h2 style="color:var(--text-heading); margin-bottom:1rem;">سجل المعاملات</h2>
+    <div class="filter-tabs">
+      <button class="filter-tab active" onclick="filterTransactions('all', this)">الكل</button>
+      <button class="filter-tab" onclick="filterTransactions('deposit', this)">شحن</button>
+      <button class="filter-tab" onclick="filterTransactions('purchase', this)">مشتريات</button>
+      <button class="filter-tab" onclick="filterTransactions('withdraw', this)">سحب</button>
+    </div>
+    <div id="transactionsList">
+      <div class="transaction-item" data-type="deposit">
+        <div class="transaction-info">
+          <div class="transaction-icon deposit">💰</div>
+          <div class="transaction-details"><h4>شحن رصيد - MTN Cash</h4><span class="transaction-date">اليوم، 10:30 ص</span></div>
+          <span class="status-badge status-completed">مكتمل</span>
+        </div>
+        <span class="transaction-amount positive">+25,000 ل.س</span>
+      </div>
+      <div class="transaction-item" data-type="purchase">
+        <div class="transaction-info">
+          <div class="transaction-icon purchase">🛒</div>
+          <div class="transaction-details"><h4>شراء خدمة - تصميم شعار</h4><span class="transaction-date">أمس، 8:15 م</span></div>
+          <span class="status-badge status-completed">مكتمل</span>
+        </div>
+        <span class="transaction-amount negative">-5,000 ل.س</span>
+      </div>
+      <div class="transaction-item" data-type="withdraw">
+        <div class="transaction-info">
+          <div class="transaction-icon withdraw">💵</div>
+          <div class="transaction-details"><h4>سحب أرباح - Syriatel Cash</h4><span class="transaction-date">قبل 3 أيام</span></div>
+          <span class="status-badge status-pending">قيد المعالجة</span>
+        </div>
+        <span class="transaction-amount negative">-50,000 ل.س</span>
+      </div>
+      <div class="transaction-item" data-type="deposit">
+        <div class="transaction-info">
+          <div class="transaction-icon deposit">💰</div>
+          <div class="transaction-details"><h4>شحن رصيد - تحويل بنكي</h4><span class="transaction-date">قبل أسبوع</span></div>
+          <span class="status-badge status-completed">مكتمل</span>
+        </div>
+        <span class="transaction-amount positive">+100,000 ل.س</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div class="modal" id="successModal">
+    <div class="modal-content">
+      <div class="modal-icon">✅</div>
+      <h3 class="modal-title" id="modalTitle">تمت العملية بنجاح</h3>
+      <p class="modal-text" id="modalText">سيتم إضافة الرصيد خلال دقائق</p>
+      <button class="btn btn-primary" onclick="closeModal()">حسناً</button>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div><h4>PikLance</h4><p style="opacity:0.7;">منصة الخدمات الرقمية السورية</p></div>
+        <div><h4>تصفح</h4><a href="services.html">الخدمات</a><a href="freelancers.html">المستقلون</a><a href="how-it-works.html">كيف تعمل</a></div>
+        <div><h4>مساعدة</h4><a href="contact.html">تواصل</a><a href="faq.html">أسئلة شائعة</a></div>
+        <div><h4>قانوني</h4><a href="terms.html">شروط</a><a href="privacy.html">خصوصية</a></div>
+      </div>
+      <div class="footer-bottom">© 2025 PikLance. جميع الحقوق محفوظة.</div>
+    </div>
+  </footer>
+
+  <script>
+    // Dark mode
+    const themeToggle = document.getElementById('themeToggle');
+    const htmlElement = document.documentElement;
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    htmlElement.setAttribute('data-theme', savedTheme);
+    themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    function toggleTheme() {
+      const current = htmlElement.getAttribute('data-theme');
+      const next = current === 'light' ? 'dark' : 'light';
+      htmlElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
+    }
+
+    // Deposit method selection
+    function selectDepositMethod(method, item) {
+      document.querySelectorAll('#depositMethods .method-item').forEach(m => m.classList.remove('selected'));
+      item.classList.add('selected');
+      document.getElementById('mtnFields').style.display = (method === 'mtn' || method === 'syriatel') ? 'block' : 'none';
+      document.getElementById('bankFields').style.display = method === 'bank' ? 'block' : 'none';
+      document.getElementById('cardFields').style.display = method === 'card' ? 'block' : 'none';
+    }
+
+    function setDepositAmount(amount) {
+      document.getElementById('depositAmount').value = amount;
+    }
+
+    function processDeposit() {
+      alert('ميزة الشحن غير مفعلة بعد. لم يتم إرسال أو خصم أي مبلغ.');
+    }
+
+    function processWithdraw() {
+      alert('ميزة السحب غير مفعلة بعد. لم يتم إنشاء أي طلب مالي.');
+    }
+
+    function showModal(title, text) {
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalText').textContent = text;
+      document.getElementById('successModal').classList.add('active');
+    }
+    function closeModal() { document.getElementById('successModal').classList.remove('active'); }
+
+    // Filter transactions
+    function filterTransactions(type, button) {
+      document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+      button.classList.add('active');
+      document.querySelectorAll('#transactionsList .transaction-item').forEach(item => {
+        item.style.display = (type === 'all' || item.dataset.type === type) ? 'flex' : 'none';
+      });
+    }
+  </script>
+  <script type="module" src="js/require-auth.js"></script>
+</body>
+</html>

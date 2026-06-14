@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>المراسلات - PikLance</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: #F4F6FA;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .chat-container {
+      width: 800px;
+      height: 600px;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      display: flex;
+      overflow: hidden;
+    }
+    .chat-sidebar {
+      width: 280px;
+      border-left: 1px solid #E2E8F0;
+      display: flex;
+      flex-direction: column;
+    }
+    .chat-sidebar-header {
+      padding: 1rem;
+      border-bottom: 1px solid #E2E8F0;
+      font-weight: 700;
+      background: #F8F9FD;
+    }
+    .chats-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+    .chat-item {
+      padding: 1rem;
+      cursor: pointer;
+      border-bottom: 1px solid #F1F3F9;
+      transition: 0.2s;
+    }
+    .chat-item:hover { background: #F1F3F9; }
+    .chat-item.active { background: #6C5CE7; color: #fff; }
+    .chat-item-name { font-weight: 700; }
+    .chat-item-last { font-size: 0.8rem; color: #636E72; margin-top: 0.2rem; }
+    .chat-item.active .chat-item-last { color: rgba(255,255,255,0.8); }
+    .chat-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .chat-header {
+      padding: 1rem;
+      border-bottom: 1px solid #E2E8F0;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .messages-list {
+      flex: 1;
+      padding: 1rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .msg {
+      max-width: 70%;
+      padding: 0.7rem 1rem;
+      border-radius: 12px;
+      line-height: 1.5;
+    }
+    .msg.sent { background: #6C5CE7; color: #fff; align-self: flex-end; }
+    .msg.received { background: #F1F3F9; color: #2D3436; align-self: flex-start; }
+    .msg small { display: block; font-size: 0.7rem; opacity: 0.7; margin-top: 0.3rem; }
+    .input-area {
+      padding: 1rem;
+      border-top: 1px solid #E2E8F0;
+      display: flex;
+      gap: 0.5rem;
+    }
+    .input-area input {
+      flex: 1;
+      padding: 0.7rem;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-family: 'Cairo', sans-serif;
+    }
+    .input-area button {
+      padding: 0.7rem 1.5rem;
+      background: #6C5CE7;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: 'Cairo', sans-serif;
+      font-weight: 700;
+    }
+    .no-chat {
+      text-align: center;
+      color: #636E72;
+      margin-top: 5rem;
+      font-size: 1.2rem;
+    }
+    .back-link {
+      display: block;
+      text-align: center;
+      padding: 1rem;
+      color: #6C5CE7;
+      text-decoration: none;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-sidebar">
+      <div class="chat-sidebar-header">📬 المحادثات</div>
+      <div class="chats-list" id="chatsList">
+        <p style="text-align:center; color:#636E72; padding:2rem;">لا توجد محادثات</p>
+      </div>
+      <a href="index.html" class="back-link">← الرئيسية</a>
+    </div>
+    <div class="chat-main">
+      <div class="chat-header" id="chatHeader">💬 اختر محادثة من القائمة</div>
+      <div class="messages-list" id="messagesList">
+        <p class="no-chat">اختر محادثة لبدء المراسلة</p>
+      </div>
+      <div class="input-area" id="inputArea" style="display:none;">
+        <input type="text" id="messageInput" placeholder="اكتب رسالتك..." maxlength="500">
+        <button onclick="sendMessage()">إرسال</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { collection, addDoc, query, where, orderBy, onSnapshot, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { auth, db } from "./js/firebase.js";
+
+    let selectedChatId = null;
+    let currentProfile = null;
+    let unsubscribeMessages = null;
+
+    function emptyState(container, text) {
+      const paragraph = document.createElement('p');
+      paragraph.textContent = text;
+      paragraph.style.cssText = 'text-align:center;color:#636E72;padding:2rem';
+      container.replaceChildren(paragraph);
+    }
+
+    function renderMessages(snapshot) {
+      const list = document.getElementById('messagesList');
+      list.replaceChildren();
+      snapshot.forEach(messageDoc => {
+        const message = messageDoc.data();
+        const bubble = document.createElement('div');
+        bubble.className = `msg ${message.senderUid === auth.currentUser.uid ? 'sent' : 'received'}`;
+        bubble.appendChild(document.createTextNode(message.text || ''));
+        const time = document.createElement('small');
+        const date = message.timestamp?.toDate?.();
+        time.textContent = date ? date.toLocaleTimeString('ar') : '';
+        bubble.appendChild(time);
+        list.appendChild(bubble);
+      });
+      list.scrollTop = list.scrollHeight;
+    }
+
+    function subscribeToChat(chatId) {
+      if (unsubscribeMessages) unsubscribeMessages();
+      const messagesQuery = query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp'));
+      unsubscribeMessages = onSnapshot(messagesQuery, renderMessages);
+    }
+
+    async function loadMyChats() {
+      const chatsQuery = query(collection(db, 'chats'), where('participantUids', 'array-contains', auth.currentUser.uid));
+      onSnapshot(chatsQuery, snapshot => {
+        const list = document.getElementById('chatsList');
+        list.replaceChildren();
+        if (snapshot.empty) {
+          emptyState(list, 'لا توجد محادثات');
+          return;
+        }
+        snapshot.forEach(chatDoc => {
+          const chat = chatDoc.data();
+          const otherUid = chat.participantUids.find(uid => uid !== auth.currentUser.uid);
+          const item = document.createElement('button');
+          item.type = 'button';
+          item.className = 'chat-item';
+          item.style.cssText = 'width:100%;text-align:right;background:transparent;border:0;font-family:inherit';
+          const name = document.createElement('div');
+          name.className = 'chat-item-name';
+          name.textContent = chat.participantNames?.[otherUid] || 'مستخدم';
+          const last = document.createElement('div');
+          last.className = 'chat-item-last';
+          last.textContent = chat.lastMessage || 'بداية محادثة';
+          item.append(name, last);
+          item.addEventListener('click', () => openChat(chatDoc.id, name.textContent, item));
+          list.appendChild(item);
+        });
+      });
+    }
+
+    function openChat(chatId, userName, item = null) {
+      selectedChatId = chatId;
+      document.getElementById('chatHeader').textContent = '💬 ' + userName;
+      document.getElementById('inputArea').style.display = 'flex';
+      document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+      item?.classList.add('active');
+      subscribeToChat(chatId);
+    }
+
+    window.sendMessage = async function() {
+      const text = document.getElementById('messageInput').value.trim();
+      if (!text || !selectedChatId) return;
+
+      await addDoc(collection(db, "chats", selectedChatId, "messages"), {
+        text,
+        senderUid: auth.currentUser.uid,
+        timestamp: serverTimestamp()
+      });
+      await setDoc(doc(db, "chats", selectedChatId), {
+        lastMessage: text.substring(0, 50),
+        lastUpdated: serverTimestamp()
+      }, { merge: true });
+      document.getElementById('messageInput').value = '';
+    };
+
+    document.getElementById('messageInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') sendMessage();
+    });
+
+    async function startRequestedChat() {
+      const otherUid = new URLSearchParams(window.location.search).get('withUid');
+      if (!otherUid || otherUid === auth.currentUser.uid) return;
+      const otherProfile = await getDoc(doc(db, 'publicProfiles', otherUid));
+      if (!otherProfile.exists()) return;
+      const ids = [auth.currentUser.uid, otherUid].sort();
+      const chatId = ids.join('_');
+      const names = {
+        [auth.currentUser.uid]: currentProfile.name || auth.currentUser.email,
+        [otherUid]: otherProfile.data().name || 'مستخدم'
+      };
+      const chatReference = doc(db, 'chats', chatId);
+      const existingChat = await getDoc(chatReference);
+      if (!existingChat.exists()) {
+        await setDoc(chatReference, {
+          participantUids: ids,
+          participantNames: names,
+          lastMessage: '',
+          createdAt: serverTimestamp(),
+          lastUpdated: serverTimestamp()
+        });
+      }
+      openChat(chatId, names[otherUid]);
+    }
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        window.location.replace('login.html');
+        return;
+      }
+      const profile = await getDoc(doc(db, 'users', user.uid));
+      if (!profile.exists()) {
+        window.location.replace('login.html');
+        return;
+      }
+      currentProfile = profile.data();
+      loadMyChats();
+      await startRequestedChat();
+    });
+  </script>
+</body>
+</html>

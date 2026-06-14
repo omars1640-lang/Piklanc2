@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>المستقلون - PikLance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ========== متغيرات الألوان العامة ========== */
+    :root {
+      --bg-primary: #F8F9FD;
+      --bg-secondary: #FFFFFF;
+      --bg-tertiary: #F1F3F9;
+      --text-primary: #2D3436;
+      --text-secondary: #636E72;
+      --text-heading: #1E1E2D;
+      --border-color: #E2E8F0;
+      --shadow-color: rgba(0,0,0,0.08);
+      --shadow-lg-color: rgba(108, 92, 231, 0.15);
+      --card-bg: #FFFFFF;
+      --navbar-bg: rgba(255,255,255,0.95);
+      --hero-bg: linear-gradient(135deg, #F8F9FD 0%, #EEF0FF 50%, #FDF2F8 100%);
+      --footer-bg: #1E1E2D;
+      --footer-text: rgba(255,255,255,0.7);
+      --btn-ghost-border: #E2E8F0;
+      --filter-bg: #FFFFFF;
+      --filter-input-bg: #F8F9FD;
+      --filter-select-bg: #FFFFFF;
+      
+      --primary: #6C5CE7;
+      --primary-dark: #5A4BD1;
+      --secondary: #FF6B6B;
+      --accent: #FFD93D;
+      --green: #10B981;
+      
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ========== الوضع الداكن ========== */
+    [data-theme="dark"] {
+      --bg-primary: #121218;
+      --bg-secondary: #1E1E2D;
+      --bg-tertiary: #252536;
+      --text-primary: #E2E8F0;
+      --text-secondary: #A0AEC0;
+      --text-heading: #F7FAFC;
+      --border-color: #2D2D3F;
+      --shadow-color: rgba(0,0,0,0.4);
+      --shadow-lg-color: rgba(108, 92, 231, 0.25);
+      --card-bg: #1E1E2D;
+      --navbar-bg: rgba(18, 18, 24, 0.95);
+      --hero-bg: linear-gradient(135deg, #121218 0%, #1A1A2E 50%, #1E1E2D 100%);
+      --footer-bg: #0F0F1A;
+      --footer-text: rgba(255,255,255,0.5);
+      --btn-ghost-border: #2D2D3F;
+      --filter-bg: #1E1E2D;
+      --filter-input-bg: #252536;
+      --filter-select-bg: #1E1E2D;
+    }
+
+    /* ========== إعدادات عامة ========== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Cairo', 'Segoe UI', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      overflow-x: hidden;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+
+    /* ========== Navbar ========== */
+    .navbar {
+      background: var(--navbar-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 1rem 0;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      border-bottom: 1px solid var(--border-color);
+      transition: var(--transition);
+    }
+
+    .navbar .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 1.8rem;
+      font-weight: 800;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.3rem;
+      font-weight: 800;
+      box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+    }
+
+    .logo-text {
+      color: var(--text-heading);
+    }
+
+    .logo-text span {
+      color: var(--primary);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: var(--transition);
+      position: relative;
+      padding: 0.3rem 0;
+    }
+
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 0;
+      height: 2px;
+      background: var(--primary);
+      transition: var(--transition);
+    }
+
+    .nav-links a:hover::after,
+    .nav-links a.active::after {
+      width: 100%;
+    }
+
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: var(--primary);
+    }
+
+    .btn {
+      padding: 0.7rem 1.8rem;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'Cairo', sans-serif;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-primary);
+      border: 2px solid var(--btn-ghost-border);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(108, 92, 231, 0.5);
+    }
+
+    .theme-toggle {
+      background: transparent;
+      border: 2px solid var(--border-color);
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+      margin-right: 1rem;
+      color: var(--text-primary);
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--primary);
+      background: var(--bg-tertiary);
+    }
+
+    /* ========== Page Header ========== */
+    .page-header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      padding: 3rem 0;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .page-header h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+
+    .page-header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+
+    /* ========== Filters Section ========== */
+    .filters-section {
+      background: var(--filter-bg);
+      padding: 1.5rem 0;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px var(--shadow-color);
+      margin-top: -2rem;
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 10;
+      border: 1px solid var(--border-color);
+    }
+
+    .filters-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .search-box {
+      flex: 2;
+      min-width: 250px;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .search-box input {
+      flex: 1;
+      padding: 0.8rem 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 50px;
+      font-size: 1rem;
+      background: var(--filter-input-bg);
+      color: var(--text-primary);
+      font-family: 'Cairo', sans-serif;
+    }
+
+    .search-box button {
+      padding: 0.8rem 1.8rem;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: 700;
+      font-family: 'Cairo', sans-serif;
+      transition: var(--transition);
+    }
+
+    .search-box button:hover {
+      background: var(--primary-dark);
+    }
+
+    .filter-select {
+      padding: 0.8rem 1.5rem;
+      border: 1px solid var(--border-color);
+      border-radius: 50px;
+      background: var(--filter-select-bg);
+      color: var(--text-primary);
+      font-family: 'Cairo', sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+    }
+
+    /* ========== Freelancers Grid ========== */
+    .freelancers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 2rem;
+      margin: 2rem 0;
+    }
+
+    .freelancer-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px var(--shadow-color);
+      transition: var(--transition);
+      border: 1px solid var(--border-color);
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .freelancer-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 25px 50px var(--shadow-lg-color);
+    }
+
+    .freelancer-avatar {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      margin: 0 auto 1.5rem;
+      background-size: cover;
+      background-position: center;
+      border: 4px solid var(--primary);
+    }
+
+    .freelancer-name {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--text-heading);
+      margin-bottom: 0.3rem;
+    }
+
+    .freelancer-title {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+    }
+
+    .freelancer-stats {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin: 1.2rem 0;
+    }
+
+    .stat-value {
+      font-weight: 700;
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .freelancer-skills {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem;
+      margin: 1.2rem 0;
+    }
+
+    .skill-tag {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      padding: 0.25rem 0.8rem;
+      border-radius: 50px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .freelancer-card .btn {
+      margin-top: 1rem;
+      width: 100%;
+    }
+
+    /* ========== Pagination ========== */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin: 2rem 0 4rem;
+    }
+
+    .page-link {
+      width: 45px;
+      height: 45px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      font-weight: 700;
+      text-decoration: none;
+      transition: var(--transition);
+    }
+
+    .page-link:hover,
+    .page-link.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    /* ========== Footer ========== */
+    .footer {
+      background: var(--footer-bg);
+      color: #fff;
+      padding: 3rem 0 1.5rem;
+      margin-top: 3rem;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .footer h4 {
+      margin-bottom: 1rem;
+    }
+
+    .footer a {
+      color: var(--footer-text);
+      text-decoration: none;
+      display: block;
+      margin-bottom: 0.5rem;
+      transition: 0.2s;
+    }
+
+    .footer a:hover {
+      color: #fff;
+      padding-right: 4px;
+    }
+
+    .footer-bottom {
+      text-align: center;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* ========== Responsive ========== */
+    @media (max-width: 768px) {
+      .filters-grid {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .nav-links {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="index.html" class="logo">
+        <div class="logo-icon">P</div>
+        <div class="logo-text">Pik<span>Lance</span></div>
+      </a>
+      <ul class="nav-links">
+        <li><a href="services.html">الخدمات</a></li>
+        <li><a href="freelancers.html" class="active">المستقلون</a></li>
+        <li><a href="how-it-works.html">كيف تعمل</a></li>
+        <li><a href="about.html">عن المنصة</a></li>
+        <li><a href="blog.html">المدونة</a></li>
+        <li><a href="contact.html">تواصل</a></li>
+      </ul>
+      <div style="display:flex; gap:1rem; align-items:center;">
+        <a href="login.html" class="btn btn-ghost">دخول</a>
+        <a href="register.html" class="btn btn-primary">انضم مجاناً</a>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="تبديل الوضع الليلي">🌙</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Page Header -->
+  <section class="page-header">
+    <div class="container">
+      <h1>المستقلون</h1>
+      <p>تواصل مع أفضل المواهب السورية في مختلف المجالات الرقمية</p>
+    </div>
+  </section>
+
+  <!-- Filters -->
+  <div class="container">
+    <div class="filters-section">
+      <div class="container" style="padding:0;">
+        <div class="filters-grid">
+          <div class="search-box">
+            <input type="text" placeholder="ابحث عن مستقل بالاسم أو المهارة..." id="searchInput" onkeyup="filterFreelancers()">
+            <button onclick="filterFreelancers()">بحث</button>
+          </div>
+          <select class="filter-select" id="categoryFilter" onchange="filterFreelancers()">
+            <option value="all">كل التخصصات</option>
+            <option value="design">تصميم</option>
+            <option value="code">برمجة</option>
+            <option value="write">كتابة</option>
+            <option value="market">تسويق</option>
+            <option value="audio">صوتيات</option>
+            <option value="video">فيديو</option>
+          </select>
+          <select class="filter-select" id="ratingFilter" onchange="filterFreelancers()">
+            <option value="all">كل التقييمات</option>
+            <option value="4.5">4.5 فأعلى</option>
+            <option value="4.0">4.0 فأعلى</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Freelancers Grid -->
+  <div class="container">
+    <div class="freelancers-grid" id="freelancersContainer">
+      <!-- ستملأ ديناميكياً -->
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination">
+      <a href="#" class="page-link">←</a>
+      <a href="#" class="page-link active">1</a>
+      <a href="#" class="page-link">2</a>
+      <a href="#" class="page-link">3</a>
+      <a href="#" class="page-link">→</a>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <h4>PikLance</h4>
+          <p style="opacity:0.7;">منصة الخدمات الرقمية السورية</p>
+        </div>
+        <div>
+          <h4>تصفح</h4>
+          <a href="services.html">الخدمات</a>
+          <a href="freelancers.html">المستقلون</a>
+          <a href="how-it-works.html">كيف تعمل</a>
+        </div>
+        <div>
+          <h4>مساعدة</h4>
+          <a href="contact.html">تواصل</a>
+          <a href="faq.html">أسئلة شائعة</a>
+        </div>
+        <div>
+          <h4>قانوني</h4>
+          <a href="terms.html">شروط</a>
+          <a href="privacy.html">خصوصية</a>
+        </div>
+      </div>
+      <div class="footer-bottom">© 2025 PikLance. جميع الحقوق محفوظة.</div>
+    </div>
+  </footer>
+
+  <script>
+    // ========== Dark Mode ==========
+    const themeToggle = document.getElementById('themeToggle');
+    const htmlElement = document.documentElement;
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    htmlElement.setAttribute('data-theme', savedTheme);
+    themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+    function toggleTheme() {
+      const current = htmlElement.getAttribute('data-theme');
+      const next = current === 'light' ? 'dark' : 'light';
+      htmlElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
+    }
+
+    // ========== بيانات المستقلين التجريبية ==========
+    const freelancersData = [
+      {
+        id: 1,
+        name: "أحمد المصمم",
+        title: "مصمم جرافيك وهوية بصرية",
+        category: "design",
+        avatar: "https://randomuser.me/api/portraits/men/1.jpg",
+        rating: 4.9,
+        completed: 347,
+        skills: ["Adobe Illustrator", "Photoshop", "شعارات", "هوية بصرية"],
+        hourlyRate: "25,000",
+      },
+      {
+        id: 2,
+        name: "سارة المبرمجة",
+        title: "مطورة ويب وتطبيقات",
+        category: "code",
+        avatar: "https://randomuser.me/api/portraits/women/1.jpg",
+        rating: 4.8,
+        completed: 215,
+        skills: ["React", "Node.js", "Laravel", "WordPress"],
+        hourlyRate: "35,000",
+      },
+      {
+        id: 3,
+        name: "خالد الكاتب",
+        title: "كاتب محتوى ومحرر",
+        category: "write",
+        avatar: "https://randomuser.me/api/portraits/men/2.jpg",
+        rating: 4.7,
+        completed: 489,
+        skills: ["كتابة إبداعية", "SEO", "تدقيق لغوي", "سيرة ذاتية"],
+        hourlyRate: "12,000",
+      },
+      {
+        id: 4,
+        name: "ليلى المسوقة",
+        title: "مسوقة رقمية وإعلانات",
+        category: "market",
+        avatar: "https://randomuser.me/api/portraits/women/2.jpg",
+        rating: 4.9,
+        completed: 156,
+        skills: ["Facebook Ads", "Google Ads", "تحليلات", "استراتيجية"],
+        hourlyRate: "20,000",
+      },
+      {
+        id: 5,
+        name: "عماد الصوت",
+        title: "مهندس صوت ومعلق",
+        category: "audio",
+        avatar: "https://randomuser.me/api/portraits/men/3.jpg",
+        rating: 4.6,
+        completed: 92,
+        skills: ["تعليق صوتي", "مكساج", "بودكاست", "إنتاج"],
+        hourlyRate: "18,000",
+      },
+      {
+        id: 6,
+        name: "نور المنتجة",
+        title: "منتجة فيديو ومونتاج",
+        category: "video",
+        avatar: "https://randomuser.me/api/portraits/women/3.jpg",
+        rating: 4.8,
+        completed: 118,
+        skills: ["Premiere Pro", "After Effects", "تصوير", "إخراج"],
+        hourlyRate: "30,000",
+      }
+    ];
+
+    // ========== عرض المستقلين ==========
+    function renderFreelancers(freelancers) {
+      const container = document.getElementById('freelancersContainer');
+      container.innerHTML = freelancers.map(f => `
+        <a href="freelancer-profile.html?id=${f.id}" class="freelancer-card">
+          <div class="freelancer-avatar" style="background-image: url('${f.avatar}');"></div>
+          <h3 class="freelancer-name">${f.name}</h3>
+          <p class="freelancer-title">${f.title}</p>
+          <div class="freelancer-stats">
+            <div><span class="stat-value">⭐ ${f.rating}</span><span class="stat-label">تقييم</span></div>
+            <div><span class="stat-value">${f.completed}</span><span class="stat-label">خدمة منجزة</span></div>
+          </div>
+          <div class="freelancer-skills">
+            ${f.skills.slice(0,3).map(s => `<span class="skill-tag">${s}</span>`).join('')}
+          </div>
+          <span class="btn btn-primary">عرض الملف</span>
+        </a>
+      `).join('');
+    }
+
+    // فلترة المستقلين
+    function filterFreelancers() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      const category = document.getElementById('categoryFilter').value;
+      const minRating = parseFloat(document.getElementById('ratingFilter').value) || 0;
+
+      let filtered = freelancersData.filter(f => {
+        if (searchTerm && !f.name.toLowerCase().includes(searchTerm) && !f.skills.some(s => s.toLowerCase().includes(searchTerm))) {
+          return false;
+        }
+        if (category !== 'all' && f.category !== category) return false;
+        if (f.rating < minRating) return false;
+        return true;
+      });
+
+      renderFreelancers(filtered);
+    }
+
+    // عرض أولي
+    document.addEventListener('DOMContentLoaded', () => {
+      renderFreelancers(freelancersData);
+    });
+  </script>
+</body>
+</html>

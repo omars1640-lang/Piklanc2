@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ملف المستقل - PikLance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ========== متغيرات الألوان العامة ========== */
+    :root {
+      --bg-primary: #F8F9FD;
+      --bg-secondary: #FFFFFF;
+      --bg-tertiary: #F1F3F9;
+      --text-primary: #2D3436;
+      --text-secondary: #636E72;
+      --text-heading: #1E1E2D;
+      --border-color: #E2E8F0;
+      --shadow-color: rgba(0,0,0,0.08);
+      --shadow-lg-color: rgba(108, 92, 231, 0.15);
+      --card-bg: #FFFFFF;
+      --navbar-bg: rgba(255,255,255,0.95);
+      --hero-bg: linear-gradient(135deg, #F8F9FD 0%, #EEF0FF 50%, #FDF2F8 100%);
+      --footer-bg: #1E1E2D;
+      --footer-text: rgba(255,255,255,0.7);
+      --btn-ghost-border: #E2E8F0;
+      --category-card-bg: #FFFFFF;
+      --service-card-bg: #FFFFFF;
+      --testimonial-bg: #FFFFFF;
+      --badge-bg: #FFFFFF;
+      --stat-ribbon-bg: #FFFFFF;
+      --header-profile-bg: linear-gradient(135deg, #6C5CE7, #5A4BD1);
+      
+      --primary: #6C5CE7;
+      --primary-dark: #5A4BD1;
+      --secondary: #FF6B6B;
+      --accent: #FFD93D;
+      --green: #10B981;
+      
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ========== الوضع الداكن ========== */
+    [data-theme="dark"] {
+      --bg-primary: #121218;
+      --bg-secondary: #1E1E2D;
+      --bg-tertiary: #252536;
+      --text-primary: #E2E8F0;
+      --text-secondary: #A0AEC0;
+      --text-heading: #F7FAFC;
+      --border-color: #2D2D3F;
+      --shadow-color: rgba(0,0,0,0.4);
+      --shadow-lg-color: rgba(108, 92, 231, 0.25);
+      --card-bg: #1E1E2D;
+      --navbar-bg: rgba(18, 18, 24, 0.95);
+      --hero-bg: linear-gradient(135deg, #121218 0%, #1A1A2E 50%, #1E1E2D 100%);
+      --footer-bg: #0F0F1A;
+      --footer-text: rgba(255,255,255,0.5);
+      --btn-ghost-border: #2D2D3F;
+      --category-card-bg: #1E1E2D;
+      --service-card-bg: #1E1E2D;
+      --testimonial-bg: #1E1E2D;
+      --badge-bg: #1E1E2D;
+      --stat-ribbon-bg: #1E1E2D;
+      --header-profile-bg: linear-gradient(135deg, #4C3FD1, #3A2FB8);
+    }
+
+    /* ========== إعدادات عامة ========== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Cairo', 'Segoe UI', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      overflow-x: hidden;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+
+    /* ========== Navbar ========== */
+    .navbar {
+      background: var(--navbar-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 1rem 0;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      border-bottom: 1px solid var(--border-color);
+      transition: var(--transition);
+    }
+
+    .navbar .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 1.8rem;
+      font-weight: 800;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.3rem;
+      font-weight: 800;
+      box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+    }
+
+    .logo-text {
+      color: var(--text-heading);
+    }
+
+    .logo-text span {
+      color: var(--primary);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: var(--transition);
+      position: relative;
+      padding: 0.3rem 0;
+    }
+
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 0;
+      height: 2px;
+      background: var(--primary);
+      transition: var(--transition);
+    }
+
+    .nav-links a:hover::after,
+    .nav-links a.active::after {
+      width: 100%;
+    }
+
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: var(--primary);
+    }
+
+    .btn {
+      padding: 0.7rem 1.8rem;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'Cairo', sans-serif;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-primary);
+      border: 2px solid var(--btn-ghost-border);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(108, 92, 231, 0.5);
+    }
+
+    .btn-outline-light {
+      border: 2px solid rgba(255,255,255,0.6);
+      color: #fff;
+      background: transparent;
+    }
+
+    .btn-outline-light:hover {
+      background: #fff;
+      color: var(--primary);
+    }
+
+    .theme-toggle {
+      background: transparent;
+      border: 2px solid var(--border-color);
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+      margin-right: 1rem;
+      color: var(--text-primary);
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--primary);
+      background: var(--bg-tertiary);
+    }
+
+    /* ========== Profile Header ========== */
+    .profile-header {
+      background: var(--header-profile-bg);
+      padding: 4rem 0 2rem;
+      color: #fff;
+      margin-bottom: 2rem;
+      transition: background 0.3s;
+    }
+
+    .profile-info-grid {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 2rem;
+      align-items: center;
+    }
+
+    .profile-avatar {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      border: 4px solid rgba(255,255,255,0.8);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      background-size: cover;
+      background-position: center;
+      background-color: #ddd;
+    }
+
+    .profile-details h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin-bottom: 0.3rem;
+    }
+
+    .profile-title {
+      font-size: 1.1rem;
+      opacity: 0.9;
+      margin-bottom: 1rem;
+    }
+
+    .profile-badges {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(5px);
+      padding: 0.4rem 1.2rem;
+      border-radius: 50px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .profile-actions {
+      display: flex;
+      gap: 1rem;
+    }
+
+    /* ========== Stats Ribbon ========== */
+    .stats-ribbon {
+      background: var(--stat-ribbon-bg);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px var(--shadow-color);
+      padding: 1.5rem 2rem;
+      margin-top: -2.5rem;
+      position: relative;
+      z-index: 10;
+      display: flex;
+      justify-content: space-around;
+      text-align: center;
+      flex-wrap: wrap;
+      transition: background 0.3s;
+    }
+
+    .stat-item .stat-number {
+      font-size: 1.8rem;
+      font-weight: 800;
+      display: block;
+    }
+
+    .stat-label {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    /* ========== Main Content Grid ========== */
+    .profile-content {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 2rem;
+      margin: 3rem 0;
+    }
+
+    /* ========== Sidebar ========== */
+    .sidebar {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      height: fit-content;
+      border: 1px solid var(--border-color);
+      transition: background 0.3s;
+    }
+
+    .sidebar-section {
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .sidebar-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-heading);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .info-list {
+      list-style: none;
+    }
+
+    .info-list li {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.6rem 0;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    .skills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .skill-tag {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      padding: 0.3rem 1rem;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .social-links {
+      display: flex;
+      gap: 0.8rem;
+    }
+
+    .social-link {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--bg-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      color: var(--text-secondary);
+      transition: var(--transition);
+    }
+
+    .social-link:hover {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    /* ========== Main Area ========== */
+    .main-area {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border-color);
+      transition: background 0.3s;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 1.5rem;
+      border-bottom: 2px solid var(--border-color);
+      margin-bottom: 2rem;
+    }
+
+    .tab {
+      padding: 0.8rem 1.5rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: var(--transition);
+      font-size: 1rem;
+    }
+
+    .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .service-card {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 5px 20px var(--shadow-color);
+      transition: var(--transition);
+      border: 1px solid var(--border-color);
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .service-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 15px 30px var(--shadow-lg-color);
+    }
+
+    .service-img {
+      height: 180px;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .service-body {
+      padding: 1.2rem;
+    }
+
+    .service-category {
+      font-size: 0.8rem;
+      color: var(--primary);
+      background: rgba(108, 92, 231, 0.1);
+      display: inline-block;
+      padding: 0.2rem 0.8rem;
+      border-radius: 50px;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    .service-title {
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 0.3rem;
+      color: var(--text-heading);
+    }
+
+    .service-price {
+      font-weight: 800;
+      color: var(--primary);
+      margin-top: 0.5rem;
+    }
+
+    /* ========== Reviews ========== */
+    .review-card {
+      background: var(--bg-tertiary);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      border: 1px solid var(--border-color);
+    }
+
+    .review-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.8rem;
+    }
+
+    .reviewer {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .reviewer-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .reviewer-name {
+      font-weight: 700;
+      color: var(--text-heading);
+    }
+
+    .review-date {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .stars {
+      color: var(--accent);
+    }
+
+    .review-text {
+      color: var(--text-secondary);
+      line-height: 1.8;
+    }
+
+    /* ========== About Tab ========== */
+    .about-text {
+      color: var(--text-secondary);
+      line-height: 1.9;
+      font-size: 1.05rem;
+    }
+
+    .about-text h3 {
+      color: var(--text-heading);
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    /* ========== Footer ========== */
+    .footer {
+      background: var(--footer-bg);
+      color: #fff;
+      padding: 3rem 0 1.5rem;
+      margin-top: 3rem;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .footer h4 {
+      margin-bottom: 1rem;
+    }
+
+    .footer a {
+      color: var(--footer-text);
+      text-decoration: none;
+      display: block;
+      margin-bottom: 0.5rem;
+      transition: 0.2s;
+    }
+
+    .footer a:hover {
+      color: #fff;
+      padding-right: 4px;
+    }
+
+    .footer-bottom {
+      text-align: center;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* ========== Responsive ========== */
+    @media (max-width: 900px) {
+      .profile-content {
+        grid-template-columns: 1fr;
+      }
+      .profile-info-grid {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+      .profile-avatar {
+        margin: 0 auto;
+      }
+      .profile-actions {
+        justify-content: center;
+      }
+      .nav-links {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="index.html" class="logo">
+        <div class="logo-icon">P</div>
+        <div class="logo-text">Pik<span>Lance</span></div>
+      </a>
+      <ul class="nav-links">
+        <li><a href="services.html">الخدمات</a></li>
+        <li><a href="freelancers.html" class="active">المستقلون</a></li>
+        <li><a href="how-it-works.html">كيف تعمل</a></li>
+        <li><a href="about.html">عن المنصة</a></li>
+        <li><a href="blog.html">المدونة</a></li>
+        <li><a href="contact.html">تواصل</a></li>
+      </ul>
+      <div style="display:flex; gap:1rem; align-items:center;">
+        <a href="login.html" class="btn btn-ghost">دخول</a>
+        <a href="register.html" class="btn btn-primary">انضم مجاناً</a>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="تبديل الوضع الليلي">🌙</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Profile Header -->
+  <section class="profile-header">
+    <div class="container">
+      <div class="profile-info-grid">
+        <div class="profile-avatar" style="background-image: url('https://randomuser.me/api/portraits/men/1.jpg');"></div>
+        <div class="profile-details">
+          <h1>أحمد المصمم</h1>
+          <div class="profile-title">مصمم جرافيك وهوية بصرية | 7 سنوات خبرة</div>
+          <div class="profile-badges">
+            <span class="badge">🏆 أفضل مصمم 2024</span>
+            <span class="badge">✅ موثوق</span>
+            <span class="badge">💎 عضوية مميزة</span>
+          </div>
+        </div>
+        <div class="profile-actions">
+          <a href="messages.html" class="btn btn-primary">المراسلات</a>
+          <button class="btn btn-outline-light">متابعة</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats Ribbon -->
+  <div class="stats-ribbon">
+    <div class="stat-item">
+      <span class="stat-number" style="color:var(--primary);">347</span>
+      <span class="stat-label">خدمة منجزة</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-number" style="color:var(--secondary);">4.9</span>
+      <span class="stat-label">التقييم</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-number" style="color:var(--green);">98%</span>
+      <span class="stat-label">رضا العملاء</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-number" style="color:var(--accent);">~2 ساعة</span>
+      <span class="stat-label">وقت الاستجابة</span>
+    </div>
+  </div>
+
+  <!-- Profile Content -->
+  <div class="container profile-content">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">📋 معلومات</div>
+        <ul class="info-list">
+          <li>📍 دمشق، سوريا</li>
+          <li>🗓️ عضو منذ 2022</li>
+          <li>⏱️ آخر تواجد: منذ 10 دقائق</li>
+          <li>💬 العربية، English</li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">🛠️ مهارات</div>
+        <div class="skills">
+          <span class="skill-tag">Adobe Illustrator</span>
+          <span class="skill-tag">Photoshop</span>
+          <span class="skill-tag">هوية بصرية</span>
+          <span class="skill-tag">شعارات</span>
+          <span class="skill-tag">طباعة</span>
+          <span class="skill-tag">Figma</span>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">📈 إحصائيات</div>
+        <ul class="info-list">
+          <li>👁️ 15.2K مشاهدة</li>
+          <li>💾 3.4K تحميل</li>
+          <li>🔄 72% عملاء متكررون</li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">🌐 تواصل</div>
+        <div class="social-links">
+          <a href="#" class="social-link">📘</a>
+          <a href="#" class="social-link">📷</a>
+          <a href="#" class="social-link">🐦</a>
+          <a href="#" class="social-link">💼</a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Area with Tabs -->
+    <main class="main-area">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab(event, 'services')">الخدمات</div>
+        <div class="tab" onclick="switchTab(event, 'reviews')">التقييمات</div>
+        <div class="tab" onclick="switchTab(event, 'about')">عن المستقل</div>
+      </div>
+
+      <!-- Services Tab -->
+      <div id="services" class="tab-content active">
+        <div class="services-grid">
+          <a href="service-details.html" class="service-card">
+            <div class="service-img" style="background-image: url('https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400&h=250&fit=crop');"></div>
+            <div class="service-body">
+              <span class="service-category">تصميم</span>
+              <h3 class="service-title">تصميم هوية بصرية كاملة</h3>
+              <div class="service-price">25,000 ل.س</div>
+            </div>
+          </a>
+          <a href="service-details.html" class="service-card">
+            <div class="service-img" style="background-image: url('https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=400&h=250&fit=crop');"></div>
+            <div class="service-body">
+              <span class="service-category">تصميم</span>
+              <h3 class="service-title">شعار احترافي للأعمال</h3>
+              <div class="service-price">15,000 ل.س</div>
+            </div>
+          </a>
+          <a href="service-details.html" class="service-card">
+            <div class="service-img" style="background-image: url('https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=250&fit=crop');"></div>
+            <div class="service-body">
+              <span class="service-category">تصميم</span>
+              <h3 class="service-title">بطاقة عمل وقرطاسية</h3>
+              <div class="service-price">8,000 ل.س</div>
+            </div>
+          </a>
+          <a href="service-details.html" class="service-card">
+            <div class="service-img" style="background-image: url('https://images.unsplash.com/photo-1586717791821-3f44a563fa4c?w=400&h=250&fit=crop');"></div>
+            <div class="service-body">
+              <span class="service-category">تصميم</span>
+              <h3 class="service-title">تصميم بوسترات سوشال ميديا</h3>
+              <div class="service-price">5,500 ل.س</div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <!-- Reviews Tab -->
+      <div id="reviews" class="tab-content">
+        <div class="review-card">
+          <div class="review-header">
+            <div class="reviewer">
+              <div class="reviewer-avatar" style="background-image: url('https://randomuser.me/api/portraits/men/3.jpg');"></div>
+              <div>
+                <div class="reviewer-name">محمد الأحمد</div>
+                <div class="review-date">منذ 3 أيام</div>
+              </div>
+            </div>
+            <div class="stars">⭐⭐⭐⭐⭐</div>
+          </div>
+          <p class="review-text">تصميم احترافي جداً، سلم العمل قبل الموعد وكان متجاوب مع التعديلات. أنصح به بقوة.</p>
+        </div>
+        <div class="review-card">
+          <div class="review-header">
+            <div class="reviewer">
+              <div class="reviewer-avatar" style="background-image: url('https://randomuser.me/api/portraits/women/2.jpg');"></div>
+              <div>
+                <div class="reviewer-name">سارة خالد</div>
+                <div class="review-date">منذ أسبوع</div>
+              </div>
+            </div>
+            <div class="stars">⭐⭐⭐⭐⭐</div>
+          </div>
+          <p class="review-text">أفضل مصمم تعاملت معه على المنصة. الشعار فاق توقعاتي وخدمة العملاء رائعة.</p>
+        </div>
+        <div class="review-card">
+          <div class="review-header">
+            <div class="reviewer">
+              <div class="reviewer-avatar" style="background-image: url('https://randomuser.me/api/portraits/men/4.jpg');"></div>
+              <div>
+                <div class="reviewer-name">خالد علي</div>
+                <div class="review-date">منذ أسبوعين</div>
+              </div>
+            </div>
+            <div class="stars">⭐⭐⭐⭐☆</div>
+          </div>
+          <p class="review-text">عمل ممتاز بشكل عام، لكن أتمنى لو كان هناك خيارات ألوان أكثر في التصميم الأولي.</p>
+        </div>
+      </div>
+
+      <!-- About Tab -->
+      <div id="about" class="tab-content">
+        <div class="about-text">
+          <p>مصمم جرافيك محترف بخبرة 7 سنوات في مجال الهوية البصرية والشعارات. عملت مع أكثر من 50 علامة تجارية محلية وعربية وساعدتهم في بناء هويات بصرية قوية ومميزة.</p>
+          <h3>الخبرات</h3>
+          <p>• مصمم أول في وكالة إبداع للدعاية (2020 - الآن)<br>• مصمم مستقل (2018 - 2020)</p>
+          <h3>الشهادات</h3>
+          <p>• Adobe Certified Expert (ACE)<br>• دبلوم تصميم جرافيك - جامعة دمشق</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <h4>PikLance</h4>
+          <p style="opacity:0.7;">منصة الخدمات الرقمية السورية</p>
+        </div>
+        <div>
+          <h4>تصفح</h4>
+          <a href="services.html">الخدمات</a>
+          <a href="freelancers.html">المستقلون</a>
+          <a href="how-it-works.html">كيف تعمل</a>
+        </div>
+        <div>
+          <h4>مساعدة</h4>
+          <a href="contact.html">تواصل</a>
+          <a href="faq.html">أسئلة شائعة</a>
+        </div>
+        <div>
+          <h4>قانوني</h4>
+          <a href="terms.html">شروط</a>
+          <a href="privacy.html">خصوصية</a>
+        </div>
+      </div>
+      <div class="footer-bottom">© 2025 PikLance. جميع الحقوق محفوظة.</div>
+    </div>
+  </footer>
+
+  <script>
+    // Dark Mode
+    const themeToggle = document.getElementById('themeToggle');
+    const htmlElement = document.documentElement;
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    htmlElement.setAttribute('data-theme', savedTheme);
+    themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+    function toggleTheme() {
+      const current = htmlElement.getAttribute('data-theme');
+      const next = current === 'light' ? 'dark' : 'light';
+      htmlElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
+    }
+
+    // Tabs
+    function switchTab(event, tabId) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+  </script>
+</body>
+</html>

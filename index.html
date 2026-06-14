@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PikLance - منصة الخدمات الرقمية السورية</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ========== متغيرات الألوان العامة ========== */
+    :root {
+      --bg-primary: #F8F9FD;
+      --bg-secondary: #FFFFFF;
+      --bg-tertiary: #F1F3F9;
+      --text-primary: #2D3436;
+      --text-secondary: #636E72;
+      --text-heading: #1E1E2D;
+      --border-color: #E2E8F0;
+      --shadow-color: rgba(0,0,0,0.08);
+      --shadow-lg: 0 25px 50px rgba(108, 92, 231, 0.15);
+      --card-bg: #FFFFFF;
+      --navbar-bg: rgba(255,255,255,0.95);
+      --hero-bg: linear-gradient(135deg, #F8F9FD 0%, #EEF0FF 50%, #FDF2F8 100%);
+      --footer-bg: #1E1E2D;
+      --footer-text: rgba(255,255,255,0.7);
+      --btn-ghost-border: #E2E8F0;
+      --primary: #6C5CE7;
+      --primary-dark: #5A4BD1;
+      --secondary: #FF6B6B;
+      --accent: #FFD93D;
+      --green: #10B981;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ========== الوضع الداكن ========== */
+    [data-theme="dark"] {
+      --bg-primary: #121218;
+      --bg-secondary: #1E1E2D;
+      --bg-tertiary: #252536;
+      --text-primary: #E2E8F0;
+      --text-secondary: #A0AEC0;
+      --text-heading: #F7FAFC;
+      --border-color: #2D2D3F;
+      --shadow-color: rgba(0,0,0,0.4);
+      --shadow-lg: 0 25px 50px rgba(108, 92, 231, 0.25);
+      --card-bg: #1E1E2D;
+      --navbar-bg: rgba(18, 18, 24, 0.95);
+      --hero-bg: linear-gradient(135deg, #121218 0%, #1A1A2E 50%, #1E1E2D 100%);
+      --footer-bg: #0F0F1A;
+      --footer-text: rgba(255,255,255,0.5);
+      --btn-ghost-border: #2D2D3F;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Cairo', 'Segoe UI', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      overflow-x: hidden;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+
+    /* ========== Navbar ========== */
+    .navbar {
+      background: var(--navbar-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 1rem 0;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      border-bottom: 1px solid var(--border-color);
+      transition: var(--transition);
+    }
+
+    .navbar.scrolled {
+      box-shadow: 0 4px 20px var(--shadow-color);
+    }
+
+    .navbar .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 1.8rem;
+      font-weight: 800;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.3rem;
+      font-weight: 800;
+      box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+    }
+
+    .logo-text {
+      color: var(--text-heading);
+    }
+
+    .logo-text span {
+      color: var(--primary);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: var(--transition);
+      position: relative;
+      padding: 0.3rem 0;
+    }
+
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 0;
+      height: 2px;
+      background: var(--primary);
+      transition: var(--transition);
+    }
+
+    .nav-links a:hover::after {
+      width: 100%;
+    }
+
+    .nav-links a:hover {
+      color: var(--primary);
+    }
+
+    .btn {
+      padding: 0.7rem 1.8rem;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'Cairo', sans-serif;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-primary);
+      border: 2px solid var(--btn-ghost-border);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(108, 92, 231, 0.5);
+    }
+
+    .btn-outline-light {
+      border: 2px solid rgba(255,255,255,0.6);
+      color: #fff;
+      background: transparent;
+    }
+
+    .btn-outline-light:hover {
+      background: #fff;
+      color: var(--primary);
+    }
+
+    .theme-toggle {
+      background: transparent;
+      border: 2px solid var(--border-color);
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+      margin-right: 1rem;
+      color: var(--text-primary);
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--primary);
+      background: var(--bg-tertiary);
+    }
+
+    .mobile-toggle {
+      display: none;
+      font-size: 1.8rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-primary);
+    }
+
+    /* ========== Hero ========== */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 8rem 0 4rem;
+      position: relative;
+      overflow: hidden;
+      background: var(--hero-bg);
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -20%;
+      left: -10%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(108, 92, 231, 0.1) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: float 8s ease-in-out infinite;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -10%;
+      right: -5%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(255, 107, 107, 0.08) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: float 6s ease-in-out infinite reverse;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(30px, -30px) scale(1.1); }
+    }
+
+    .hero-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero-text .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--card-bg);
+      color: var(--primary);
+      padding: 0.6rem 1.5rem;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 15px var(--shadow-color);
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      background: #10B981;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .hero-text h1 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      line-height: 1.3;
+      margin-bottom: 1.5rem;
+      color: var(--text-heading);
+    }
+
+    .hero-text h1 .gradient-text {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-text p {
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+      margin-bottom: 2.5rem;
+      max-width: 500px;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .hero-visual {
+      position: relative;
+      display: flex;
+      justify-content: center;
+    }
+
+    .hero-image {
+      width: 100%;
+      max-width: 550px;
+      animation: floatVisual 6s ease-in-out infinite;
+    }
+
+    @keyframes floatVisual {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-20px); }
+    }
+
+    .floating-badge {
+      position: absolute;
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      animation: floatBadge 5s ease-in-out infinite;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .floating-badge-1 {
+      top: 10%;
+      right: -10%;
+      animation-delay: 0s;
+    }
+
+    .floating-badge-2 {
+      bottom: 20%;
+      left: -5%;
+      animation-delay: 2s;
+    }
+
+    @keyframes floatBadge {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-15px) rotate(2deg); }
+    }
+
+    .badge-avatar {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      background-size: cover;
+      background-position: center;
+    }
+
+    /* ========== Stats Ribbon ========== */
+    .stats-ribbon {
+      background: var(--card-bg);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px var(--shadow-color);
+      padding: 2rem 0;
+      margin-top: -3rem;
+      position: relative;
+      z-index: 10;
+      border: 1px solid var(--border-color);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      text-align: center;
+      gap: 2rem;
+    }
+
+    .stat-item .stat-number {
+      font-size: 2.5rem;
+      font-weight: 800;
+      display: block;
+    }
+
+    .stat-label {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    /* ========== Sections ========== */
+    .section {
+      padding: 5rem 0;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .section-tag {
+      display: inline-block;
+      background: rgba(108, 92, 231, 0.1);
+      color: var(--primary);
+      padding: 0.5rem 1.5rem;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+
+    .section-title {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--text-heading);
+      margin-bottom: 1rem;
+    }
+
+    .section-subtitle {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ========== Categories ========== */
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .category-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 2rem 1.5rem;
+      text-align: center;
+      transition: var(--transition);
+      cursor: pointer;
+      border: 2px solid var(--border-color);
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .category-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-8px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .category-icon {
+      width: 70px;
+      height: 70px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      margin: 0 auto 1rem;
+    }
+
+    .icon-design { background: #EDE9FE; }
+    .icon-code { background: #DBEAFE; }
+    .icon-write { background: #FEF3C7; }
+    .icon-market { background: #D1FAE5; }
+    .icon-audio { background: #FCE7F3; }
+    .icon-video { background: #E0E7FF; }
+
+    .category-title {
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 0.3rem;
+      color: var(--text-heading);
+    }
+
+    .category-count {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    /* ========== Featured Services ========== */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 2rem;
+    }
+
+    .service-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px var(--shadow-color);
+      transition: var(--transition);
+      border: 1px solid var(--border-color);
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .service-card:hover {
+      transform: translateY(-8px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .service-img {
+      height: 200px;
+      background-size: cover;
+      background-position: center;
+      position: relative;
+    }
+
+    .service-badge {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: var(--accent);
+      color: #1E1E2D;
+      padding: 0.3rem 1rem;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 0.8rem;
+    }
+
+    .service-body {
+      padding: 1.5rem;
+    }
+
+    .service-category {
+      display: inline-block;
+      background: rgba(108, 92, 231, 0.1);
+      color: var(--primary);
+      padding: 0.2rem 1rem;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .service-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 0.8rem;
+      color: var(--text-heading);
+    }
+
+    .service-seller {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 1rem;
+    }
+
+    .service-avatar {
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .service-seller-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .service-seller-level {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .service-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .service-price {
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: var(--primary);
+    }
+
+    .service-rating {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* ========== How It Works ========== */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+    }
+
+    .step-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 2.5rem 2rem;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 10px 30px var(--shadow-color);
+      transition: var(--transition);
+      border: 1px solid var(--border-color);
+    }
+
+    .step-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .step-number {
+      width: 55px;
+      height: 55px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 1.5rem;
+    }
+
+    .step-card h3 {
+      font-size: 1.3rem;
+      margin-bottom: 0.8rem;
+      color: var(--text-heading);
+    }
+
+    .step-card p {
+      color: var(--text-secondary);
+    }
+
+    /* ========== Testimonials ========== */
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 2rem;
+    }
+
+    .testimonial-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: 0 10px 30px var(--shadow-color);
+      border: 1px solid var(--border-color);
+    }
+
+    .testimonial-stars {
+      color: var(--accent);
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+    }
+
+    .testimonial-text {
+      font-size: 1.05rem;
+      color: var(--text-primary);
+      margin-bottom: 1.5rem;
+      line-height: 1.8;
+    }
+
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .testimonial-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .testimonial-name {
+      font-weight: 700;
+      color: var(--text-heading);
+    }
+
+    .testimonial-role {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    /* ========== CTA ========== */
+    .cta {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      border-radius: 20px;
+      padding: 4rem 3rem;
+      text-align: center;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta h2 {
+      font-size: 2.2rem;
+      margin-bottom: 1rem;
+    }
+
+    .cta p {
+      font-size: 1.1rem;
+      margin-bottom: 2rem;
+      opacity: 0.9;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    /* ========== Footer ========== */
+    .footer {
+      background: var(--footer-bg);
+      color: #fff;
+      padding: 4rem 0 2rem;
+      margin-top: 3rem;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 2.5rem;
+      margin-bottom: 3rem;
+    }
+
+    .footer h4 {
+      font-size: 1.1rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .footer a {
+      color: var(--footer-text);
+      text-decoration: none;
+      display: block;
+      margin-bottom: 0.7rem;
+      transition: 0.2s;
+    }
+
+    .footer a:hover {
+      color: #fff;
+      padding-right: 5px;
+    }
+
+    .footer-bottom {
+      text-align: center;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* ========== Responsive ========== */
+    @media (max-width: 1024px) {
+      .hero-text h1 { font-size: 2.5rem; }
+    }
+
+    @media (max-width: 768px) {
+      .hero-content {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+      .hero-text p { margin: 0 auto 2rem; }
+      .hero-buttons { justify-content: center; }
+      .hero-visual { display: none; }
+      .nav-links { display: none; }
+      .mobile-toggle { display: block; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .steps-grid { grid-template-columns: 1fr; }
+      .categories-grid { grid-template-columns: repeat(2, 1fr); }
+      .section-title { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="index.html" class="logo">
+        <div class="logo-icon">P</div>
+        <div class="logo-text">Pik<span>Lance</span></div>
+      </a>
+      <ul class="nav-links">
+        <li><a href="services.html">الخدمات</a></li>
+        <li><a href="freelancers.html">المستقلون</a></li>
+        <li><a href="how-it-works.html">كيف تعمل</a></li>
+        <li><a href="about.html">عن المنصة</a></li>
+        <li><a href="blog.html">المدونة</a></li>
+        <li><a href="contact.html">تواصل</a></li>
+      </ul>
+      <div style="display:flex; gap:1rem; align-items:center;" id="navActions">
+        <a href="login.html" class="btn btn-ghost" id="loginBtn">دخول</a>
+        <a href="register.html" class="btn btn-primary" id="registerBtn">انضم مجاناً</a>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="تبديل الوضع الليلي">🌙</button>
+        <button class="mobile-toggle" onclick="toggleMobileMenu()">☰</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-text">
+          <div class="badge">
+            <span class="badge-dot"></span>
+            +500 مستقل نشط اليوم
+          </div>
+          <h1>
+            منصتك الأولى<br>
+            <span class="gradient-text">للخدمات الرقمية</span><br>
+            في سوريا
+          </h1>
+          <p>وظّف أفضل المستقلين في التصميم، البرمجة، الكتابة، التسويق، الصوتيات والإنتاج المرئي. ادفع بأمان واستلم خدمتك بسرعة.</p>
+          <div class="hero-buttons">
+            <a href="services.html" class="btn btn-primary">تصفح الخدمات ←</a>
+            <a href="register.html" class="btn btn-outline-light">ابدأ بالبيع</a>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <svg viewBox="0 0 500 400" xmlns="http://www.w3.org/2000/svg" class="hero-image">
+            <rect x="50" y="50" width="400" height="300" rx="30" fill="var(--bg-tertiary)" opacity="0.5"/>
+            <circle cx="120" cy="120" r="40" fill="#EDE9FE" />
+            <text x="120" y="128" text-anchor="middle" font-size="30">🎨</text>
+            <circle cx="380" cy="120" r="40" fill="#DBEAFE" />
+            <text x="380" y="128" text-anchor="middle" font-size="30">💻</text>
+            <circle cx="120" cy="280" r="40" fill="#FEF3C7" />
+            <text x="120" y="288" text-anchor="middle" font-size="30">✍️</text>
+            <circle cx="380" cy="280" r="40" fill="#D1FAE5" />
+            <text x="380" y="288" text-anchor="middle" font-size="30">📈</text>
+            <circle cx="250" cy="200" r="60" fill="url(#centerGrad)" />
+            <defs>
+              <linearGradient id="centerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#6C5CE7" />
+                <stop offset="100%" style="stop-color:#5A4BD1" />
+              </linearGradient>
+            </defs>
+            <text x="250" y="210" text-anchor="middle" font-size="40" fill="#fff">⚡</text>
+            <line x1="160" y1="130" x2="190" y2="180" stroke="#6C5CE7" stroke-width="2" stroke-dasharray="5,5" />
+            <line x1="340" y1="130" x2="310" y2="180" stroke="#6C5CE7" stroke-width="2" stroke-dasharray="5,5" />
+            <line x1="160" y1="270" x2="190" y2="220" stroke="#6C5CE7" stroke-width="2" stroke-dasharray="5,5" />
+            <line x1="340" y1="270" x2="310" y2="220" stroke="#6C5CE7" stroke-width="2" stroke-dasharray="5,5" />
+          </svg>
+          <div class="floating-badge floating-badge-1">
+            <div class="badge-avatar" style="background-image:url('https://randomuser.me/api/portraits/men/1.jpg');"></div>
+            <div>أحمد <br><small style="color:#10B981;">متاح الآن</small></div>
+          </div>
+          <div class="floating-badge floating-badge-2">
+            <div>⭐⭐⭐⭐⭐<br><small>+1000 تقييم</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats Ribbon -->
+  <div class="stats-ribbon">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-item">
+          <span class="stat-number" style="color:var(--primary);">2,500+</span>
+          <span class="stat-label">مستقل نشط</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number" style="color:var(--secondary);">12,000+</span>
+          <span class="stat-label">خدمة منجزة</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number" style="color:var(--accent);">4.8/5</span>
+          <span class="stat-label">متوسط التقييم</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number" style="color:#10B981;">₴ 50M+</span>
+          <span class="stat-label">مدفوعات آمنة</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Categories Section -->
+  <section class="section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">فئات الخدمات</span>
+        <h2 class="section-title">اعثر على الخدمة التي تبحث عنها</h2>
+        <p class="section-subtitle">ست فئات رئيسية تغطي كل ما تحتاجه لإنجاز مشروعك الرقمي</p>
+      </div>
+      <div class="categories-grid">
+        <a href="services.html?cat=design" class="category-card">
+          <div class="category-icon icon-design">🎨</div>
+          <div class="category-title">تصميم</div>
+          <div class="category-count">3,200+ خدمة</div>
+        </a>
+        <a href="services.html?cat=code" class="category-card">
+          <div class="category-icon icon-code">💻</div>
+          <div class="category-title">برمجة</div>
+          <div class="category-count">1,800+ خدمة</div>
+        </a>
+        <a href="services.html?cat=write" class="category-card">
+          <div class="category-icon icon-write">✍️</div>
+          <div class="category-title">كتابة</div>
+          <div class="category-count">2,100+ خدمة</div>
+        </a>
+        <a href="services.html?cat=market" class="category-card">
+          <div class="category-icon icon-market">📈</div>
+          <div class="category-title">تسويق</div>
+          <div class="category-count">1,500+ خدمة</div>
+        </a>
+        <a href="services.html?cat=audio" class="category-card">
+          <div class="category-icon icon-audio">🎤</div>
+          <div class="category-title">صوتيات</div>
+          <div class="category-count">900+ خدمة</div>
+        </a>
+        <a href="services.html?cat=video" class="category-card">
+          <div class="category-icon icon-video">🎬</div>
+          <div class="category-title">فيديو</div>
+          <div class="category-count">1,100+ خدمة</div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured Services Section -->
+  <section class="section" style="background: var(--bg-secondary);">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">خدمات مميزة</span>
+        <h2 class="section-title">خدمات يوصي بها العملاء</h2>
+        <p class="section-subtitle">خدمات عالية الجودة من مستقلين موثوقين مع ضمان حقوقك</p>
+      </div>
+      <div class="services-grid">
+        <a href="service-details.html" class="service-card">
+          <div class="service-img" style="background-image:url('https://images.unsplash.com/photo-1561070791-2526d30994b5?w=500&h=300&fit=crop');">
+            <span class="service-badge">الأكثر طلباً</span>
+          </div>
+          <div class="service-body">
+            <span class="service-category">تصميم</span>
+            <h3 class="service-title">تصميم هوية بصرية كاملة</h3>
+            <div class="service-seller">
+              <div class="service-avatar" style="background-image:url('https://randomuser.me/api/portraits/men/1.jpg');"></div>
+              <div>
+                <div class="service-seller-name">أحمد المصمم</div>
+                <div class="service-seller-level">🏆 مصمم محترف</div>
+              </div>
+            </div>
+            <div class="service-footer">
+              <span class="service-price">25,000 ل.س</span>
+              <span class="service-rating">⭐ 4.9 (128)</span>
+            </div>
+          </div>
+        </a>
+        <a href="service-details.html" class="service-card">
+          <div class="service-img" style="background-image:url('https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=500&h=300&fit=crop');"></div>
+          <div class="service-body">
+            <span class="service-category">برمجة</span>
+            <h3 class="service-title">تطوير متجر إلكتروني متكامل</h3>
+            <div class="service-seller">
+              <div class="service-avatar" style="background-image:url('https://randomuser.me/api/portraits/women/1.jpg');"></div>
+              <div>
+                <div class="service-seller-name">سارة المبرمجة</div>
+                <div class="service-seller-level">💎 مطورة Full-Stack</div>
+              </div>
+            </div>
+            <div class="service-footer">
+              <span class="service-price">150,000 ل.س</span>
+              <span class="service-rating">⭐ 4.8 (35)</span>
+            </div>
+          </div>
+        </a>
+        <a href="service-details.html" class="service-card">
+          <div class="service-img" style="background-image:url('https://images.unsplash.com/photo-1455390582262-044cdead277a?w=500&h=300&fit=crop');"></div>
+          <div class="service-body">
+            <span class="service-category">كتابة</span>
+            <h3 class="service-title">كتابة محتوى SEO احترافي</h3>
+            <div class="service-seller">
+              <div class="service-avatar" style="background-image:url('https://randomuser.me/api/portraits/men/2.jpg');"></div>
+              <div>
+                <div class="service-seller-name">خالد الكاتب</div>
+                <div class="service-seller-level">✍️ كاتب محتوى</div>
+              </div>
+            </div>
+            <div class="service-footer">
+              <span class="service-price">8,000 ل.س</span>
+              <span class="service-rating">⭐ 4.7 (92)</span>
+            </div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works Section -->
+  <section class="section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">كيف تعمل</span>
+        <h2 class="section-title">ثلاث خطوات فقط</h2>
+        <p class="section-subtitle">تصميم بسيط لتجربة سلسة من البداية حتى استلام الخدمة</p>
+      </div>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number">1</div>
+          <h3>أنشئ حساباً</h3>
+          <p>سجل مجاناً كعميل أو مستقل في دقيقة واحدة</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">2</div>
+          <h3>اختر خدمتك</h3>
+          <p>تصفح الخدمات، قارن الأسعار والتقييمات، ثم اطلب</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">3</div>
+          <h3>ادفع بأمان</h3>
+          <p>الدفع عبر MTN Cash أو Syriatel Cash، واستلم خدمتك</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials Section -->
+  <section class="section" style="background: var(--bg-secondary);">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">آراء العملاء</span>
+        <h2 class="section-title">ماذا يقول مستخدمونا</h2>
+        <p class="section-subtitle">قصص نجاح حقيقية من مستقلين وعملاء على منصتنا</p>
+      </div>
+      <div class="testimonials-grid">
+        <div class="testimonial-card">
+          <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+          <p class="testimonial-text">"حصلت على شعار احترافي لمتجري في يومين فقط. المنصة سهلة الاستخدام والدفع كان آمناً. سأعود بالتأكيد"</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar" style="background-image:url('https://randomuser.me/api/portraits/men/3.jpg');"></div>
+            <div>
+              <div class="testimonial-name">محمد الأحمد</div>
+              <div class="testimonial-role">صاحب متجر إلكتروني</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+          <p class="testimonial-text">"كسبت أول مليون ليرة من المنصة خلال 3 أشهر من العمل الحر. النظام واضح والعمولة منافسة جداً"</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar" style="background-image:url('https://randomuser.me/api/portraits/women/2.jpg');"></div>
+            <div>
+              <div class="testimonial-name">نور المصممة</div>
+              <div class="testimonial-role">مستقلة - تصميم جرافيك</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="section">
+    <div class="container">
+      <div class="cta">
+        <h2>🎯 مستعد تبدأ؟</h2>
+        <p>انضم إلى آلاف المستقلين والعملاء على PikLance اليوم</p>
+        <div class="cta-buttons">
+          <a href="register.html" class="btn btn-primary" style="background:#fff; color:var(--primary);">ابدأ كعميل</a>
+          <a href="register.html?role=freelancer" class="btn btn-outline-light">ابدأ كمستقل</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <h4>🏢 PikLance</h4>
+          <p style="opacity:0.7;">منصة الخدمات الرقمية السورية الأولى. نربط المواهب بالمشاريع.</p>
+        </div>
+        <div>
+          <h4>تصفح</h4>
+          <a href="services.html">تصفح الخدمات</a>
+          <a href="freelancers.html">المستقلون</a>
+          <a href="how-it-works.html">كيف تعمل</a>
+          <a href="blog.html">المدونة</a>
+        </div>
+        <div>
+          <h4>مساعدة</h4>
+          <a href="about.html">عن المنصة</a>
+          <a href="contact.html">تواصل معنا</a>
+          <a href="faq.html">الأسئلة الشائعة</a>
+          <a href="support.html">الدعم الفني</a>
+        </div>
+        <div>
+          <h4>قانوني</h4>
+          <a href="terms.html">شروط الاستخدام</a>
+          <a href="privacy.html">سياسة الخصوصية</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        © 2025 PikLance. جميع الحقوق محفوظة. منصة سورية بقلب Damascus.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ========== Dark Mode ==========
+    const themeToggle = document.getElementById('themeToggle');
+    const htmlElement = document.documentElement;
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    htmlElement.setAttribute('data-theme', savedTheme);
+    themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+    function toggleTheme() {
+      const current = htmlElement.getAttribute('data-theme');
+      const next = current === 'light' ? 'dark' : 'light';
+      htmlElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      const button = document.getElementById('themeToggle');
+      if (button) button.textContent = next === 'dark' ? '☀️' : '🌙';
+    }
+
+    // ========== Navbar scroll effect ==========
+    window.addEventListener('scroll', () => {
+      const navbar = document.getElementById('navbar');
+      if (window.scrollY > 50) {
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
+      }
+    });
+
+    // ========== Mobile menu toggle ==========
+    function toggleMobileMenu() {
+      const navLinks = document.querySelector('.nav-links');
+      if (navLinks.style.display === 'flex') {
+        navLinks.style.display = 'none';
+      } else {
+        navLinks.style.display = 'flex';
+        navLinks.style.flexDirection = 'column';
+        navLinks.style.position = 'absolute';
+        navLinks.style.top = '100%';
+        navLinks.style.right = '0';
+        navLinks.style.background = 'var(--navbar-bg)';
+        navLinks.style.width = '100%';
+        navLinks.style.padding = '1rem';
+        navLinks.style.borderBottom = '1px solid var(--border-color)';
+      }
+    }
+  </script>
+  <script type="module" src="js/auth-nav.js"></script>
+</body>
+</html>

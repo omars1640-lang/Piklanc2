@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الخدمات - PikLance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ========== متغيرات الألوان العامة ========== */
+    :root {
+      --bg-primary: #F8F9FD;
+      --bg-secondary: #FFFFFF;
+      --bg-tertiary: #F1F3F9;
+      --text-primary: #2D3436;
+      --text-secondary: #636E72;
+      --text-heading: #1E1E2D;
+      --border-color: #E2E8F0;
+      --shadow-color: rgba(0,0,0,0.08);
+      --shadow-lg-color: rgba(108, 92, 231, 0.15);
+      --card-bg: #FFFFFF;
+      --navbar-bg: rgba(255,255,255,0.95);
+      --hero-bg: linear-gradient(135deg, #F8F9FD 0%, #EEF0FF 50%, #FDF2F8 100%);
+      --footer-bg: #1E1E2D;
+      --footer-text: rgba(255,255,255,0.7);
+      --btn-ghost-border: #E2E8F0;
+      --filter-bg: #FFFFFF;
+      --filter-input-bg: #F8F9FD;
+      --filter-select-bg: #FFFFFF;
+      
+      --primary: #6C5CE7;
+      --primary-dark: #5A4BD1;
+      --secondary: #FF6B6B;
+      --accent: #FFD93D;
+      --green: #10B981;
+      
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ========== الوضع الداكن ========== */
+    [data-theme="dark"] {
+      --bg-primary: #121218;
+      --bg-secondary: #1E1E2D;
+      --bg-tertiary: #252536;
+      --text-primary: #E2E8F0;
+      --text-secondary: #A0AEC0;
+      --text-heading: #F7FAFC;
+      --border-color: #2D2D3F;
+      --shadow-color: rgba(0,0,0,0.4);
+      --shadow-lg-color: rgba(108, 92, 231, 0.25);
+      --card-bg: #1E1E2D;
+      --navbar-bg: rgba(18, 18, 24, 0.95);
+      --hero-bg: linear-gradient(135deg, #121218 0%, #1A1A2E 50%, #1E1E2D 100%);
+      --footer-bg: #0F0F1A;
+      --footer-text: rgba(255,255,255,0.5);
+      --btn-ghost-border: #2D2D3F;
+      --filter-bg: #1E1E2D;
+      --filter-input-bg: #252536;
+      --filter-select-bg: #1E1E2D;
+    }
+
+    /* ========== إعدادات عامة ========== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Cairo', 'Segoe UI', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      overflow-x: hidden;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+
+    /* ========== Navbar ========== */
+    .navbar {
+      background: var(--navbar-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 1rem 0;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      border-bottom: 1px solid var(--border-color);
+      transition: var(--transition);
+    }
+
+    .navbar .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 1.8rem;
+      font-weight: 800;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.3rem;
+      font-weight: 800;
+      box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+    }
+
+    .logo-text {
+      color: var(--text-heading);
+    }
+
+    .logo-text span {
+      color: var(--primary);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: var(--transition);
+      position: relative;
+      padding: 0.3rem 0;
+    }
+
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 0;
+      height: 2px;
+      background: var(--primary);
+      transition: var(--transition);
+    }
+
+    .nav-links a:hover::after,
+    .nav-links a.active::after {
+      width: 100%;
+    }
+
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: var(--primary);
+    }
+
+    .btn {
+      padding: 0.7rem 1.8rem;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'Cairo', sans-serif;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-primary);
+      border: 2px solid var(--btn-ghost-border);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(108, 92, 231, 0.5);
+    }
+
+    .theme-toggle {
+      background: transparent;
+      border: 2px solid var(--border-color);
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+      margin-right: 1rem;
+      color: var(--text-primary);
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--primary);
+      background: var(--bg-tertiary);
+    }
+
+    /* ========== Page Header ========== */
+    .page-header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      padding: 3rem 0;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .page-header h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+
+    .page-header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+
+    /* ========== Filters Section ========== */
+    .filters-section {
+      background: var(--filter-bg);
+      padding: 1.5rem 0;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px var(--shadow-color);
+      margin-top: -2rem;
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 10;
+      border: 1px solid var(--border-color);
+    }
+
+    .filters-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .search-box {
+      flex: 2;
+      min-width: 250px;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .search-box input {
+      flex: 1;
+      padding: 0.8rem 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 50px;
+      font-size: 1rem;
+      background: var(--filter-input-bg);
+      color: var(--text-primary);
+      font-family: 'Cairo', sans-serif;
+    }
+
+    .search-box button {
+      padding: 0.8rem 1.8rem;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: 700;
+      font-family: 'Cairo', sans-serif;
+      transition: var(--transition);
+    }
+
+    .search-box button:hover {
+      background: var(--primary-dark);
+    }
+
+    .filter-select {
+      padding: 0.8rem 1.5rem;
+      border: 1px solid var(--border-color);
+      border-radius: 50px;
+      background: var(--filter-select-bg);
+      color: var(--text-primary);
+      font-family: 'Cairo', sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .view-toggle {
+      display: flex;
+      background: var(--bg-tertiary);
+      border-radius: 30px;
+      padding: 0.3rem;
+    }
+
+    .view-btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-weight: 700;
+      cursor: pointer;
+      border-radius: 30px;
+      transition: var(--transition);
+    }
+
+    .view-btn.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    /* ========== Services Grid ========== */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 2rem;
+      margin: 2rem 0;
+    }
+
+    .service-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px var(--shadow-color);
+      transition: var(--transition);
+      border: 1px solid var(--border-color);
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .service-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 25px 50px var(--shadow-lg-color);
+    }
+
+    .service-img {
+      height: 200px;
+      background-size: cover;
+      background-position: center;
+      position: relative;
+    }
+
+    .service-badge {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: var(--accent);
+      color: #1E1E2D;
+      padding: 0.3rem 1rem;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 0.8rem;
+    }
+
+    .service-body {
+      padding: 1.5rem;
+    }
+
+    .service-category {
+      display: inline-block;
+      background: rgba(108, 92, 231, 0.1);
+      color: var(--primary);
+      padding: 0.2rem 1rem;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .service-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 0.8rem;
+      color: var(--text-heading);
+    }
+
+    .service-seller {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 1rem;
+    }
+
+    .seller-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .seller-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+    }
+
+    .service-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .service-price {
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: var(--primary);
+    }
+
+    .service-rating {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    /* ========== Pagination ========== */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin: 2rem 0 4rem;
+    }
+
+    .page-link {
+      width: 45px;
+      height: 45px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      font-weight: 700;
+      text-decoration: none;
+      transition: var(--transition);
+    }
+
+    .page-link:hover,
+    .page-link.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    /* ========== Footer ========== */
+    .footer {
+      background: var(--footer-bg);
+      color: #fff;
+      padding: 3rem 0 1.5rem;
+      margin-top: 3rem;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .footer h4 {
+      margin-bottom: 1rem;
+    }
+
+    .footer a {
+      color: var(--footer-text);
+      text-decoration: none;
+      display: block;
+      margin-bottom: 0.5rem;
+      transition: 0.2s;
+    }
+
+    .footer a:hover {
+      color: #fff;
+      padding-right: 4px;
+    }
+
+    .footer-bottom {
+      text-align: center;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* ========== Responsive ========== */
+    @media (max-width: 768px) {
+      .filters-grid {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .nav-links {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="index.html" class="logo">
+        <div class="logo-icon">P</div>
+        <div class="logo-text">Pik<span>Lance</span></div>
+      </a>
+      <ul class="nav-links">
+        <li><a href="services.html" class="active">الخدمات</a></li>
+        <li><a href="freelancers.html">المستقلون</a></li>
+        <li><a href="how-it-works.html">كيف تعمل</a></li>
+        <li><a href="about.html">عن المنصة</a></li>
+        <li><a href="blog.html">المدونة</a></li>
+        <li><a href="contact.html">تواصل</a></li>
+      </ul>
+      <div style="display:flex; gap:1rem; align-items:center;">
+        <a href="login.html" class="btn btn-ghost">دخول</a>
+        <a href="register.html" class="btn btn-primary">انضم مجاناً</a>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="تبديل الوضع الليلي">🌙</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Page Header -->
+  <section class="page-header">
+    <div class="container">
+      <h1>جميع الخدمات</h1>
+      <p>تصفح آلاف الخدمات الرقمية من أفضل المستقلين السوريين</p>
+    </div>
+  </section>
+
+  <!-- Filters -->
+  <div class="container">
+    <div class="filters-section">
+      <div class="container" style="padding:0;">
+        <div class="filters-grid">
+          <div class="search-box">
+            <input type="text" placeholder="ابحث عن خدمة..." id="searchInput" onkeyup="filterServices()">
+            <button onclick="filterServices()">بحث</button>
+          </div>
+          <select class="filter-select" id="categoryFilter" onchange="filterServices()">
+            <option value="all">كل الفئات</option>
+            <option value="design">تصميم</option>
+            <option value="code">برمجة</option>
+            <option value="write">كتابة</option>
+            <option value="market">تسويق</option>
+            <option value="audio">صوتيات</option>
+            <option value="video">فيديو</option>
+          </select>
+          <select class="filter-select" id="priceFilter" onchange="filterServices()">
+            <option value="all">كل الأسعار</option>
+            <option value="under10k">أقل من 10,000 ل.س</option>
+            <option value="10k-50k">10,000 - 50,000 ل.س</option>
+            <option value="over50k">أكثر من 50,000 ل.س</option>
+          </select>
+          <select class="filter-select" id="sortFilter" onchange="sortServices()">
+            <option value="newest">الأحدث</option>
+            <option value="popular">الأكثر مبيعاً</option>
+            <option value="price-low">السعر: من الأقل للأعلى</option>
+            <option value="price-high">السعر: من الأعلى للأقل</option>
+          </select>
+          <div class="view-toggle">
+            <button class="view-btn active" onclick="switchView('grid', this)">📱</button>
+            <button class="view-btn" onclick="switchView('list', this)">📋</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Services Grid -->
+  <div class="container">
+    <div class="services-grid" id="servicesContainer">
+      <!-- الخدمات ستضاف هنا ديناميكياً أو ستكون ثابتة -->
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination">
+      <a href="#" class="page-link">←</a>
+      <a href="#" class="page-link active">1</a>
+      <a href="#" class="page-link">2</a>
+      <a href="#" class="page-link">3</a>
+      <a href="#" class="page-link">→</a>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <h4>PikLance</h4>
+          <p style="opacity:0.7;">منصة الخدمات الرقمية السورية</p>
+        </div>
+        <div>
+          <h4>تصفح</h4>
+          <a href="services.html">الخدمات</a>
+          <a href="freelancers.html">المستقلون</a>
+          <a href="how-it-works.html">كيف تعمل</a>
+        </div>
+        <div>
+          <h4>مساعدة</h4>
+          <a href="contact.html">تواصل</a>
+          <a href="faq.html">أسئلة شائعة</a>
+        </div>
+        <div>
+          <h4>قانوني</h4>
+          <a href="terms.html">شروط</a>
+          <a href="privacy.html">خصوصية</a>
+        </div>
+      </div>
+      <div class="footer-bottom">© 2025 PikLance. جميع الحقوق محفوظة.</div>
+    </div>
+  </footer>
+
+  <script>
+    // ========== Dark Mode ==========
+    const themeToggle = document.getElementById('themeToggle');
+    const htmlElement = document.documentElement;
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    htmlElement.setAttribute('data-theme', savedTheme);
+    themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+    function toggleTheme() {
+      const current = htmlElement.getAttribute('data-theme');
+      const next = current === 'light' ? 'dark' : 'light';
+      htmlElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
+    }
+
+    // ========== بيانات الخدمات التجريبية ==========
+    const servicesData = [
+      {
+        id: 1,
+        title: "تصميم هوية بصرية كاملة",
+        category: "design",
+        categoryName: "تصميم",
+        price: 25000,
+        seller: "أحمد المصمم",
+        sellerImg: "https://randomuser.me/api/portraits/men/1.jpg",
+        img: "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400&h=250&fit=crop",
+        rating: 4.9,
+        badge: "الأكثر طلباً"
+      },
+      {
+        id: 2,
+        title: "تطوير متجر إلكتروني",
+        category: "code",
+        categoryName: "برمجة",
+        price: 150000,
+        seller: "سارة المبرمجة",
+        sellerImg: "https://randomuser.me/api/portraits/women/1.jpg",
+        img: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=250&fit=crop",
+        rating: 4.8
+      },
+      {
+        id: 3,
+        title: "كتابة محتوى SEO احترافي",
+        category: "write",
+        categoryName: "كتابة",
+        price: 8000,
+        seller: "خالد الكاتب",
+        sellerImg: "https://randomuser.me/api/portraits/men/2.jpg",
+        img: "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=400&h=250&fit=crop",
+        rating: 4.7
+      },
+      {
+        id: 4,
+        title: "إدارة حملات إعلانية ممولة",
+        category: "market",
+        categoryName: "تسويق",
+        price: 35000,
+        seller: "ليلى المسوقة",
+        sellerImg: "https://randomuser.me/api/portraits/women/2.jpg",
+        img: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=250&fit=crop",
+        rating: 4.9
+      },
+      {
+        id: 5,
+        title: "تسجيل تعليق صوتي احترافي",
+        category: "audio",
+        categoryName: "صوتيات",
+        price: 15000,
+        seller: "عماد الصوت",
+        sellerImg: "https://randomuser.me/api/portraits/men/3.jpg",
+        img: "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=400&h=250&fit=crop",
+        rating: 4.6
+      },
+      {
+        id: 6,
+        title: "مونتاج فيديو احترافي",
+        category: "video",
+        categoryName: "فيديو",
+        price: 50000,
+        seller: "نور المنتجة",
+        sellerImg: "https://randomuser.me/api/portraits/women/3.jpg",
+        img: "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=400&h=250&fit=crop",
+        rating: 4.8
+      }
+    ];
+
+    // ========== عرض الخدمات ==========
+    function renderServices(services) {
+      const container = document.getElementById('servicesContainer');
+      container.innerHTML = services.map(service => `
+        <a href="service-details.html?id=${service.id}" class="service-card">
+          <div class="service-img" style="background-image: url('${service.img}');">
+            ${service.badge ? `<span class="service-badge">${service.badge}</span>` : ''}
+          </div>
+          <div class="service-body">
+            <span class="service-category">${service.categoryName}</span>
+            <h3 class="service-title">${service.title}</h3>
+            <div class="service-seller">
+              <div class="seller-avatar" style="background-image: url('${service.sellerImg}');"></div>
+              <span class="seller-name">${service.seller}</span>
+            </div>
+            <div class="service-footer">
+              <span class="service-price">${service.price.toLocaleString()} ل.س</span>
+              <span class="service-rating">⭐ ${service.rating}</span>
+            </div>
+          </div>
+        </a>
+      `).join('');
+    }
+
+    // فلترة الخدمات
+    function filterServices() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      const category = document.getElementById('categoryFilter').value;
+      const priceRange = document.getElementById('priceFilter').value;
+
+      let filtered = servicesData.filter(service => {
+        // بحث بالنص
+        if (searchTerm && !service.title.toLowerCase().includes(searchTerm) && !service.seller.toLowerCase().includes(searchTerm)) {
+          return false;
+        }
+        // فئة
+        if (category !== 'all' && service.category !== category) {
+          return false;
+        }
+        // سعر
+        if (priceRange === 'under10k' && service.price >= 10000) return false;
+        if (priceRange === '10k-50k' && (service.price < 10000 || service.price > 50000)) return false;
+        if (priceRange === 'over50k' && service.price <= 50000) return false;
+        return true;
+      });
+
+      renderServices(filtered);
+    }
+
+    // ترتيب الخدمات
+    function sortServices() {
+      const sortType = document.getElementById('sortFilter').value;
+      let sorted = [...servicesData];
+      if (sortType === 'price-low') sorted.sort((a, b) => a.price - b.price);
+      if (sortType === 'price-high') sorted.sort((a, b) => b.price - a.price);
+      // باقي الأنواع تعتمد على بيانات حقيقية، هنا نستخدم نفس البيانات للتبسيط
+      renderServices(sorted);
+    }
+
+    // تبديل العرض (شبكة / قائمة)
+    function switchView(view, button) {
+      const grid = document.getElementById('servicesContainer');
+      const buttons = document.querySelectorAll('.view-btn');
+      buttons.forEach(b => b.classList.remove('active'));
+      button.classList.add('active');
+
+      if (view === 'list') {
+        grid.style.gridTemplateColumns = '1fr';
+      } else {
+        grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
+      }
+    }
+
+    // عرض أولي
+    document.addEventListener('DOMContentLoaded', () => {
+      const category = new URLSearchParams(window.location.search).get('cat');
+      const categoryFilter = document.getElementById('categoryFilter');
+      if (category && [...categoryFilter.options].some(option => option.value === category)) {
+        categoryFilter.value = category;
+        filterServices();
+        return;
+      }
+      renderServices(servicesData);
+    });
+  </script>
+</body>
+</html>

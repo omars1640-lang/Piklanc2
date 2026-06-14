@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>المدونة - PikLance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #F8F9FD;
+      --bg-secondary: #FFFFFF;
+      --bg-tertiary: #F1F3F9;
+      --text-primary: #2D3436;
+      --text-secondary: #636E72;
+      --text-heading: #1E1E2D;
+      --border-color: #E2E8F0;
+      --shadow-color: rgba(0,0,0,0.08);
+      --shadow-lg: 0 25px 50px rgba(108, 92, 231, 0.15);
+      --card-bg: #FFFFFF;
+      --navbar-bg: rgba(255,255,255,0.95);
+      --footer-bg: #1E1E2D;
+      --footer-text: rgba(255,255,255,0.7);
+      --btn-ghost-border: #E2E8F0;
+      --primary: #6C5CE7;
+      --primary-dark: #5A4BD1;
+      --secondary: #FF6B6B;
+      --accent: #FFD93D;
+      --green: #10B981;
+      --input-bg: #F8F9FD;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --tag-bg: #EDE9FE;
+      --tag-text: #6C5CE7;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #121218;
+      --bg-secondary: #1E1E2D;
+      --bg-tertiary: #252536;
+      --text-primary: #E2E8F0;
+      --text-secondary: #A0AEC0;
+      --text-heading: #F7FAFC;
+      --border-color: #2D2D3F;
+      --shadow-color: rgba(0,0,0,0.4);
+      --shadow-lg: 0 25px 50px rgba(108, 92, 231, 0.25);
+      --card-bg: #1E1E2D;
+      --navbar-bg: rgba(18, 18, 24, 0.95);
+      --footer-bg: #0F0F1A;
+      --footer-text: rgba(255,255,255,0.5);
+      --btn-ghost-border: #2D2D3F;
+      --input-bg: #252536;
+      --tag-bg: #2D2D3F;
+      --tag-text: #b4a7f5;
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Cairo', 'Segoe UI', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      transition: background 0.3s, color 0.3s;
+    }
+    .container { width:90%; max-width:1240px; margin:0 auto; }
+
+    /* Navbar */
+    .navbar {
+      background: var(--navbar-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      padding: 1rem 0; position: sticky; top:0; z-index:1000;
+      border-bottom: 1px solid var(--border-color); transition: var(--transition);
+    }
+    .navbar .container { display:flex; justify-content:space-between; align-items:center; }
+    .logo { font-size:1.8rem; font-weight:800; text-decoration:none; display:flex; align-items:center; gap:0.3rem; }
+    .logo-icon {
+      width:40px; height:40px; background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius:12px; display:flex; align-items:center; justify-content:center;
+      color:#fff; font-size:1.3rem; font-weight:800; box-shadow:0 4px 15px rgba(108,92,231,0.3);
+    }
+    .logo-text { color: var(--text-heading); }
+    .logo-text span { color: var(--primary); }
+    .nav-links { display:flex; gap:2rem; list-style:none; }
+    .nav-links a {
+      text-decoration:none; color:var(--text-secondary); font-weight:600; font-size:0.95rem;
+      transition: var(--transition); position:relative; padding:0.3rem 0; white-space: nowrap;
+    }
+    .nav-links a::after {
+      content:''; position:absolute; bottom:0; right:0; width:0; height:2px;
+      background:var(--primary); transition: var(--transition);
+    }
+    .nav-links a:hover::after, .nav-links a.active::after { width:100%; }
+    .nav-links a:hover, .nav-links a.active { color:var(--primary); }
+    .btn {
+      padding:0.7rem 1.8rem; border-radius:50px; font-weight:700; font-size:0.95rem;
+      cursor:pointer; border:none; transition:var(--transition); text-decoration:none;
+      display:inline-flex; align-items:center; gap:0.5rem; font-family: 'Cairo', sans-serif;
+    }
+    .btn-ghost { background:transparent; color:var(--text-primary); border:2px solid var(--btn-ghost-border); }
+    .btn-ghost:hover { border-color:var(--primary); color:var(--primary); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color:#fff; box-shadow:0 4px 15px rgba(108,92,231,0.4);
+    }
+    .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(108,92,231,0.5); }
+    .theme-toggle {
+      background:transparent; border:2px solid var(--border-color); width:42px; height:42px;
+      border-radius:50%; cursor:pointer; font-size:1.2rem; display:flex; align-items:center;
+      justify-content:center; transition:var(--transition); margin-right:1rem; color:var(--text-primary);
+    }
+    .theme-toggle:hover { border-color:var(--primary); background:var(--bg-tertiary); }
+
+    /* Page Header */
+    .page-header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color:#fff; padding:3rem 0; text-align:center; margin-bottom:2rem;
+    }
+    .page-header h1 { font-size:2.5rem; font-weight:800; margin-bottom:0.5rem; }
+    .page-header p { font-size:1.1rem; opacity:0.9; }
+
+    /* Search Bar */
+    .search-bar {
+      display: flex; max-width: 500px; margin: -2rem auto 2rem;
+      background: var(--card-bg); border-radius: 50px; padding: 0.3rem;
+      box-shadow: 0 10px 30px var(--shadow-color); border: 1px solid var(--border-color);
+      position: relative; z-index: 10;
+    }
+    .search-bar input {
+      flex: 1; padding: 0.8rem 1.5rem; border: none; background: transparent;
+      color: var(--text-primary); font-family: 'Cairo', sans-serif; font-size: 1rem; outline: none;
+    }
+    .search-bar button {
+      padding: 0.8rem 2rem; background: var(--primary); color: #fff;
+      border: none; border-radius: 50px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 700;
+    }
+
+    /* Categories Filter */
+    .categories-filter {
+      display: flex; gap: 0.8rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2.5rem;
+    }
+    .filter-btn {
+      padding: 0.5rem 1.5rem; border-radius: 50px; border: 2px solid var(--border-color);
+      background: var(--card-bg); color: var(--text-secondary); font-weight: 600;
+      cursor: pointer; transition: var(--transition); font-family: 'Cairo', sans-serif;
+    }
+    .filter-btn:hover, .filter-btn.active {
+      border-color: var(--primary); background: var(--primary); color: #fff;
+    }
+
+    /* Featured Article */
+    .featured-article {
+      background: var(--card-bg); border-radius: 20px; overflow: hidden;
+      box-shadow: 0 10px 30px var(--shadow-color); border: 1px solid var(--border-color);
+      margin-bottom: 2.5rem; display: grid; grid-template-columns: 1fr 1fr;
+    }
+    .featured-img {
+      height: 400px; background-size: cover; background-position: center;
+    }
+    .featured-content {
+      padding: 2.5rem; display: flex; flex-direction: column; justify-content: center;
+    }
+    .featured-tag {
+      display: inline-block; background: var(--primary); color: #fff;
+      padding: 0.3rem 1.2rem; border-radius: 50px; font-size: 0.8rem; font-weight: 700; margin-bottom: 1rem;
+    }
+    .featured-content h2 {
+      font-size: 1.8rem; font-weight: 800; color: var(--text-heading); margin-bottom: 1rem;
+    }
+    .featured-content p { color: var(--text-secondary); margin-bottom: 1.5rem; line-height: 1.8; }
+    .featured-meta {
+      display: flex; align-items: center; gap: 1.5rem; color: var(--text-secondary); font-size: 0.9rem;
+    }
+
+    /* Articles Grid */
+    .articles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+    .article-card {
+      background: var(--card-bg); border-radius: 20px; overflow: hidden;
+      box-shadow: 0 10px 30px var(--shadow-color); border: 1px solid var(--border-color);
+      transition: var(--transition); cursor: pointer;
+    }
+    .article-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
+    .article-img {
+      height: 220px; background-size: cover; background-position: center;
+    }
+    .article-body { padding: 1.5rem; }
+    .article-category {
+      display: inline-block; background: var(--tag-bg); color: var(--tag-text);
+      padding: 0.2rem 1rem; border-radius: 50px; font-size: 0.8rem; font-weight: 700; margin-bottom: 0.8rem;
+    }
+    .article-body h3 {
+      font-size: 1.2rem; font-weight: 700; color: var(--text-heading); margin-bottom: 0.5rem;
+    }
+    .article-body p { color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.8; }
+    .article-meta {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-top: 1rem; border-top: 1px solid var(--border-color);
+      color: var(--text-secondary); font-size: 0.85rem;
+    }
+    .read-more {
+      color: var(--primary); font-weight: 700; text-decoration: none;
+    }
+
+    /* Newsletter */
+    .newsletter {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      border-radius: 20px; padding: 3rem; text-align: center; color: #fff; margin: 3rem 0;
+    }
+    .newsletter h3 { font-size: 1.8rem; margin-bottom: 1rem; }
+    .newsletter p { margin-bottom: 1.5rem; opacity: 0.9; }
+    .newsletter-form {
+      display: flex; max-width: 450px; margin: 0 auto; gap: 0.5rem;
+    }
+    .newsletter-form input {
+      flex: 1; padding: 0.8rem 1.5rem; border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50px; background: rgba(255,255,255,0.1); color: #fff;
+      font-family: 'Cairo', sans-serif; outline: none;
+    }
+    .newsletter-form input::placeholder { color: rgba(255,255,255,0.6); }
+    .newsletter-form button {
+      padding: 0.8rem 2rem; background: #fff; color: var(--primary);
+      border: none; border-radius: 50px; font-weight: 700; cursor: pointer; font-family: 'Cairo', sans-serif;
+    }
+
+    /* Pagination */
+    .pagination {
+      display: flex; justify-content: center; gap: 0.5rem; margin: 2rem 0;
+    }
+    .page-link {
+      width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; background: var(--card-bg); border: 1px solid var(--border-color);
+      color: var(--text-primary); text-decoration: none; font-weight: 700; transition: var(--transition);
+    }
+    .page-link:hover, .page-link.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    /* Footer */
+    .footer {
+      background: var(--footer-bg); color: #fff; padding: 3rem 0 1.5rem; margin-top: 3rem;
+    }
+    .footer-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:2rem; margin-bottom:2rem; }
+    .footer a { color:var(--footer-text); text-decoration:none; display:block; margin-bottom:0.5rem; transition:0.2s; }
+    .footer a:hover { color:#fff; padding-right:4px; }
+    .footer-bottom { text-align:center; padding-top:1.5rem; border-top:1px solid rgba(255,255,255,0.1); font-size:0.9rem; color:rgba(255,255,255,0.5); }
+
+    @media (max-width: 768px) {
+      .featured-article { grid-template-columns: 1fr; }
+      .featured-img { height: 250px; }
+      .articles-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container">
+      <a href="index.html" class="logo">
+        <div class="logo-icon">P</div>
+        <div class="logo-text">Pik<span>Lance</span></div>
+      </a>
+      <ul class="nav-links">
+        <li><a href="services.html">الخدمات</a></li>
+        <li><a href="freelancers.html">المستقلون</a></li>
+        <li><a href="how-it-works.html">كيف تعمل</a></li>
+        <li><a href="about.html">عن المنصة</a></li>
+        <li><a href="blog.html">المدونة</a></li>
+        <li><a href="contact.html">تواصل</a></li>
+      </ul>
+      <div style="display:flex; gap:1rem; align-items:center;">
+        <a href="login.html" class="btn btn-ghost">دخول</a>
+        <a href="register.html" class="btn btn-primary">انضم مجاناً</a>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙</button>
+      </div>
+    </div>
+  </nav>
+
+  <section class="page-header">
+    <div class="container">
+      <h1>المدونة</h1>
+      <p>آخر المقالات والنصائح في عالم العمل الحر والخدمات الرقمية</p>
+    </div>
+  </section>
+
+  <div class="container">
+    <div class="search-bar">
+      <input type="text" placeholder="ابحث في المقالات..." id="blogSearch" onkeyup="filterArticles()">
+      <button onclick="filterArticles()">🔍 بحث</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="categories-filter">
+      <button class="filter-btn active" onclick="filterCategory('all', this)">الكل</button>
+      <button class="filter-btn" onclick="filterCategory('freelance', this)">عمل حر</button>
+      <button class="filter-btn" onclick="filterCategory('design', this)">تصميم</button>
+      <button class="filter-btn" onclick="filterCategory('programming', this)">برمجة</button>
+      <button class="filter-btn" onclick="filterCategory('marketing', this)">تسويق</button>
+      <button class="filter-btn" onclick="filterCategory('tips', this)">نصائح</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Featured Article -->
+    <div class="featured-article">
+      <div class="featured-img" style="background-image: url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=500&fit=crop');"></div>
+      <div class="featured-content">
+        <span class="featured-tag">الأكثر قراءة</span>
+        <h2>كيف تبدأ العمل الحر في سوريا وتحقق أول 1000 دولار؟</h2>
+        <p>دليل شامل للمبتدئين في عالم الفريلانس: المنصات، المهارات، التسعير، وبناء السمعة.</p>
+        <div class="featured-meta">
+          <span>📅 15 يونيو 2025</span>
+          <span>👁️ 12,500 مشاهدة</span>
+          <span>⏱️ 8 دقائق قراءة</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Articles Grid -->
+    <div class="articles-grid" id="articlesGrid">
+      <!-- المقالات ستضاف ديناميكياً -->
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination">
+      <a href="#" class="page-link">←</a>
+      <a href="#" class="page-link active">1</a>
+      <a href="#" class="page-link">2</a>
+      <a href="#" class="page-link">3</a>
+      <a href="#" class="page-link">→</a>
+    </div>
+
+    <!-- Newsletter -->
+    <div class="newsletter">
+      <h3>📧 اشترك في نشرتنا البريدية</h3>
+      <p>احصل على أحدث المقالات والنصائح مباشرة إلى بريدك الإلكتروني أسبوعياً</p>
+      <div class="newsletter-form">
+        <input type="email" placeholder="أدخل بريدك الإلكتروني">
+        <button onclick="subscribeNewsletter()">اشتراك</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div><h4>PikLance</h4><p style="opacity:0.7;">منصة الخدمات الرقمية السورية</p></div>
+        <div><h4>تصفح</h4><a href="services.html">الخدمات</a><a href="freelancers.html">المستقلون</a><a href="blog.html">المدونة</a></div>
+        <div><h4>مساعدة</h4><a href="contact.html">تواصل</a><a href="faq.html">أسئلة شائعة</a></div>
+        <div><h4>قانوني</h4><a href="terms.html">شروط</a><a href="privacy.html">خصوصية</a></div>
+      </div>
+      <div class="footer-bottom">© 2025 PikLance. جميع الحقوق محفوظة.</div>
+    </div>
+  </footer>
+
+  <script>
+    const themeToggle = document.getElementById('themeToggle');
+    const htmlElement = document.documentElement;
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    htmlElement.setAttribute('data-theme', savedTheme);
+    themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    function toggleTheme() {
+      const current = htmlElement.getAttribute('data-theme');
+      const next = current === 'light' ? 'dark' : 'light';
+      htmlElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
+    }
+
+    const articlesData = [
+      {
+        id: 1,
+        title: "كيف تبني ملف شخصي قوي على منصات العمل الحر؟",
+        excerpt: "ملفك الشخصي هو واجهتك الأولى للعملاء. تعلم كيف تجعله احترافياً...",
+        category: "freelance",
+        categoryName: "عمل حر",
+        image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&h=350&fit=crop",
+        date: "12 يونيو 2025",
+        views: 8900,
+        readTime: "6 دقائق"
+      },
+      {
+        id: 2,
+        title: "اتجاهات التصميم الجرافيكي في 2025",
+        excerpt: "أحدث توجهات التصميم التي يجب أن يعرفها كل مصمم جرافيك...",
+        category: "design",
+        categoryName: "تصميم",
+        image: "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=500&h=350&fit=crop",
+        date: "10 يونيو 2025",
+        views: 6700,
+        readTime: "5 دقائق"
+      },
+      {
+        id: 3,
+        title: "أفضل 10 أدوات للمبرمج المستقل في 2025",
+        excerpt: "أدوات تزيد إنتاجيتك وتوفر وقتك كمبرمج مستقل...",
+        category: "programming",
+        categoryName: "برمجة",
+        image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=500&h=350&fit=crop",
+        date: "8 يونيو 2025",
+        views: 5400,
+        readTime: "7 دقائق"
+      },
+      {
+        id: 4,
+        title: "استراتيجيات تسويق خدماتك الرقمية",
+        excerpt: "كيف تسوق لنفسك وتجذب عملاء جدد بدون ميزانية إعلانية...",
+        category: "marketing",
+        categoryName: "تسويق",
+        image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=500&h=350&fit=crop",
+        date: "5 يونيو 2025",
+        views: 7800,
+        readTime: "9 دقائق"
+      },
+      {
+        id: 5,
+        title: "5 نصائح لزيادة أرباحك كمستقل",
+        excerpt: "استراتيجيات عملية لزيادة دخلك الشهري من العمل الحر...",
+        category: "tips",
+        categoryName: "نصائح",
+        image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=500&h=350&fit=crop",
+        date: "1 يونيو 2025",
+        views: 10200,
+        readTime: "4 دقائق"
+      },
+      {
+        id: 6,
+        title: "كيف تتفاوض على سعر خدمتك بثقة؟",
+        excerpt: "فن التفاوض مع العملاء: كيف تحدد سعرك وتقنع العميل بقيمتك...",
+        category: "freelance",
+        categoryName: "عمل حر",
+        image: "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=500&h=350&fit=crop",
+        date: "28 مايو 2025",
+        views: 6100,
+        readTime: "6 دقائق"
+      }
+    ];
+
+    function renderArticles(articles) {
+      const grid = document.getElementById('articlesGrid');
+      grid.innerHTML = articles.map(article => `
+        <div class="article-card" onclick="window.location.href='article.html?id=${article.id}'">
+          <div class="article-img" style="background-image: url('${article.image}');"></div>
+          <div class="article-body">
+            <span class="article-category">${article.categoryName}</span>
+            <h3>${article.title}</h3>
+            <p>${article.excerpt}</p>
+            <div class="article-meta">
+              <span>📅 ${article.date}</span>
+              <span>👁️ ${article.views.toLocaleString()}</span>
+              <span>⏱️ ${article.readTime}</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function filterCategory(category, button) {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      button.classList.add('active');
+      const filtered = category === 'all' ? articlesData : articlesData.filter(a => a.category === category);
+      renderArticles(filtered);
+    }
+
+    function filterArticles() {
+      const term = document.getElementById('blogSearch').value.toLowerCase();
+      const filtered = articlesData.filter(a =>
+        a.title.toLowerCase().includes(term) || a.excerpt.toLowerCase().includes(term)
+      );
+      renderArticles(filtered);
+    }
+
+    function subscribeNewsletter() {
+      const input = document.querySelector('.newsletter-form input');
+      if (input.value && input.value.includes('@')) {
+        alert('النشرة البريدية غير مفعلة بعد. لم يتم حفظ بريدك.');
+      } else {
+        alert('يرجى إدخال بريد إلكتروني صحيح');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => renderArticles(articlesData));
+  </script>
+</body>
+</html>

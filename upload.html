@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إضافة خدمة جديدة - PikLance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #F8F9FD;
+      --bg-secondary: #FFFFFF;
+      --bg-tertiary: #F1F3F9;
+      --text-primary: #2D3436;
+      --text-secondary: #636E72;
+      --text-heading: #1E1E2D;
+      --border-color: #E2E8F0;
+      --shadow-color: rgba(0,0,0,0.08);
+      --card-bg: #FFFFFF;
+      --navbar-bg: rgba(255,255,255,0.95);
+      --footer-bg: #1E1E2D;
+      --footer-text: rgba(255,255,255,0.7);
+      --btn-ghost-border: #E2E8F0;
+      --primary: #6C5CE7;
+      --primary-dark: #5A4BD1;
+      --secondary: #FF6B6B;
+      --accent: #FFD93D;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --input-bg: #F8F9FD;
+      --form-bg: #FFFFFF;
+      --tag-bg: #EDE9FE;
+      --tag-text: #6C5CE7;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #121218;
+      --bg-secondary: #1E1E2D;
+      --bg-tertiary: #252536;
+      --text-primary: #E2E8F0;
+      --text-secondary: #A0AEC0;
+      --text-heading: #F7FAFC;
+      --border-color: #2D2D3F;
+      --shadow-color: rgba(0,0,0,0.4);
+      --card-bg: #1E1E2D;
+      --navbar-bg: rgba(18, 18, 24, 0.95);
+      --footer-bg: #0F0F1A;
+      --footer-text: rgba(255,255,255,0.5);
+      --btn-ghost-border: #2D2D3F;
+      --input-bg: #252536;
+      --form-bg: #1E1E2D;
+      --tag-bg: #2D2D3F;
+      --tag-text: #b4a7f5;
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Cairo', 'Segoe UI', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      transition: background 0.3s, color 0.3s;
+    }
+    .container { width:90%; max-width:1100px; margin:0 auto; }
+
+    /* Navbar */
+    .navbar {
+      background: var(--navbar-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      padding: 1rem 0; position: sticky; top:0; z-index:1000;
+      border-bottom: 1px solid var(--border-color); transition: var(--transition);
+    }
+    .navbar .container { display:flex; justify-content:space-between; align-items:center; }
+    .logo { font-size:1.8rem; font-weight:800; text-decoration:none; display:flex; align-items:center; gap:0.3rem; }
+    .logo-icon {
+      width:40px; height:40px; background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius:12px; display:flex; align-items:center; justify-content:center;
+      color:#fff; font-size:1.3rem; font-weight:800; box-shadow:0 4px 15px rgba(108,92,231,0.3);
+    }
+    .logo-text { color: var(--text-heading); }
+    .logo-text span { color: var(--primary); }
+    .nav-links { display:flex; gap:2rem; list-style:none; }
+    .nav-links a {
+      text-decoration:none; color:var(--text-secondary); font-weight:600; font-size:0.95rem;
+      transition: var(--transition); position:relative; padding:0.3rem 0; white-space: nowrap;
+    }
+    .nav-links a::after {
+      content:''; position:absolute; bottom:0; right:0; width:0; height:2px;
+      background:var(--primary); transition: var(--transition);
+    }
+    .nav-links a:hover::after, .nav-links a.active::after { width:100%; }
+    .nav-links a:hover, .nav-links a.active { color:var(--primary); }
+
+    .btn {
+      padding:0.7rem 1.8rem; border-radius:50px; font-weight:700; font-size:0.95rem;
+      cursor:pointer; border:none; transition:var(--transition); text-decoration:none;
+      display:inline-flex; align-items:center; gap:0.5rem; font-family: 'Cairo', sans-serif;
+    }
+    .btn-ghost { background:transparent; color:var(--text-primary); border:2px solid var(--btn-ghost-border); }
+    .btn-ghost:hover { border-color:var(--primary); color:var(--primary); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color:#fff; box-shadow:0 4px 15px rgba(108,92,231,0.4);
+    }
+    .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(108,92,231,0.5); }
+    .btn-success {
+      background: #10B981; color:#fff; box-shadow:0 4px 15px rgba(16,185,129,0.3);
+    }
+    .btn-success:hover { background: #059669; }
+    .theme-toggle {
+      background:transparent; border:2px solid var(--border-color); width:42px; height:42px;
+      border-radius:50%; cursor:pointer; font-size:1.2rem; display:flex; align-items:center;
+      justify-content:center; transition:var(--transition); margin-right:1rem; color:var(--text-primary);
+    }
+    .theme-toggle:hover { border-color:var(--primary); background:var(--bg-tertiary); }
+    .mobile-toggle { display:none; font-size:1.8rem; background:none; border:none; color:var(--text-primary); cursor:pointer; }
+
+    /* Page Header */
+    .page-header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color:#fff; padding:2.5rem 0; text-align:center; margin-bottom:2rem;
+    }
+    .page-header h1 { font-size:2.2rem; font-weight:800; margin-bottom:0.5rem; }
+    .page-header p { font-size:1rem; opacity:0.9; }
+
+    /* Form Container */
+    .form-container {
+      background: var(--form-bg); border-radius:20px; padding:2rem;
+      box-shadow:0 10px 30px var(--shadow-color); border:1px solid var(--border-color);
+      margin-bottom:2rem;
+    }
+    .section-title {
+      font-size:1.3rem; font-weight:700; color:var(--text-heading);
+      margin-bottom:1.5rem; display:flex; align-items:center; gap:0.5rem;
+    }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; }
+    .form-group { margin-bottom:1.5rem; }
+    .form-group label { display:block; margin-bottom:0.5rem; font-weight:600; color:var(--text-primary); }
+    .required { color:var(--secondary); }
+    .form-control {
+      width:100%; padding:0.8rem 1rem; border:1px solid var(--border-color); border-radius:10px;
+      background:var(--input-bg); font-family:'Cairo', sans-serif; font-size:1rem;
+      color:var(--text-primary); transition:var(--transition);
+    }
+    .form-control:focus { outline:none; border-color:var(--primary); }
+    textarea.form-control { min-height:120px; resize:vertical; }
+    .form-hint { font-size:0.85rem; color:var(--text-secondary); margin-top:0.3rem; }
+
+    /* File Upload */
+    .file-upload-area {
+      border:2px dashed var(--border-color); border-radius:12px; padding:2rem;
+      text-align:center; background:var(--input-bg); cursor:pointer; transition:var(--transition);
+    }
+    .file-upload-area:hover { border-color:var(--primary); }
+    .file-upload-icon { font-size:2.5rem; color:var(--primary); margin-bottom:0.5rem; }
+    .file-upload-text { font-weight:600; }
+    .file-upload-hint { font-size:0.85rem; color:var(--text-secondary); }
+    .file-list { margin-top:1rem; }
+    .file-item {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0.6rem 1rem; background:var(--bg-tertiary); border-radius:8px; margin-bottom:0.5rem;
+    }
+    .file-name { font-weight:500; }
+    .file-remove { color:var(--secondary); cursor:pointer; font-weight:700; }
+
+    /* Tags */
+    .tags-input {
+      display:flex; flex-wrap:wrap; gap:0.5rem; border:1px solid var(--border-color);
+      border-radius:10px; padding:0.5rem; background:var(--input-bg);
+      min-height:42px;
+    }
+    .tag {
+      background:var(--tag-bg); color:var(--tag-text); padding:0.3rem 1rem; border-radius:20px;
+      font-size:0.9rem; display:flex; align-items:center; gap:0.5rem;
+    }
+    .tag-remove { cursor:pointer; font-weight:700; }
+    .tags-input input { border:none; background:transparent; outline:none; flex:1; min-width:120px; color:var(--text-primary); font-family:'Cairo',sans-serif; }
+
+    /* Price delivery row */
+    .price-input-wrapper {
+      display:flex; align-items:center; border:1px solid var(--border-color);
+      border-radius:10px; overflow:hidden; background:var(--input-bg);
+    }
+    .price-input-wrapper input {
+      flex:1; padding:0.8rem; border:none; background:transparent; color:var(--text-primary); font-family:'Cairo',sans-serif;
+    }
+    .price-currency {
+      padding:0 1rem; font-weight:700; color:var(--text-secondary); border-right:1px solid var(--border-color);
+    }
+
+    /* Checkbox terms */
+    .checkbox-label { display:flex; align-items:center; gap:0.5rem; margin:1.5rem 0; }
+
+    .modal {
+      display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5);
+      z-index:2000; align-items:center; justify-content:center;
+    }
+    .modal.active { display:flex; }
+    .modal-content {
+      background:var(--card-bg); border-radius:20px; padding:2rem; max-width:400px;
+      text-align:center; width:90%;
+    }
+    .modal-icon { font-size:3rem; margin-bottom:1rem; }
+    .modal-title { font-size:1.4rem; color:var(--text-heading); margin-bottom:0.5rem; }
+    .modal-text { color:var(--text-secondary); margin-bottom:1.5rem; }
+
+    /* Footer */
+    .footer {
+      background:var(--footer-bg); color:#fff; padding:3rem 0 1.5rem; margin-top:3rem;
+    }
+    .footer-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:2rem; margin-bottom:2rem; }
+    .footer a { color:var(--footer-text); text-decoration:none; display:block; margin-bottom:0.5rem; transition:0.2s; }
+    .footer a:hover { color:#fff; padding-right:4px; }
+    .footer-bottom { text-align:center; padding-top:1.5rem; border-top:1px solid rgba(255,255,255,0.1); font-size:0.9rem; color:rgba(255,255,255,0.5); }
+
+    @media (max-width:768px) {
+      .form-row { grid-template-columns:1fr; }
+      .nav-links { display:none; }
+      .mobile-toggle { display:block; }
+    }
+  </style>
+</head>
+<body data-account-type="freelancer">
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="index.html" class="logo">
+        <div class="logo-icon">P</div>
+        <div class="logo-text">Pik<span>Lance</span></div>
+      </a>
+      <ul class="nav-links">
+        <li><a href="services.html">الخدمات</a></li>
+        <li><a href="freelancers.html">المستقلون</a></li>
+        <li><a href="how-it-works.html">كيف تعمل</a></li>
+        <li><a href="about.html">عن المنصة</a></li>
+        <li><a href="blog.html">المدونة</a></li>
+        <li><a href="contact.html">تواصل</a></li>
+      </ul>
+      <div style="display:flex; gap:1rem; align-items:center;">
+        <a href="profile.html" class="btn btn-ghost">حسابي</a>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙</button>
+        <button class="mobile-toggle" onclick="toggleMobileMenu()">☰</button>
+      </div>
+    </div>
+  </nav>
+
+  <section class="page-header">
+    <div class="container">
+      <h1>إضافة خدمة جديدة</h1>
+      <p>املأ التفاصيل بدقة لزيادة فرص بيع خدمتك</p>
+    </div>
+  </section>
+
+  <div class="container">
+    <div class="form-container">
+      <!-- Title & Category -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>عنوان الخدمة <span class="required">*</span></label>
+          <input type="text" class="form-control" id="serviceTitle" placeholder="مثال: تصميم شعار احترافي">
+        </div>
+        <div class="form-group">
+          <label>الفئة <span class="required">*</span></label>
+          <select class="form-control" id="serviceCategory">
+            <option value="">اختر الفئة</option>
+            <option value="design">تصميم</option>
+            <option value="code">برمجة</option>
+            <option value="write">كتابة</option>
+            <option value="market">تسويق</option>
+            <option value="audio">صوتيات</option>
+            <option value="video">فيديو</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="form-group">
+        <label>وصف الخدمة <span class="required">*</span></label>
+        <textarea class="form-control" id="serviceDescription" placeholder="اشرح ما ستقدمه، المخرجات، والمتطلبات..."></textarea>
+        <div class="form-hint">كلما كان الوصف دقيقاً زادت ثقة المشتري</div>
+      </div>
+
+      <!-- Price & Delivery -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>السعر <span class="required">*</span></label>
+          <div class="price-input-wrapper">
+            <input type="number" id="servicePrice" placeholder="أدخل السعر" min="1000">
+            <span class="price-currency">ل.س</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>مدة التسليم (بالأيام)</label>
+          <select class="form-control" id="deliveryTime">
+            <option value="1">يوم واحد</option>
+            <option value="2" selected>يومان</option>
+            <option value="3">3 أيام</option>
+            <option value="5">5 أيام</option>
+            <option value="7">أسبوع</option>
+            <option value="14">أسبوعين</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Revisions & Images -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>عدد التعديلات المسموحة</label>
+          <select class="form-control" id="revisions">
+            <option value="0">بدون تعديلات</option>
+            <option value="1" selected>تعديل واحد</option>
+            <option value="2">تعديلان</option>
+            <option value="3">3 تعديلات</option>
+            <option value="unlimited">غير محدود</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>صور الخدمة (حتى 5 صور)</label>
+          <div class="file-upload-area" onclick="document.getElementById('fileInput').click()">
+            <div class="file-upload-icon">📁</div>
+            <div class="file-upload-text">اضغط لرفع الصور</div>
+            <div class="file-upload-hint">PNG, JPG (يفضل 1280×720)</div>
+            <input type="file" id="fileInput" accept="image/*" multiple style="display:none;" onchange="handleFiles(this.files)">
+          </div>
+          <div class="file-list" id="fileList"></div>
+        </div>
+      </div>
+
+      <!-- Tags -->
+      <div class="form-group">
+        <label>الكلمات المفتاحية</label>
+        <div class="tags-input" id="tagsContainer">
+          <div id="tagsDisplay" style="display:flex; flex-wrap:wrap; gap:0.5rem;"></div>
+          <input type="text" id="tagInput" placeholder="أضف كلمة ثم Enter" onkeydown="addTag(event)">
+        </div>
+        <div class="form-hint">كلمات تساعد في ظهور خدمتك في نتائج البحث</div>
+      </div>
+
+      <!-- Terms -->
+      <label class="checkbox-label">
+        <input type="checkbox" id="agreeTerms" onchange="document.getElementById('submitBtn').disabled = !this.checked;">
+        <span>أوافق على <a href="terms.html" style="color:var(--primary);">شروط الخدمة</a> وأتعهد بتقديم عمل أصلي</span>
+      </label>
+
+      <div style="display:flex; gap:1rem; justify-content:flex-end;">
+        <button class="btn btn-ghost" onclick="window.history.back()">إلغاء</button>
+        <button class="btn btn-success" id="submitBtn" disabled onclick="submitService()">نشر الخدمة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div class="modal" id="successModal">
+    <div class="modal-content">
+      <div class="modal-icon">🎉</div>
+      <h3 class="modal-title">تمت إضافة الخدمة بنجاح!</h3>
+      <p class="modal-text">ستتم مراجعة الخدمة ونشرها خلال 24 ساعة</p>
+      <button class="btn btn-primary" onclick="closeModal()">حسناً</button>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div><h4>PikLance</h4><p style="opacity:0.7;">منصة الخدمات الرقمية السورية</p></div>
+        <div><h4>تصفح</h4><a href="services.html">الخدمات</a><a href="freelancers.html">المستقلون</a><a href="how-it-works.html">كيف تعمل</a></div>
+        <div><h4>مساعدة</h4><a href="contact.html">تواصل</a><a href="faq.html">أسئلة شائعة</a></div>
+        <div><h4>قانوني</h4><a href="terms.html">شروط</a><a href="privacy.html">خصوصية</a></div>
+      </div>
+      <div class="footer-bottom">© 2025 PikLance. جميع الحقوق محفوظة.</div>
+    </div>
+  </footer>
+
+  <script>
+    // Dark mode
+    const themeToggle = document.getElementById('themeToggle');
+    const htmlElement = document.documentElement;
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    htmlElement.setAttribute('data-theme', savedTheme);
+    themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    function toggleTheme() {
+      const current = htmlElement.getAttribute('data-theme');
+      const next = current === 'light' ? 'dark' : 'light';
+      htmlElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
+    }
+
+    function toggleMobileMenu() {
+      const nav = document.querySelector('.nav-links');
+      nav.style.display = nav.style.display === 'flex' ? 'none' : 'flex';
+      nav.style.flexDirection = 'column';
+      nav.style.position = 'absolute';
+      nav.style.top = '100%';
+      nav.style.right = '0';
+      nav.style.background = 'var(--navbar-bg)';
+      nav.style.width = '100%';
+      nav.style.padding = '1rem';
+      nav.style.backdropFilter = 'blur(20px)';
+    }
+
+    // File handling
+    let filesArray = [];
+    function handleFiles(files) {
+      for (let file of files) {
+        if (filesArray.length >= 5) { alert('يمكنك رفع 5 صور كحد أقصى'); break; }
+        filesArray.push(file);
+      }
+      renderFiles();
+    }
+    function renderFiles() {
+      const fileList = document.getElementById('fileList');
+      fileList.replaceChildren();
+      filesArray.forEach((file, index) => {
+        const item = document.createElement('div');
+        item.className = 'file-item';
+        const name = document.createElement('span');
+        name.className = 'file-name';
+        name.textContent = `🖼️ ${file.name}`;
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'file-remove';
+        remove.textContent = '✕';
+        remove.addEventListener('click', () => removeFile(index));
+        item.append(name, remove);
+        fileList.appendChild(item);
+      });
+    }
+    function removeFile(index) {
+      filesArray.splice(index, 1);
+      renderFiles();
+    }
+
+    // Tags
+    let tags = [];
+    function addTag(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        const input = document.getElementById('tagInput');
+        const value = input.value.trim();
+        if (value && !tags.includes(value) && tags.length < 10) {
+          tags.push(value);
+          renderTags();
+        }
+        input.value = '';
+      }
+    }
+    function renderTags() {
+      const display = document.getElementById('tagsDisplay');
+      display.replaceChildren();
+      tags.forEach(tagText => {
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.appendChild(document.createTextNode(tagText + ' '));
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'tag-remove';
+        remove.textContent = '✕';
+        remove.addEventListener('click', () => removeTag(tagText));
+        tag.appendChild(remove);
+        display.appendChild(tag);
+      });
+    }
+    function removeTag(tag) {
+      tags = tags.filter(t => t !== tag);
+      renderTags();
+    }
+
+    // Submit
+    function submitService() {
+      const title = document.getElementById('serviceTitle').value.trim();
+      const category = document.getElementById('serviceCategory').value;
+      const description = document.getElementById('serviceDescription').value.trim();
+      const price = document.getElementById('servicePrice').value;
+      if (!title || !category || !description || !price) {
+        alert('يرجى ملء جميع الحقول المطلوبة');
+        return;
+      }
+      alert('نشر الخدمات غير مربوط بقاعدة البيانات بعد. لم يتم نشر الخدمة.');
+    }
+    function closeModal() {
+      document.getElementById('successModal').classList.remove('active');
+      // يمكن إعادة التوجيه إلى صفحة الخدمات
+      window.location.href = 'services.html';
+    }
+  </script>
+  <script type="module" src="js/require-auth.js"></script>
+</body>
+</html>

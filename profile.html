@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ملفي الشخصي - PikLance</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Cairo', sans-serif; background: #F4F6FA; }
+    .container { max-width: 800px; margin: 2rem auto; padding: 1rem; }
+    .profile-header {
+      background: #fff; border-radius: 20px; padding: 2rem; text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 1.5rem;
+    }
+    .avatar {
+      width: 100px; height: 100px; border-radius: 50%; background: #6C5CE7;
+      color: #fff; display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem; font-weight: 800; margin: 0 auto 1rem;
+    }
+    .card {
+      background: #fff; border-radius: 16px; padding: 1.5rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 1rem;
+    }
+    .btn {
+      padding: 0.7rem 1.5rem; background: #6C5CE7; color: #fff;
+      border: none; border-radius: 10px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 700;
+    }
+    .btn-outline { background: #fff; color: #6C5CE7; border: 2px solid #6C5CE7; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="profile-header">
+      <div class="avatar" id="profileAvatar">U</div>
+      <h2 id="profileName">المستخدم</h2>
+      <p style="color:#636E72;" id="profileEmail">user@email.com</p>
+    </div>
+
+    <div class="card">
+      <h3>👤 معلوماتي</h3>
+      <p><strong>الاسم:</strong> <span id="infoName">-</span></p>
+      <p><strong>البريد:</strong> <span id="infoEmail">-</span></p>
+      <p><strong>نوع الحساب:</strong> <span id="infoType">-</span></p>
+    </div>
+
+    <div class="card" id="buyerHistory" style="display:none;">
+      <h3>🛒 مشترياتي</h3>
+      <p style="color:#636E72;">لا توجد مشتريات بعد</p>
+    </div>
+
+    <div class="card" id="freelancerServices" style="display:none;">
+      <h3>🎨 خدماتي</h3>
+      <a href="freelancer-dashboard.html" class="btn">لوحة تحكم المستقل</a>
+    </div>
+
+    <button class="btn btn-outline" onclick="logout()" style="margin-top:1rem;">🚪 تسجيل الخروج</button>
+  </div>
+
+  <script type="module">
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { auth, db } from "./js/firebase.js";
+
+    window.logout = async function() {
+      await signOut(auth);
+      window.location.href = 'index.html';
+    };
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        window.location.replace('login.html');
+        return;
+      }
+      const snapshot = await getDoc(doc(db, 'users', user.uid));
+      if (!snapshot.exists()) {
+        await signOut(auth);
+        window.location.replace('login.html');
+        return;
+      }
+      const profile = snapshot.data();
+      document.getElementById('profileAvatar').textContent = (profile.name || user.email).charAt(0);
+      document.getElementById('profileName').textContent = profile.name || '';
+      document.getElementById('profileEmail').textContent = user.email || '';
+      document.getElementById('infoName').textContent = profile.name || '';
+      document.getElementById('infoEmail').textContent = user.email || '';
+
+      if (profile.accountType === 'freelancer') {
+        document.getElementById('infoType').textContent = 'مستقل';
+        document.getElementById('freelancerServices').style.display = 'block';
+      } else {
+        document.getElementById('infoType').textContent = 'عميل';
+        document.getElementById('buyerHistory').style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

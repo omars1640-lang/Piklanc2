@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة تحكم المستقل - PikLance</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Cairo', sans-serif; background: #F4F6FA; display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 250px; background: #1E1E2D; color: #fff; padding: 1.5rem;
+      position: fixed; top:0; bottom:0; right:0;
+    }
+    .sidebar h2 { font-size: 1.4rem; margin-bottom: 2rem; }
+    .sidebar h2 span { color: #6C5CE7; }
+    .sidebar a {
+      display: block; color: rgba(255,255,255,0.7); text-decoration: none;
+      padding: 0.7rem 0; font-weight: 600; cursor: pointer;
+    }
+    .sidebar a:hover, .sidebar a.active { color: #fff; }
+    .main { margin-right: 250px; padding: 2rem; flex: 1; }
+    .card {
+      background: #fff; border-radius: 16px; padding: 1.5rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 1.5rem;
+    }
+    .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat-box { background: #fff; padding: 1.2rem; border-radius: 12px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    .stat-num { font-size: 2rem; font-weight: 800; color: #6C5CE7; }
+    .btn {
+      padding: 0.7rem 1.5rem; background: #6C5CE7; color: #fff; border: none;
+      border-radius: 10px; font-weight: 700; cursor: pointer; font-family: 'Cairo', sans-serif;
+    }
+    .section { display: none; }
+    .section.active { display: block; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #F8F9FD; padding: 0.8rem; text-align: right; }
+    td { padding: 0.8rem; border-bottom: 1px solid #eee; }
+    input, select, textarea {
+      width: 100%; padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px;
+      font-family: 'Cairo', sans-serif; margin-bottom: 0.8rem;
+    }
+    textarea { resize: vertical; }
+  </style>
+</head>
+<body data-account-type="freelancer">
+  <div class="sidebar">
+    <h2>Pik<span>Lance</span></h2>
+    <p style="opacity:0.7; margin-bottom:1.5rem;">👤 <span id="freelancerName">أحمد</span></p>
+    <a class="active" onclick="showTab('dashboard', this)">📊 لوحة المعلومات</a>
+    <a onclick="showTab('services', this)">🎨 خدماتي</a>
+    <a onclick="showTab('wallet', this)">💰 المحفظة</a>
+    <a onclick="showTab('withdrawals', this)">💵 طلبات السحب</a>
+    <a onclick="showTab('reviews', this)">⭐ التقييمات</a>
+    <a onclick="showTab('profile', this)">👤 ملفي</a>
+    <a href="index.html" style="margin-top:2rem; color:#FF6B6B;">🚪 خروج</a>
+  </div>
+
+  <div class="main">
+    <!-- Dashboard -->
+    <div class="section active" id="tab-dashboard">
+      <h2 style="margin-bottom:1rem;">📊 لوحة المعلومات</h2>
+      <div class="stats">
+        <div class="stat-box"><div class="stat-num" id="myServicesCount">0</div>خدماتي</div>
+        <div class="stat-box"><div class="stat-num" style="color:#10B981;" id="mySales">0</div>مبيعات</div>
+        <div class="stat-box"><div class="stat-num" style="color:#FFD93D;">⭐ <span id="myRating">0</span></div>تقييمي</div>
+      </div>
+      <div class="card">
+        <h3>💰 رصيدي: <span id="myBalance">0</span> ل.س</h3>
+      </div>
+    </div>
+
+    <!-- Services -->
+    <div class="section" id="tab-services">
+      <h2 style="margin-bottom:1rem;">🎨 خدماتي</h2>
+      <button class="btn" onclick="addMyService()">+ إضافة خدمة</button>
+      <div class="card" style="margin-top:1rem;">
+        <table>
+          <thead><tr><th>العنوان / الفئة</th><th>السعر</th><th>التسليم</th><th>المبيعات</th><th>حذف</th></tr></thead>
+          <tbody id="myServicesTable"></tbody>
+        </table>
+        <p id="noMyServices" style="text-align:center; padding:2rem;">لا توجد خدمات بعد</p>
+      </div>
+    </div>
+
+    <!-- Wallet -->
+    <div class="section" id="tab-wallet">
+      <h2 style="margin-bottom:1rem;">💰 المحفظة</h2>
+      <div class="card"><h3>رصيدي الحالي: <span id="walletBalance">0</span> ل.س</h3></div>
+      <div class="card" style="margin-top:1rem;">
+        <h3>سجل المعاملات</h3>
+        <table><thead><tr><th>التاريخ</th><th>النوع</th><th>المبلغ</th></tr></thead>
+        <tbody id="myTransactions"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Withdrawals -->
+    <div class="section" id="tab-withdrawals">
+      <h2 style="margin-bottom:1rem;">💵 طلب سحب</h2>
+      <div class="card">
+        <label>المبلغ (الحد الأدنى 50,000 ل.س)</label>
+        <input type="number" id="withdrawAmount" placeholder="50000">
+        <label>رقم المحفظة</label>
+        <input type="text" id="withdrawWallet" placeholder="09xxxxxxxx">
+        <button class="btn" onclick="requestWithdraw()">تقديم الطلب</button>
+      </div>
+      <div class="card" style="margin-top:1rem;">
+        <h3>طلباتي السابقة</h3>
+        <table><thead><tr><th>التاريخ</th><th>المبلغ</th><th>الحالة</th></tr></thead>
+        <tbody id="myWithdrawals"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Reviews -->
+    <div class="section" id="tab-reviews">
+      <h2 style="margin-bottom:1rem;">⭐ تقييمات العملاء</h2>
+      <div class="card">
+        <p>⭐⭐⭐⭐⭐ "عمل ممتاز وسريع" - محمد</p>
+        <p style="margin-top:0.5rem;">⭐⭐⭐⭐☆ "جيد جداً" - سارة</p>
+      </div>
+    </div>
+
+    <!-- Profile -->
+    <div class="section" id="tab-profile">
+      <h2 style="margin-bottom:1rem;">👤 تعديل ملفي</h2>
+      <div class="card">
+        <label>الاسم</label><input type="text" id="editName">
+        <label>البريد</label><input type="email" id="editEmail">
+        <label>الهاتف</label><input type="text" id="editPhone">
+        <button class="btn" onclick="saveProfile()">حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showTab(tab, link) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+      link.classList.add('active');
+    }
+
+    function loadMyServices() {
+      const services = JSON.parse(localStorage.getItem('myServices') || '[]');
+      const table = document.getElementById('myServicesTable');
+      table.replaceChildren();
+      services.forEach((service, index) => {
+        const row = document.createElement('tr');
+        const titleCell = document.createElement('td');
+        const title = document.createElement('strong');
+        title.textContent = service.title;
+        const category = document.createElement('small');
+        category.textContent = service.category;
+        category.style.color = '#636E72';
+        titleCell.append(title, document.createElement('br'), category);
+        row.appendChild(titleCell);
+        [
+          `${Number(service.price).toLocaleString()} ل.س ${service.negotiable ? '🟢' : ''}`,
+          `⏱️ ${service.delivery || 2} أيام`,
+          service.sales || 0
+        ].forEach(value => {
+          const cell = document.createElement('td');
+          cell.textContent = value;
+          row.appendChild(cell);
+        });
+        const actions = document.createElement('td');
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'btn';
+        remove.textContent = '🗑️';
+        remove.style.cssText = 'background:#FF6B6B;padding:.3rem .8rem';
+        remove.addEventListener('click', () => deleteMyService(index));
+        actions.appendChild(remove);
+        row.appendChild(actions);
+        table.appendChild(row);
+      });
+      document.getElementById('noMyServices').style.display = services.length ? 'none' : 'block';
+      document.getElementById('myServicesCount').textContent = services.length;
+    }
+
+    function addMyService() {
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:2000;';
+      modal.innerHTML = `
+        <div style="background:#fff; border-radius:20px; padding:2rem; width:600px; max-height:80vh; overflow-y:auto;">
+          <h3 style="margin-bottom:1rem;">🎨 إضافة خدمة جديدة</h3>
+          <label>عنوان الخدمة *</label>
+          <input type="text" id="svTitle" placeholder="مثال: تصميم شعار احترافي">
+          <label>الفئة *</label>
+          <select id="svCategory">
+            <option value="">اختر الفئة</option>
+            <option value="تصميم">تصميم</option>
+            <option value="برمجة">برمجة</option>
+            <option value="كتابة">كتابة</option>
+            <option value="تسويق">تسويق</option>
+            <option value="صوتيات">صوتيات</option>
+            <option value="فيديو">فيديو</option>
+          </select>
+          <label>وصف الخدمة *</label>
+          <textarea id="svDescription" rows="4" placeholder="اشرح بالتفصيل ماذا ستقدم..."></textarea>
+          <label>السعر (ل.س) *</label>
+          <input type="number" id="svPrice" placeholder="25000">
+          <label style="display:flex; align-items:center; gap:0.5rem;">
+            <input type="checkbox" id="svNegotiable"> السعر قابل للتفاوض
+          </label>
+          <label>مدة التسليم (بالأيام)</label>
+          <select id="svDelivery">
+            <option value="1">يوم واحد</option>
+            <option value="2" selected>يومان</option>
+            <option value="3">3 أيام</option>
+            <option value="5">5 أيام</option>
+            <option value="7">أسبوع</option>
+            <option value="14">أسبوعين</option>
+          </select>
+          <label>عدد التعديلات المسموحة</label>
+          <select id="svRevisions">
+            <option value="0">بدون تعديلات</option>
+            <option value="1" selected>تعديل واحد</option>
+            <option value="2">تعديلان</option>
+            <option value="3">3 تعديلات</option>
+            <option value="unlimited">غير محدود</option>
+          </select>
+          <label>الكلمات المفتاحية (لفصل بينها استخدم فاصلة ,)</label>
+          <input type="text" id="svKeywords" placeholder="مثال: شعار, هوية, تصميم, Logo">
+          <div style="display:flex; gap:1rem; margin-top:1rem;">
+            <button class="btn" onclick="saveNewService()" style="flex:1;">✅ حفظ الخدمة</button>
+            <button class="btn" style="flex:1; background:#636E72;" onclick="this.closest('[style*=fixed]').remove()">إلغاء</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
+    }
+
+    function saveNewService() {
+      const title = document.getElementById('svTitle').value.trim();
+      const category = document.getElementById('svCategory').value;
+      const description = document.getElementById('svDescription').value.trim();
+      const price = document.getElementById('svPrice').value;
+      const negotiable = document.getElementById('svNegotiable').checked;
+      const delivery = document.getElementById('svDelivery').value;
+      const revisions = document.getElementById('svRevisions').value;
+      const keywords = document.getElementById('svKeywords').value.trim();
+
+      if (!title || !category || !description || !price) {
+        alert('يرجى ملء جميع الحقول المطلوبة (*)');
+        return;
+      }
+
+      const services = JSON.parse(localStorage.getItem('myServices') || '[]');
+      services.push({
+        title, category, description, price: parseInt(price),
+        negotiable, delivery, revisions, keywords,
+        sales: 0, rating: 0,
+        date: new Date().toLocaleDateString('ar')
+      });
+      localStorage.setItem('myServices', JSON.stringify(services));
+      
+      document.querySelector('[style*=fixed]').remove();
+      loadMyServices();
+      alert('تم حفظ المسودة محليًا على هذا الجهاز فقط. لم تُنشر الخدمة.');
+    }
+
+    function deleteMyService(index) {
+      if (!confirm('هل أنت متأكد من حذف هذه الخدمة؟')) return;
+      const services = JSON.parse(localStorage.getItem('myServices') || '[]');
+      services.splice(index, 1);
+      localStorage.setItem('myServices', JSON.stringify(services));
+      loadMyServices();
+    }
+
+    function requestWithdraw() {
+      alert('السحب غير مفعّل بعد. لم يتم إنشاء أي طلب مالي.');
+    }
+
+    function loadMyWithdrawals() {
+      const withdrawals = JSON.parse(localStorage.getItem('myWithdrawals') || '[]');
+      const table = document.getElementById('myWithdrawals');
+      table.replaceChildren();
+      withdrawals.forEach(withdrawal => {
+        const row = document.createElement('tr');
+        [withdrawal.date, `${Number(withdrawal.amount).toLocaleString()} ل.س`, withdrawal.status].forEach(value => {
+          const cell = document.createElement('td');
+          cell.textContent = value;
+          row.appendChild(cell);
+        });
+        table.appendChild(row);
+      });
+    }
+
+    function saveProfile() {
+      const name = document.getElementById('editName').value;
+      if (name) document.getElementById('freelancerName').textContent = name;
+      alert('✅ تم حفظ التعديلات');
+    }
+
+    loadMyServices();
+    loadMyWithdrawals();
+  </script>
+  <script type="module" src="js/require-auth.js"></script>
+</body>
+</html>
