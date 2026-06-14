@@ -10,6 +10,19 @@ service firebase.storage {
         && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == "admin";
     }
 
+    function activeUser() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.status == "active";
+    }
+
+    function isChatParticipant(chatId) {
+      return activeUser()
+        && request.auth.uid in firestore.get(
+          /databases/(default)/documents/chats/$(chatId)
+        ).data.participantUids;
+    }
+
     match /identity/{userId}/{fileName} {
       allow create, update: if signedIn()
         && request.auth.uid == userId
@@ -18,6 +31,18 @@ service firebase.storage {
         && request.resource.contentType.matches("image/.*");
       allow delete: if signedIn() && request.auth.uid == userId;
       allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /chat-attachments/{chatId}/{messageId}/{fileName} {
+      allow create: if isChatParticipant(chatId)
+        && request.resource.size > 0
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType.matches(
+          "image/(jpeg|png|webp)|application/(pdf|msword|vnd.openxmlformats-officedocument.wordprocessingml.document|zip|x-zip-compressed)"
+        );
+      allow read: if isChatParticipant(chatId);
+      allow delete: if isChatParticipant(chatId);
+      allow update: if false;
     }
 
     match /{allPaths=**} {

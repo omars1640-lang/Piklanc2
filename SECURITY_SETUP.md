@@ -21,7 +21,7 @@
 ```powershell
 firebase login
 firebase use piklance-c2651
-firebase deploy --only firestore:rules,storage
+firebase deploy --only firestore:rules,firestore:indexes,storage
 ```
 
 رفع الملفات إلى GitHub Pages لا ينشر قواعد Firebase تلقائيًا.
