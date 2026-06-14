@@ -126,8 +126,17 @@
             return;
           }
 
+          if (userData.status === 'suspended') {
+            await signOut(auth);
+            alert('تم إيقاف حسابك مؤقتاً. السبب: ' + (userData.suspensionReason || 'راجع دعم المنصة'));
+            return;
+          }
+
           alert('✅ تم تسجيل الدخول بنجاح');
-          window.location.href = safeReturnUrl();
+          const returnUrl = safeReturnUrl();
+          window.location.href = returnUrl !== 'index.html'
+            ? returnUrl
+            : userData.role === 'admin' ? 'dashboard.html' : 'index.html';
         } else {
           await signOut(auth);
           alert('❌ بيانات الحساب غير مكتملة. تواصل مع الدعم.');

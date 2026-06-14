@@ -101,7 +101,13 @@ if (header) {
         renderSignedOutActions();
         return;
       }
-      renderSignedInActions(user, snapshot.data());
+      const profile = snapshot.data();
+      if (profile.status !== "active" && profile.role !== "admin") {
+        await signOut(auth);
+        renderSignedOutActions();
+        return;
+      }
+      renderSignedInActions(user, profile);
     } catch {
       renderSignedOutActions();
     }

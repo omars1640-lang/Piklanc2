@@ -215,7 +215,8 @@ service cloud.firestore {
         && request.resource.data.lastUpdated == request.time
         && validChatContext(request.resource.data);
 
-      allow read: if activeUser() && request.auth.uid in resource.data.participantUids;
+      allow read: if isAdmin()
+        || (activeUser() && request.auth.uid in resource.data.participantUids);
       allow update: if activeUser()
         && request.auth.uid in resource.data.participantUids
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -262,6 +263,53 @@ service cloud.firestore {
           && request.resource.data.readBy.size() <= 2;
         allow delete: if false;
       }
+    }
+
+    match /adminAuditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          "action", "actorUid", "actorName", "actorEmail",
+          "targetUid", "targetName", "targetEmail", "reason", "createdAt"
+        ])
+        && request.resource.data.keys().hasAll([
+          "action", "actorUid", "actorName", "actorEmail",
+          "targetUid", "targetName", "targetEmail", "reason", "createdAt"
+        ])
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.action in [
+          "approve_user", "reject_user", "suspend_user",
+          "activate_user", "update_settings"
+        ]
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() <= 500
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /platformSettings/{settingId} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && settingId == "general"
+        && request.resource.data.keys().hasOnly([
+          "maintenanceMode", "registrationsEnabled",
+          "freelancerApplicationsEnabled", "platformFeePercent",
+          "supportEmail", "platformName", "updatedAt", "updatedBy"
+        ])
+        && request.resource.data.maintenanceMode is bool
+        && request.resource.data.registrationsEnabled is bool
+        && request.resource.data.freelancerApplicationsEnabled is bool
+        && request.resource.data.platformFeePercent is number
+        && request.resource.data.platformFeePercent >= 0
+        && request.resource.data.platformFeePercent <= 100
+        && request.resource.data.supportEmail is string
+        && request.resource.data.supportEmail.size() <= 160
+        && request.resource.data.platformName is string
+        && request.resource.data.platformName.size() > 0
+        && request.resource.data.platformName.size() <= 60
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid;
+      allow delete: if false;
     }
 
     match /{document=**} {
