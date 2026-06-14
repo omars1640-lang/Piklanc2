@@ -322,6 +322,7 @@ onAuthStateChanged(auth, async user => {
     state.user = user;
     state.profile = profile;
     fillProfile(user, profile);
+    document.getElementById("publicProfileLink").href = `freelancer-profile.html?uid=${encodeURIComponent(user.uid)}`;
     elements.loadingScreen.classList.add("hidden");
   } catch (error) {
     console.error("Dashboard initialization failed", error);
