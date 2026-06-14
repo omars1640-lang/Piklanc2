@@ -71,6 +71,18 @@
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { auth, db } from "./js/firebase.js";
 
+    function safeReturnUrl() {
+      const requested = new URLSearchParams(window.location.search).get('returnUrl');
+      if (!requested) return 'index.html';
+      try {
+        const target = new URL(requested, window.location.href);
+        if (target.origin !== window.location.origin || !target.pathname.endsWith('.html')) return 'index.html';
+        return `${target.pathname.split('/').pop()}${target.search}${target.hash}`;
+      } catch {
+        return 'index.html';
+      }
+    }
+
     window.handleLogin = async function() {
       const email = document.getElementById('loginEmail').value.trim();
       const password = document.getElementById('loginPassword').value;
@@ -115,7 +127,7 @@
           }
 
           alert('✅ تم تسجيل الدخول بنجاح');
-          window.location.href = 'index.html';
+          window.location.href = safeReturnUrl();
         } else {
           await signOut(auth);
           alert('❌ بيانات الحساب غير مكتملة. تواصل مع الدعم.');

@@ -255,9 +255,12 @@ function renderPortfolio(projects) {
 }
 
 function renderServices(services) {
-  const cards = services.map(service => {
-    const card = document.createElement("article");
+  const profileUid = new URLSearchParams(location.search).get("uid");
+  const cards = services.map((service, index) => {
+    const card = document.createElement("a");
     card.className = "service-card";
+    const serviceId = service.id || index + 1;
+    card.href = `service-details.html?id=${encodeURIComponent(serviceId)}${profileUid ? `&sellerUid=${encodeURIComponent(profileUid)}` : ""}`;
     const cover = document.createElement("div");
     cover.className = "service-cover";
     const image = document.createElement("img");
@@ -426,7 +429,6 @@ function bindEvents() {
   document.querySelectorAll(".profile-tabs button").forEach(button => button.addEventListener("click", () => showTab(button.dataset.tab)));
   document.querySelectorAll("[data-tab-target]").forEach(button => button.addEventListener("click", () => showTab(button.dataset.tabTarget)));
   document.querySelectorAll("[data-close-portfolio]").forEach(button => button.addEventListener("click", closePortfolioProject));
-  document.getElementById("themeButton").addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
   document.getElementById("shareButton").addEventListener("click", async () => {
     try {
       if (navigator.share) await navigator.share({ title: document.title, url: location.href });
@@ -437,9 +439,6 @@ function bindEvents() {
     } catch (error) {
       if (error.name !== "AbortError") showToast("تعذر مشاركة الرابط.");
     }
-  });
-  document.getElementById("mobileNavButton").addEventListener("click", () => {
-    document.querySelector(".nav-links").classList.toggle("mobile-open");
   });
   document.addEventListener("keydown", event => {
     if (event.key === "Escape") closePortfolioProject();
@@ -452,11 +451,5 @@ elements.loader.classList.add("hidden");
 
 const uid = new URLSearchParams(location.search).get("uid");
 onAuthStateChanged(auth, async user => {
-  if (user) {
-    document.getElementById("loginLink").href = "profile.html";
-    document.getElementById("loginLink").textContent = "حسابي";
-    document.getElementById("joinLink").href = "messages.html";
-    document.getElementById("joinLink").textContent = "الرسائل";
-  }
   if (uid) await loadUidProfile(uid, user);
 });

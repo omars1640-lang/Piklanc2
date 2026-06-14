@@ -3,281 +3,152 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>المراسلات - PikLance</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      font-family: 'Cairo', sans-serif;
-      background: #F4F6FA;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .chat-container {
-      width: 800px;
-      height: 600px;
-      background: #fff;
-      border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-      display: flex;
-      overflow: hidden;
-    }
-    .chat-sidebar {
-      width: 280px;
-      border-left: 1px solid #E2E8F0;
-      display: flex;
-      flex-direction: column;
-    }
-    .chat-sidebar-header {
-      padding: 1rem;
-      border-bottom: 1px solid #E2E8F0;
-      font-weight: 700;
-      background: #F8F9FD;
-    }
-    .chats-list {
-      flex: 1;
-      overflow-y: auto;
-    }
-    .chat-item {
-      padding: 1rem;
-      cursor: pointer;
-      border-bottom: 1px solid #F1F3F9;
-      transition: 0.2s;
-    }
-    .chat-item:hover { background: #F1F3F9; }
-    .chat-item.active { background: #6C5CE7; color: #fff; }
-    .chat-item-name { font-weight: 700; }
-    .chat-item-last { font-size: 0.8rem; color: #636E72; margin-top: 0.2rem; }
-    .chat-item.active .chat-item-last { color: rgba(255,255,255,0.8); }
-    .chat-main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-    .chat-header {
-      padding: 1rem;
-      border-bottom: 1px solid #E2E8F0;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .messages-list {
-      flex: 1;
-      padding: 1rem;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    .msg {
-      max-width: 70%;
-      padding: 0.7rem 1rem;
-      border-radius: 12px;
-      line-height: 1.5;
-    }
-    .msg.sent { background: #6C5CE7; color: #fff; align-self: flex-end; }
-    .msg.received { background: #F1F3F9; color: #2D3436; align-self: flex-start; }
-    .msg small { display: block; font-size: 0.7rem; opacity: 0.7; margin-top: 0.3rem; }
-    .input-area {
-      padding: 1rem;
-      border-top: 1px solid #E2E8F0;
-      display: flex;
-      gap: 0.5rem;
-    }
-    .input-area input {
-      flex: 1;
-      padding: 0.7rem;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      font-family: 'Cairo', sans-serif;
-    }
-    .input-area button {
-      padding: 0.7rem 1.5rem;
-      background: #6C5CE7;
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      font-family: 'Cairo', sans-serif;
-      font-weight: 700;
-    }
-    .no-chat {
-      text-align: center;
-      color: #636E72;
-      margin-top: 5rem;
-      font-size: 1.2rem;
-    }
-    .back-link {
-      display: block;
-      text-align: center;
-      padding: 1rem;
-      color: #6C5CE7;
-      text-decoration: none;
-      font-weight: 600;
-    }
-  </style>
+  <title>الرسائل - PikLance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/site-header.css">
+  <link rel="stylesheet" href="css/messages.css">
 </head>
 <body>
-  <div class="chat-container">
-    <div class="chat-sidebar">
-      <div class="chat-sidebar-header">📬 المحادثات</div>
-      <div class="chats-list" id="chatsList">
-        <p style="text-align:center; color:#636E72; padding:2rem;">لا توجد محادثات</p>
+  <header class="site-header" id="navbar">
+    <div class="site-header-inner">
+      <a class="site-header-brand" href="index.html" aria-label="PikLance home">
+        <span class="site-header-brand-mark">P</span>
+        <strong>Pik<span>Lance</span></strong>
+      </a>
+      <nav class="site-header-nav" id="siteHeaderNav" aria-label="التنقل الرئيسي">
+        <a href="index.html">الرئيسية</a>
+        <a href="services.html">الخدمات</a>
+        <a href="freelancers.html">المستقلون</a>
+        <a href="how-it-works.html">كيف تعمل المنصة</a>
+      </nav>
+      <div class="site-header-actions" id="siteHeaderActions">
+        <button class="site-header-theme" id="themeToggle" type="button" aria-label="تبديل المظهر">☾</button>
+        <a class="site-header-button ghost" href="login.html">دخول</a>
+        <a class="site-header-button primary" href="register.html">انضم مجاناً</a>
       </div>
-      <a href="index.html" class="back-link">← الرئيسية</a>
+      <button class="site-header-mobile" id="siteHeaderMobile" type="button" aria-controls="siteHeaderNav" aria-expanded="false" aria-label="فتح القائمة">☰</button>
     </div>
-    <div class="chat-main">
-      <div class="chat-header" id="chatHeader">💬 اختر محادثة من القائمة</div>
-      <div class="messages-list" id="messagesList">
-        <p class="no-chat">اختر محادثة لبدء المراسلة</p>
-      </div>
-      <div class="input-area" id="inputArea" style="display:none;">
-        <input type="text" id="messageInput" placeholder="اكتب رسالتك..." maxlength="500">
-        <button onclick="sendMessage()">إرسال</button>
-      </div>
-    </div>
+  </header>
+
+  <main class="messages-page">
+    <section class="messenger-shell" aria-label="مركز الرسائل">
+      <aside class="conversation-panel" id="conversationPanel">
+        <div class="conversation-panel-head">
+          <div>
+            <p class="eyebrow">مساحة العمل</p>
+            <h1>الرسائل</h1>
+          </div>
+          <span class="conversation-count" id="conversationCount">0</span>
+        </div>
+
+        <label class="conversation-search">
+          <span aria-hidden="true">⌕</span>
+          <input id="conversationSearch" type="search" placeholder="ابحث في المحادثات" autocomplete="off">
+        </label>
+
+        <div class="conversation-filters" role="group" aria-label="تصفية المحادثات">
+          <button class="active" type="button" data-filter="all">الكل</button>
+          <button type="button" data-filter="unread">غير المقروءة <span id="unreadCount">0</span></button>
+        </div>
+
+        <div class="conversation-list" id="conversationList" aria-live="polite">
+          <div class="list-skeleton" aria-label="جاري تحميل المحادثات">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      </aside>
+
+      <section class="chat-panel" id="chatPanel">
+        <div class="chat-empty" id="chatEmpty">
+          <span class="empty-illustration">✉</span>
+          <h2>كل محادثات عملك في مكان واحد</h2>
+          <p>اختر محادثة من القائمة أو ابدأ من صفحة أحد المستقلين أو الخدمات.</p>
+          <a href="freelancers.html">استكشف المستقلين</a>
+        </div>
+
+        <div class="chat-workspace" id="chatWorkspace" hidden>
+          <header class="chat-head">
+            <button class="mobile-back" id="mobileBack" type="button" aria-label="العودة إلى المحادثات">‹</button>
+            <a class="chat-person" id="chatProfileLink" href="freelancers.html">
+              <span class="person-avatar" id="chatAvatar">م</span>
+              <span>
+                <strong id="chatPersonName">مستخدم PikLance</strong>
+                <small id="chatPersonRole">عضو في المنصة</small>
+              </span>
+            </a>
+            <div class="chat-head-actions">
+              <button id="detailsToggle" type="button" aria-expanded="true" aria-controls="chatDetails">تفاصيل</button>
+            </div>
+          </header>
+
+          <a class="service-context" id="serviceContext" href="services.html" hidden>
+            <img id="contextImage" alt="">
+            <span class="context-copy">
+              <small>المحادثة بخصوص</small>
+              <strong id="contextTitle">خدمة</strong>
+            </span>
+            <b id="contextPrice"></b>
+            <span aria-hidden="true">‹</span>
+          </a>
+
+          <div class="message-stream" id="messageStream" aria-live="polite"></div>
+
+          <div class="attachment-preview" id="attachmentPreview" hidden>
+            <span class="attachment-kind" id="attachmentKind">ملف</span>
+            <span>
+              <strong id="attachmentName"></strong>
+              <small id="attachmentSize"></small>
+            </span>
+            <button id="removeAttachment" type="button" aria-label="إزالة المرفق">×</button>
+          </div>
+
+          <form class="composer" id="messageForm">
+            <input id="attachmentInput" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.zip" hidden>
+            <button class="attach-button" id="attachButton" type="button" aria-label="إرفاق ملف">⌕</button>
+            <textarea id="messageInput" rows="1" maxlength="2000" placeholder="اكتب رسالتك..."></textarea>
+            <span class="composer-limit" id="composerLimit">0/2000</span>
+            <button class="send-button" id="sendButton" type="submit">
+              <span>إرسال</span>
+              <b aria-hidden="true">←</b>
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <aside class="chat-details" id="chatDetails" hidden>
+        <button class="details-close" id="detailsClose" type="button" aria-label="إغلاق التفاصيل">×</button>
+        <span class="details-avatar" id="detailsAvatar">م</span>
+        <h2 id="detailsName">مستخدم PikLance</h2>
+        <p id="detailsRole">عضو في المنصة</p>
+        <a class="details-profile-link" id="detailsProfileLink" href="freelancers.html">عرض الملف الشخصي</a>
+
+        <div class="details-section" id="detailsService" hidden>
+          <small>الخدمة المرتبطة</small>
+          <strong id="detailsServiceTitle"></strong>
+          <a id="detailsServiceLink" href="services.html">عرض تفاصيل الخدمة</a>
+        </div>
+
+        <div class="details-section">
+          <small>إرشادات تواصل آمن</small>
+          <ul>
+            <li>أبقِ الاتفاقات والدفع داخل المنصة.</li>
+            <li>لا تشارك كلمات المرور أو رموز التحقق.</li>
+            <li>وضّح المطلوب والمدة قبل بدء العمل.</li>
+          </ul>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <div class="toast" id="messageToast" role="status"></div>
+  <div class="auth-loading" id="authLoading">
+    <span>P</span>
+    <p>جاري تجهيز مساحة الرسائل...</p>
   </div>
 
-  <script type="module">
-    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { collection, addDoc, query, where, orderBy, onSnapshot, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { auth, db } from "./js/firebase.js";
-
-    let selectedChatId = null;
-    let currentProfile = null;
-    let unsubscribeMessages = null;
-
-    function emptyState(container, text) {
-      const paragraph = document.createElement('p');
-      paragraph.textContent = text;
-      paragraph.style.cssText = 'text-align:center;color:#636E72;padding:2rem';
-      container.replaceChildren(paragraph);
-    }
-
-    function renderMessages(snapshot) {
-      const list = document.getElementById('messagesList');
-      list.replaceChildren();
-      snapshot.forEach(messageDoc => {
-        const message = messageDoc.data();
-        const bubble = document.createElement('div');
-        bubble.className = `msg ${message.senderUid === auth.currentUser.uid ? 'sent' : 'received'}`;
-        bubble.appendChild(document.createTextNode(message.text || ''));
-        const time = document.createElement('small');
-        const date = message.timestamp?.toDate?.();
-        time.textContent = date ? date.toLocaleTimeString('ar') : '';
-        bubble.appendChild(time);
-        list.appendChild(bubble);
-      });
-      list.scrollTop = list.scrollHeight;
-    }
-
-    function subscribeToChat(chatId) {
-      if (unsubscribeMessages) unsubscribeMessages();
-      const messagesQuery = query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp'));
-      unsubscribeMessages = onSnapshot(messagesQuery, renderMessages);
-    }
-
-    async function loadMyChats() {
-      const chatsQuery = query(collection(db, 'chats'), where('participantUids', 'array-contains', auth.currentUser.uid));
-      onSnapshot(chatsQuery, snapshot => {
-        const list = document.getElementById('chatsList');
-        list.replaceChildren();
-        if (snapshot.empty) {
-          emptyState(list, 'لا توجد محادثات');
-          return;
-        }
-        snapshot.forEach(chatDoc => {
-          const chat = chatDoc.data();
-          const otherUid = chat.participantUids.find(uid => uid !== auth.currentUser.uid);
-          const item = document.createElement('button');
-          item.type = 'button';
-          item.className = 'chat-item';
-          item.style.cssText = 'width:100%;text-align:right;background:transparent;border:0;font-family:inherit';
-          const name = document.createElement('div');
-          name.className = 'chat-item-name';
-          name.textContent = chat.participantNames?.[otherUid] || 'مستخدم';
-          const last = document.createElement('div');
-          last.className = 'chat-item-last';
-          last.textContent = chat.lastMessage || 'بداية محادثة';
-          item.append(name, last);
-          item.addEventListener('click', () => openChat(chatDoc.id, name.textContent, item));
-          list.appendChild(item);
-        });
-      });
-    }
-
-    function openChat(chatId, userName, item = null) {
-      selectedChatId = chatId;
-      document.getElementById('chatHeader').textContent = '💬 ' + userName;
-      document.getElementById('inputArea').style.display = 'flex';
-      document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
-      item?.classList.add('active');
-      subscribeToChat(chatId);
-    }
-
-    window.sendMessage = async function() {
-      const text = document.getElementById('messageInput').value.trim();
-      if (!text || !selectedChatId) return;
-
-      await addDoc(collection(db, "chats", selectedChatId, "messages"), {
-        text,
-        senderUid: auth.currentUser.uid,
-        timestamp: serverTimestamp()
-      });
-      await setDoc(doc(db, "chats", selectedChatId), {
-        lastMessage: text.substring(0, 50),
-        lastUpdated: serverTimestamp()
-      }, { merge: true });
-      document.getElementById('messageInput').value = '';
-    };
-
-    document.getElementById('messageInput').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') sendMessage();
-    });
-
-    async function startRequestedChat() {
-      const otherUid = new URLSearchParams(window.location.search).get('withUid');
-      if (!otherUid || otherUid === auth.currentUser.uid) return;
-      const otherProfile = await getDoc(doc(db, 'publicProfiles', otherUid));
-      if (!otherProfile.exists()) return;
-      const ids = [auth.currentUser.uid, otherUid].sort();
-      const chatId = ids.join('_');
-      const names = {
-        [auth.currentUser.uid]: currentProfile.name || auth.currentUser.email,
-        [otherUid]: otherProfile.data().name || 'مستخدم'
-      };
-      const chatReference = doc(db, 'chats', chatId);
-      const existingChat = await getDoc(chatReference);
-      if (!existingChat.exists()) {
-        await setDoc(chatReference, {
-          participantUids: ids,
-          participantNames: names,
-          lastMessage: '',
-          createdAt: serverTimestamp(),
-          lastUpdated: serverTimestamp()
-        });
-      }
-      openChat(chatId, names[otherUid]);
-    }
-
-    onAuthStateChanged(auth, async user => {
-      if (!user) {
-        window.location.replace('login.html');
-        return;
-      }
-      const profile = await getDoc(doc(db, 'users', user.uid));
-      if (!user.emailVerified || !profile.exists() || profile.data().status !== 'active') {
-        await signOut(auth);
-        window.location.replace('login.html');
-        return;
-      }
-      currentProfile = profile.data();
-      loadMyChats();
-      await startRequestedChat();
-    });
-  </script>
+  <script type="module" src="js/site-header.js"></script>
+  <script type="module" src="js/messages.js"></script>
 </body>
 </html>

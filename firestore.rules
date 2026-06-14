@@ -32,6 +32,108 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(userId)).data.status == "active";
     }
 
+    function validParticipantMap(data, field) {
+      return data[field] is map
+        && data[field].keys().hasOnly(data.participantUids);
+    }
+
+    function validUnreadCounts(data) {
+      return validParticipantMap(data, "unreadCounts")
+        && data.unreadCounts[data.participantUids[0]] is int
+        && data.unreadCounts[data.participantUids[0]] >= 0
+        && data.unreadCounts[data.participantUids[1]] is int
+        && data.unreadCounts[data.participantUids[1]] >= 0;
+    }
+
+    function validParticipantTypes(data) {
+      return validParticipantMap(data, "participantTypes")
+        && data.participantTypes[data.participantUids[0]] in ["buyer", "freelancer"]
+        && data.participantTypes[data.participantUids[1]] in ["buyer", "freelancer"]
+        && data.participantTypes[data.participantUids[0]] == get(
+          /databases/$(database)/documents/publicProfiles/$(data.participantUids[0])
+        ).data.accountType
+        && data.participantTypes[data.participantUids[1]] == get(
+          /databases/$(database)/documents/publicProfiles/$(data.participantUids[1])
+        ).data.accountType;
+    }
+
+    function otherParticipant(data) {
+      return data.participantUids[0] == request.auth.uid
+        ? data.participantUids[1]
+        : data.participantUids[0];
+    }
+
+    function validChatUpdate() {
+      let otherUid = otherParticipant(resource.data);
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return (
+        changed.hasOnly(["unreadCounts"])
+        && request.resource.data.unreadCounts[request.auth.uid] == 0
+        && request.resource.data.unreadCounts[otherUid] == resource.data.unreadCounts[otherUid]
+      ) || (
+        changed.hasOnly([
+          "lastMessage", "lastMessageType", "lastSenderUid", "lastUpdated", "unreadCounts"
+        ])
+        && request.resource.data.lastSenderUid == request.auth.uid
+        && request.resource.data.unreadCounts[request.auth.uid] == 0
+        && request.resource.data.unreadCounts[otherUid] == resource.data.unreadCounts[otherUid] + 1
+        && request.resource.data.lastUpdated == request.time
+      );
+    }
+
+    function validLegacyChatUpgrade() {
+      return !resource.data.keys().hasAll([
+          "participantTypes", "unreadCounts", "lastMessageType", "lastSenderUid"
+        ])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "participantTypes", "unreadCounts", "lastMessageType", "lastSenderUid"
+        ])
+        && validParticipantTypes(request.resource.data)
+        && validUnreadCounts(request.resource.data)
+        && request.resource.data.lastMessageType == "text"
+        && request.resource.data.lastSenderUid == "";
+    }
+
+    function validChatContext(data) {
+      return !data.keys().hasAny(["context"])
+        || (
+          data.context is map
+          && data.context.keys().hasOnly(["serviceId", "title", "image", "price", "sellerUid"])
+          && data.context.keys().hasAll(["serviceId", "title", "image", "price", "sellerUid"])
+          && data.context.serviceId is string
+          && data.context.serviceId.size() > 0
+          && data.context.serviceId.size() <= 80
+          && data.context.title is string
+          && data.context.title.size() > 0
+          && data.context.title.size() <= 140
+          && data.context.image is string
+          && data.context.image.size() <= 600
+          && data.context.price is number
+          && data.context.price >= 0
+          && data.context.sellerUid in data.participantUids
+        );
+    }
+
+    function validAttachment(data) {
+      return !data.keys().hasAny(["attachment"])
+        || (
+          data.attachment is map
+          && data.attachment.keys().hasOnly(["name", "url", "path", "size", "contentType"])
+          && data.attachment.keys().hasAll(["name", "url", "path", "size", "contentType"])
+          && data.attachment.name is string
+          && data.attachment.name.size() > 0
+          && data.attachment.name.size() <= 160
+          && data.attachment.url is string
+          && data.attachment.url.size() > 0
+          && data.attachment.path is string
+          && data.attachment.path.size() > 0
+          && data.attachment.size is int
+          && data.attachment.size > 0
+          && data.attachment.size <= 10 * 1024 * 1024
+          && data.attachment.contentType is string
+        );
+    }
+
     match /users/{userId} {
       allow create: if signedIn()
         && request.auth.uid == userId
@@ -75,15 +177,22 @@ service cloud.firestore {
     match /chats/{chatId} {
       allow create: if activeUser()
         && request.resource.data.keys().hasOnly([
-          "participantUids", "participantNames", "lastMessage", "createdAt", "lastUpdated"
+          "participantUids", "participantNames", "participantTypes", "unreadCounts",
+          "lastMessage", "lastMessageType", "lastSenderUid", "context",
+          "createdAt", "lastUpdated"
+        ])
+        && request.resource.data.keys().hasAll([
+          "participantUids", "participantNames", "participantTypes", "unreadCounts",
+          "lastMessage", "lastMessageType", "lastSenderUid", "createdAt", "lastUpdated"
         ])
         && request.resource.data.participantUids.size() == 2
         && request.resource.data.participantUids[0] != request.resource.data.participantUids[1]
         && request.auth.uid in request.resource.data.participantUids
         && activeParticipant(request.resource.data.participantUids[0])
         && activeParticipant(request.resource.data.participantUids[1])
-        && request.resource.data.participantNames is map
-        && request.resource.data.participantNames.keys().hasOnly(request.resource.data.participantUids)
+        && validParticipantMap(request.resource.data, "participantNames")
+        && validParticipantTypes(request.resource.data)
+        && validUnreadCounts(request.resource.data)
         && request.resource.data.participantNames[
           request.resource.data.participantUids[0]
         ] == get(
@@ -99,25 +208,59 @@ service cloud.firestore {
           )
         ).data.name
         && request.resource.data.lastMessage is string
-        && request.resource.data.lastMessage.size() <= 50;
+        && request.resource.data.lastMessage.size() <= 140
+        && request.resource.data.lastMessageType in ["text", "attachment", "mixed"]
+        && request.resource.data.lastSenderUid == ""
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.lastUpdated == request.time
+        && validChatContext(request.resource.data);
 
       allow read: if activeUser() && request.auth.uid in resource.data.participantUids;
       allow update: if activeUser()
         && request.auth.uid in resource.data.participantUids
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["lastMessage", "lastUpdated"])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "participantTypes", "lastMessage", "lastMessageType",
+          "lastSenderUid", "lastUpdated", "unreadCounts"
+        ])
         && request.resource.data.lastMessage is string
-        && request.resource.data.lastMessage.size() <= 50;
+        && request.resource.data.lastMessage.size() <= 140
+        && request.resource.data.lastMessageType in ["text", "attachment", "mixed"]
+        && validUnreadCounts(request.resource.data)
+        && (validLegacyChatUpgrade() || validChatUpdate());
       allow delete: if false;
 
       match /messages/{messageId} {
         allow read: if isChatParticipant(chatId);
         allow create: if isChatParticipant(chatId)
-          && request.resource.data.keys().hasOnly(["text", "senderUid", "timestamp"])
+          && request.resource.data.keys().hasOnly([
+            "text", "senderUid", "timestamp", "type", "attachment", "readBy"
+          ])
+          && request.resource.data.keys().hasAll([
+            "text", "senderUid", "timestamp", "type", "readBy"
+          ])
           && request.resource.data.senderUid == request.auth.uid
           && request.resource.data.text is string
-          && request.resource.data.text.size() > 0
-          && request.resource.data.text.size() <= 500;
-        allow update, delete: if false;
+          && request.resource.data.text.size() <= 2000
+          && request.resource.data.type in ["text", "attachment", "mixed"]
+          && (
+            (request.resource.data.type == "text" && request.resource.data.text.size() > 0)
+            || (
+              request.resource.data.type in ["attachment", "mixed"]
+              && request.resource.data.keys().hasAny(["attachment"])
+            )
+          )
+          && request.resource.data.readBy is list
+          && request.resource.data.readBy.size() == 1
+          && request.resource.data.readBy[0] == request.auth.uid
+          && request.resource.data.timestamp == request.time
+          && validAttachment(request.resource.data);
+        allow update: if isChatParticipant(chatId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["readBy"])
+          && request.resource.data.readBy is list
+          && request.resource.data.readBy.hasAll(resource.data.readBy)
+          && request.auth.uid in request.resource.data.readBy
+          && request.resource.data.readBy.size() <= 2;
+        allow delete: if false;
       }
     }
 

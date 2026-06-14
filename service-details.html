@@ -4,14 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>تفاصيل الخدمة - PikLance</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    *{box-sizing:border-box}body{margin:0;font-family:Cairo,sans-serif;background:#f8f9fd;color:#2d3436}
-    main{max-width:850px;margin:4rem auto;padding:2rem;background:#fff;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
-    a{color:#6c5ce7;text-decoration:none}.price{font-size:1.5rem;font-weight:800;color:#6c5ce7}
-    .notice{padding:1rem;background:#fff3cd;border-radius:10px;margin:1.5rem 0}
-  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/site-header.css">
+  <link rel="stylesheet" href="css/service-details.css">
 </head>
 <body>
   <header class="site-header" id="navbar">
@@ -34,29 +31,152 @@
       <button class="site-header-mobile" id="siteHeaderMobile" type="button" aria-controls="siteHeaderNav" aria-expanded="false" aria-label="فتح القائمة">☰</button>
     </div>
   </header>
+
   <main>
-    <a href="services.html">← العودة إلى الخدمات</a>
-    <h1 id="title">تفاصيل الخدمة</h1>
-    <p id="category"></p>
-    <p id="seller"></p>
-    <p class="price" id="price"></p>
-    <div class="notice">الطلب والدفع غير مفعّلين بعد. لن يتم خصم أي مبلغ من هذه الصفحة.</div>
+    <div class="service-breadcrumb container">
+      <a href="index.html">الرئيسية</a><span>‹</span>
+      <a href="services.html">الخدمات</a><span>‹</span>
+      <b id="breadcrumbCategory">تفاصيل الخدمة</b>
+    </div>
+
+    <section class="service-hero">
+      <div class="container service-hero-grid">
+        <div class="service-heading">
+          <span class="category-pill" id="serviceCategory">تصميم</span>
+          <h1 id="serviceTitle">خدمة احترافية مصممة لنتائج واضحة</h1>
+          <p id="serviceSubtitle">تنفيذ متقن، تواصل مباشر، وتسليم ضمن الوقت المتفق عليه.</p>
+          <div class="service-proof">
+            <span class="rating"><b>★</b> <strong id="serviceRating">4.9</strong> <small id="reviewCount">(128 تقييماً)</small></span>
+            <span>✓ بائع موثّق</span>
+            <span id="ordersCount">أكثر من 300 طلب</span>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button id="shareService" type="button">مشاركة</button>
+          <button id="favoriteService" type="button" aria-pressed="false">♡ حفظ</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="container service-layout">
+      <div class="service-content">
+        <section class="gallery-card">
+          <div class="main-media">
+            <img id="mainServiceImage" src="" alt="">
+            <span class="popular-badge" id="popularBadge">اختيار العملاء</span>
+          </div>
+          <div class="gallery-thumbs" id="galleryThumbs"></div>
+        </section>
+
+        <nav class="detail-tabs" aria-label="أقسام الخدمة">
+          <a class="active" href="#description">الوصف</a>
+          <a href="#deliverables">ماذا ستحصل عليه</a>
+          <a href="#seller">مقدم الخدمة</a>
+          <a href="#reviews">التقييمات</a>
+        </nav>
+
+        <section class="detail-card" id="description">
+          <div class="section-title">
+            <p>عن الخدمة</p>
+            <h2>خدمة مبنية حول احتياج مشروعك</h2>
+          </div>
+          <div class="description-copy" id="serviceDescription"></div>
+        </section>
+
+        <section class="detail-card" id="deliverables">
+          <div class="section-title">
+            <p>نطاق العمل</p>
+            <h2>ماذا ستحصل عليه؟</h2>
+          </div>
+          <div class="deliverables-grid" id="deliverablesGrid"></div>
+        </section>
+
+        <section class="detail-card work-steps">
+          <div class="section-title">
+            <p>طريقة التنفيذ</p>
+            <h2>رحلة عمل واضحة من البداية للتسليم</h2>
+          </div>
+          <div class="steps-grid">
+            <article><span>1</span><strong>فهم المطلوب</strong><p>نتفق على الهدف، التفاصيل، والملفات اللازمة.</p></article>
+            <article><span>2</span><strong>التنفيذ والمتابعة</strong><p>يبدأ العمل مع تحديثات ورسائل مستمرة داخل المنصة.</p></article>
+            <article><span>3</span><strong>المراجعة والتسليم</strong><p>تراجع النتيجة وتُطبق التعديلات المتفق عليها.</p></article>
+          </div>
+        </section>
+
+        <section class="detail-card seller-card" id="seller">
+          <div class="seller-profile">
+            <img id="sellerImage" src="" alt="">
+            <div>
+              <span class="verified">✓ موثّق</span>
+              <h2 id="sellerName">مقدم الخدمة</h2>
+              <p id="sellerSpecialty">متخصص في الخدمات الرقمية</p>
+              <div class="seller-meta">
+                <span>★ <b id="sellerRating">4.9</b></span>
+                <span>◷ يرد خلال ساعتين</span>
+                <span>● متاح للعمل</span>
+              </div>
+            </div>
+          </div>
+          <p id="sellerBio"></p>
+          <div class="seller-actions">
+            <a id="sellerProfileLink" href="freelancers.html">عرض الملف الشخصي</a>
+            <a id="sellerMessageLink" href="freelancers.html">مراسلة مقدم الخدمة</a>
+          </div>
+        </section>
+
+        <section class="detail-card" id="reviews">
+          <div class="section-title review-title">
+            <div>
+              <p>آراء العملاء</p>
+              <h2>تقييمات موثوقة بعد التسليم</h2>
+            </div>
+            <strong><span id="reviewAverage">4.9</span> ★</strong>
+          </div>
+          <div class="reviews-list" id="reviewsList"></div>
+        </section>
+      </div>
+
+      <aside class="purchase-column">
+        <section class="purchase-card">
+          <div class="package-tabs" id="packageTabs"></div>
+          <div class="package-body">
+            <div class="package-price">
+              <span>تبدأ من</span>
+              <strong id="packagePrice">25,000 ل.س</strong>
+            </div>
+            <p id="packageDescription"></p>
+            <ul id="packageFeatures"></ul>
+            <div class="package-meta">
+              <span>◷ <b id="packageDelivery">4 أيام</b></span>
+              <span>↻ <b id="packageRevisions">تعديلان</b></span>
+            </div>
+            <a class="purchase-primary" id="startConversation" href="login.html">ناقش الخدمة مع البائع</a>
+            <a class="purchase-secondary" id="viewSeller" href="freelancers.html">عرض ملف البائع</a>
+          </div>
+        </section>
+
+        <section class="trust-card">
+          <h3>تواصل واطلب بثقة</h3>
+          <p><span>✓</span> سجل كامل للمحادثة والاتفاق</p>
+          <p><span>✓</span> لا يبدأ التنفيذ قبل وضوح المتطلبات</p>
+          <p><span>✓</span> دعم المنصة متاح عند الحاجة</p>
+        </section>
+      </aside>
+    </div>
+
+    <section class="related-section">
+      <div class="container">
+        <div class="section-title related-title">
+          <div><p>قد يناسبك أيضاً</p><h2>خدمات مشابهة</h2></div>
+          <a href="services.html">عرض كل الخدمات</a>
+        </div>
+        <div class="related-grid" id="relatedServices"></div>
+      </div>
+    </section>
   </main>
-  <script>
-    const services = {
-      1:{title:'تصميم هوية بصرية كاملة',category:'تصميم',seller:'أحمد المصمم',price:25000},
-      2:{title:'تطوير متجر إلكتروني',category:'برمجة',seller:'سارة المبرمجة',price:150000},
-      3:{title:'كتابة محتوى SEO احترافي',category:'كتابة',seller:'خالد الكاتب',price:8000},
-      4:{title:'إدارة حملات إعلانية ممولة',category:'تسويق',seller:'ليلى المسوقة',price:35000},
-      5:{title:'تسجيل تعليق صوتي احترافي',category:'صوتيات',seller:'عماد الصوت',price:15000},
-      6:{title:'مونتاج فيديو احترافي',category:'فيديو',seller:'نور المنتجة',price:50000}
-    };
-    const service = services[new URLSearchParams(location.search).get('id')] || services[1];
-    document.getElementById('title').textContent = service.title;
-    document.getElementById('category').textContent = `الفئة: ${service.category}`;
-    document.getElementById('seller').textContent = `مقدم الخدمة: ${service.seller}`;
-    document.getElementById('price').textContent = `${service.price.toLocaleString('ar')} ل.س`;
-  </script>
+
+  <div class="service-toast" id="serviceToast" role="status"></div>
   <script type="module" src="js/site-header.js"></script>
+  <script type="module" src="js/service-details.js"></script>
 </body>
 </html>
