@@ -11,8 +11,29 @@
     a{color:#6c5ce7;text-decoration:none}.price{font-size:1.5rem;font-weight:800;color:#6c5ce7}
     .notice{padding:1rem;background:#fff3cd;border-radius:10px;margin:1.5rem 0}
   </style>
+  <link rel="stylesheet" href="css/site-header.css">
 </head>
 <body>
+  <header class="site-header" id="navbar">
+    <div class="site-header-inner">
+      <a class="site-header-brand" href="index.html" aria-label="PikLance home">
+        <span class="site-header-brand-mark">P</span>
+        <strong>Pik<span>Lance</span></strong>
+      </a>
+      <nav class="site-header-nav" id="siteHeaderNav" aria-label="التنقل الرئيسي">
+        <a href="index.html">الرئيسية</a>
+        <a href="services.html">الخدمات</a>
+        <a href="freelancers.html">المستقلون</a>
+        <a href="how-it-works.html">كيف تعمل المنصة</a>
+      </nav>
+      <div class="site-header-actions" id="siteHeaderActions">
+        <button class="site-header-theme" id="themeToggle" type="button" aria-label="تبديل المظهر">☾</button>
+        <a class="site-header-button ghost" href="login.html">دخول</a>
+        <a class="site-header-button primary" href="register.html">انضم مجاناً</a>
+      </div>
+      <button class="site-header-mobile" id="siteHeaderMobile" type="button" aria-controls="siteHeaderNav" aria-expanded="false" aria-label="فتح القائمة">☰</button>
+    </div>
+  </header>
   <main>
     <a href="services.html">← العودة إلى الخدمات</a>
     <h1 id="title">تفاصيل الخدمة</h1>
@@ -36,5 +57,6 @@
     document.getElementById('seller').textContent = `مقدم الخدمة: ${service.seller}`;
     document.getElementById('price').textContent = `${service.price.toLocaleString('ar')} ل.س`;
   </script>
+  <script type="module" src="js/site-header.js"></script>
 </body>
 </html>

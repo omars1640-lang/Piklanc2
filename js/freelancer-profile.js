@@ -140,12 +140,6 @@ function initials(name) {
   return (name || "م").trim().charAt(0).toUpperCase();
 }
 
-function setTheme(theme) {
-  document.documentElement.dataset.theme = theme;
-  localStorage.setItem("theme", theme);
-  document.getElementById("themeButton").textContent = theme === "dark" ? "☀" : "☾";
-}
-
 function showToast(message) {
   elements.toast.textContent = message;
   elements.toast.classList.add("show");
@@ -452,7 +446,6 @@ function bindEvents() {
   });
 }
 
-setTheme(localStorage.getItem("theme") || "light");
 bindEvents();
 renderProfile(activeProfile);
 elements.loader.classList.add("hidden");
