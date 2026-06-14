@@ -142,7 +142,7 @@
   </div>
 
   <script type="module">
-    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { collection, addDoc, query, where, orderBy, onSnapshot, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { auth, db } from "./js/firebase.js";
 
@@ -269,7 +269,8 @@
         return;
       }
       const profile = await getDoc(doc(db, 'users', user.uid));
-      if (!profile.exists()) {
+      if (!user.emailVerified || !profile.exists() || profile.data().status !== 'active') {
+        await signOut(auth);
         window.location.replace('login.html');
         return;
       }

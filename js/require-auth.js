@@ -1,4 +1,4 @@
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth, db } from "./firebase.js";
 
@@ -10,10 +10,14 @@ onAuthStateChanged(auth, async user => {
     return;
   }
 
-  if (!requiredAccountType) return;
-
   const profile = await getDoc(doc(db, "users", user.uid));
-  if (!profile.exists() || profile.data().accountType !== requiredAccountType) {
+  if (!user.emailVerified || !profile.exists() || profile.data().status !== "active") {
+    await signOut(auth);
+    window.location.replace("login.html");
+    return;
+  }
+
+  if (requiredAccountType && profile.data().accountType !== requiredAccountType) {
     window.location.replace("profile.html");
   }
 });
