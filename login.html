@@ -266,6 +266,22 @@
       resetModal.setAttribute("aria-hidden", "true");
     }
 
+    function completeResetRequest(email) {
+      resetCooldown = true;
+      document.getElementById("loginEmail").value = email;
+      closeResetModal();
+      showMessage(
+        loginMessage,
+        "تم إرسال رابط استعادة كلمة المرور. تحقق من بريدك الإلكتروني ومجلد الرسائل غير المرغوب فيها.",
+        "success"
+      );
+      setTimeout(() => {
+        resetCooldown = false;
+        sendResetButton.disabled = false;
+        sendResetButton.textContent = "إعادة إرسال الرابط";
+      }, 60000);
+    }
+
     document.getElementById("forgotPasswordButton").addEventListener("click", openResetModal);
     document.querySelectorAll("[data-close-reset]").forEach(button => button.addEventListener("click", closeResetModal));
     resetModal.addEventListener("click", event => {
@@ -287,31 +303,11 @@
       try {
         auth.languageCode = "ar";
         await sendPasswordResetEmail(auth, email);
-        resetCooldown = true;
-        showMessage(
-          resetMessage,
-          "إذا كان البريد مرتبطاً بحساب، ستصلك رسالة إعادة التعيين خلال دقائق. افحص مجلد الرسائل غير المرغوب فيها أيضاً.",
-          "success"
-        );
-        setTimeout(() => {
-          resetCooldown = false;
-          sendResetButton.disabled = false;
-          sendResetButton.textContent = "إعادة إرسال الرابط";
-        }, 60000);
+        completeResetRequest(email);
       } catch (error) {
         console.error("Password reset email failed", error);
         if (error.code === "auth/user-not-found") {
-          resetCooldown = true;
-          showMessage(
-            resetMessage,
-            "إذا كان البريد مرتبطاً بحساب، ستصلك رسالة إعادة التعيين خلال دقائق. افحص مجلد الرسائل غير المرغوب فيها أيضاً.",
-            "success"
-          );
-          setTimeout(() => {
-            resetCooldown = false;
-            sendResetButton.disabled = false;
-            sendResetButton.textContent = "إعادة إرسال الرابط";
-          }, 60000);
+          completeResetRequest(email);
           return;
         }
         const messages = {
