@@ -1,120 +1,107 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ملفي الشخصي - PikLance</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: 'Cairo', sans-serif; background: #F4F6FA; }
-    .container { max-width: 800px; margin: 2rem auto; padding: 1rem; }
-    .profile-header {
-      background: #fff; border-radius: 20px; padding: 2rem; text-align: center;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 1.5rem;
-    }
-    .avatar {
-      width: 100px; height: 100px; border-radius: 50%; background: #6C5CE7;
-      color: #fff; display: flex; align-items: center; justify-content: center;
-      font-size: 2.5rem; font-weight: 800; margin: 0 auto 1rem;
-    }
-    .card {
-      background: #fff; border-radius: 16px; padding: 1.5rem;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 1rem;
-    }
-    .btn {
-      padding: 0.7rem 1.5rem; background: #6C5CE7; color: #fff;
-      border: none; border-radius: 10px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 700;
-    }
-    .btn-outline { background: #fff; color: #6C5CE7; border: 2px solid #6C5CE7; }
-  </style>
-  <link rel="stylesheet" href="css/site-header.css">
+  <title>لوحة العميل | PikLance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/client-dashboard.css">
 </head>
 <body>
-  <header class="site-header" id="navbar">
-    <div class="site-header-inner">
-      <a class="site-header-brand" href="index.html" aria-label="PikLance home">
-        <span class="site-header-brand-mark">P</span>
-        <strong>Pik<span>Lance</span></strong>
-      </a>
-      <nav class="site-header-nav" id="siteHeaderNav" aria-label="التنقل الرئيسي">
-        <a href="index.html">الرئيسية</a>
-        <a href="services.html">الخدمات</a>
-        <a href="freelancers.html">المستقلون</a>
-        <a href="how-it-works.html">كيف تعمل المنصة</a>
-      </nav>
-      <div class="site-header-actions" id="siteHeaderActions">
-        <button class="site-header-theme" id="themeToggle" type="button" aria-label="تبديل المظهر">☾</button>
-        <a class="site-header-button ghost" href="login.html">دخول</a>
-        <a class="site-header-button primary" href="register.html">انضم مجاناً</a>
-      </div>
-      <button class="site-header-mobile" id="siteHeaderMobile" type="button" aria-controls="siteHeaderNav" aria-expanded="false" aria-label="فتح القائمة">☰</button>
+  <div class="dashboard-loading" id="dashboardLoading"><span>P</span><strong>جاري تجهيز مساحة عملك...</strong></div>
+
+  <header class="dashboard-topbar">
+    <button class="icon-button mobile-only" id="menuButton" type="button" aria-label="فتح القائمة">☰</button>
+    <a class="brand" href="index.html"><span>P</span><strong>Pik<em>Lance</em></strong></a>
+    <div class="topbar-copy"><small>مساحة العميل</small><strong id="topbarTitle">نظرة عامة</strong></div>
+    <div class="topbar-actions">
+      <button class="icon-button" id="themeButton" type="button" aria-label="تبديل المظهر">☀</button>
+      <button class="notification-button" type="button" data-section-target="notifications" aria-label="الإشعارات">
+        <span>♧</span><b id="notificationBadge" hidden>0</b>
+      </button>
+      <a class="message-link" href="messages.html">الرسائل</a>
+      <span class="avatar" id="topAvatar">ع</span>
     </div>
   </header>
-  <div class="container">
-    <div class="profile-header">
-      <div class="avatar" id="profileAvatar">U</div>
-      <h2 id="profileName">المستخدم</h2>
-      <p style="color:#636E72;" id="profileEmail">user@email.com</p>
-    </div>
 
-    <div class="card">
-      <h3>👤 معلوماتي</h3>
-      <p><strong>الاسم:</strong> <span id="infoName">-</span></p>
-      <p><strong>البريد:</strong> <span id="infoEmail">-</span></p>
-      <p><strong>نوع الحساب:</strong> <span id="infoType">-</span></p>
-    </div>
+  <div class="dashboard-shell">
+    <aside class="dashboard-sidebar" id="sidebar">
+      <div class="account-card"><span class="avatar large" id="sidebarAvatar">ع</span><div><strong id="sidebarName">عميل PikLance</strong><small>حساب عميل</small></div></div>
+      <nav>
+        <p>مساحة العمل</p>
+        <button class="nav-link active" type="button" data-section="overview"><span>⌂</span>نظرة عامة</button>
+        <button class="nav-link" type="button" data-section="orders"><span>▣</span>طلباتي <b id="ordersBadge">0</b></button>
+        <button class="nav-link" type="button" data-section="favorites"><span>♡</span>الخدمات المحفوظة <b id="favoritesBadge">0</b></button>
+        <a class="nav-link" href="messages.html"><span>✉</span>الرسائل</a>
+        <p>المساعدة والحساب</p>
+        <button class="nav-link" type="button" data-section="support"><span>?</span>الدعم والنزاعات <b id="ticketsBadge">0</b></button>
+        <button class="nav-link" type="button" data-section="notifications"><span>♧</span>الإشعارات</button>
+        <button class="nav-link" type="button" data-section="account"><span>○</span>إعدادات الحساب</button>
+      </nav>
+      <div class="sidebar-footer"><a href="services.html">استكشف الخدمات</a><button id="logoutButton" type="button">تسجيل الخروج</button></div>
+    </aside>
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
-    <div class="card" id="buyerHistory" style="display:none;">
-      <h3>🛒 مشترياتي</h3>
-      <p style="color:#636E72;">لا توجد مشتريات بعد</p>
-    </div>
+    <main class="dashboard-main">
+      <section class="dashboard-section active" id="section-overview">
+        <div class="page-heading"><div><p>لوحة العميل</p><h1>مرحباً، <span id="welcomeName">عميل</span></h1><span>تابع طلباتك ورسائلك ودعمك من مكان واحد.</span></div><a class="primary-button" href="services.html">استكشف الخدمات</a></div>
+        <div class="metrics-grid">
+          <article><span>إجمالي الطلبات</span><strong id="ordersCount">0</strong><small>مرتبطة بحسابك</small></article>
+          <article><span>طلبات قيد التنفيذ</span><strong id="activeOrdersCount">0</strong><small>تحتاج متابعة</small></article>
+          <article><span>الخدمات المحفوظة</span><strong id="favoritesCount">0</strong><small>للعودة إليها لاحقاً</small></article>
+          <article><span>إشعارات غير مقروءة</span><strong id="unreadCount">0</strong><small>آخر تحديثات حسابك</small></article>
+        </div>
+        <div class="content-grid">
+          <section class="panel">
+            <div class="panel-head"><div><small>آخر النشاط</small><h2>طلباتك الأخيرة</h2></div><button type="button" data-section-target="orders">عرض الكل</button></div>
+            <div id="overviewOrders"></div>
+            <div class="empty-state" id="overviewOrdersEmpty"><span>▣</span><strong>لا توجد طلبات بعد</strong><p>عند تشغيل نظام الشراء ستظهر الطلبات الفعلية ومراحل تنفيذها هنا.</p><a href="services.html">تصفح الخدمات</a></div>
+          </section>
+          <aside class="panel quick-actions">
+            <div class="panel-head"><div><small>اختصارات</small><h2>إجراءات سريعة</h2></div></div>
+            <a href="services.html"><span>▦</span><div><strong>استكشف الخدمات</strong><small>ابحث حسب التخصص والميزانية</small></div></a>
+            <a href="freelancers.html"><span>◎</span><div><strong>ابحث عن مستقل</strong><small>اطلع على الملفات ومعارض الأعمال</small></div></a>
+            <button type="button" data-section-target="support"><span>?</span><div><strong>افتح تذكرة دعم</strong><small>مساعدة تقنية أو نزاع</small></div></button>
+          </aside>
+        </div>
+      </section>
 
-    <div class="card" id="freelancerServices" style="display:none;">
-      <h3>🎨 خدماتي</h3>
-      <a href="freelancer-dashboard.html" class="btn">لوحة تحكم المستقل</a>
-    </div>
+      <section class="dashboard-section" id="section-orders">
+        <div class="page-heading"><div><p>إدارة المشتريات</p><h1>طلباتي</h1><span>سجل موحّد لكل الطلبات ومراحل التنفيذ والتسليم.</span></div></div>
+        <div class="panel list-panel" id="ordersList"></div>
+      </section>
 
-    <button class="btn btn-outline" onclick="logout()" style="margin-top:1rem;">🚪 تسجيل الخروج</button>
+      <section class="dashboard-section" id="section-favorites">
+        <div class="page-heading"><div><p>قائمة المتابعة</p><h1>الخدمات المحفوظة</h1><span>الخدمات التي حفظتها للمقارنة أو الشراء لاحقاً.</span></div></div>
+        <div class="cards-grid" id="favoritesList"></div>
+      </section>
+
+      <section class="dashboard-section" id="section-support">
+        <div class="page-heading"><div><p>مركز المساعدة</p><h1>الدعم والنزاعات</h1><span>أنشئ تذكرة جديدة وتابع رد فريق الإدارة.</span></div><a class="primary-button" href="support.html">فتح مركز الدعم</a></div>
+        <div class="panel list-panel" id="ticketsList"></div>
+      </section>
+
+      <section class="dashboard-section" id="section-notifications">
+        <div class="page-heading"><div><p>مركز التنبيهات</p><h1>الإشعارات</h1><span>قرارات الإدارة وتحديثات الدعم والحساب.</span></div><button class="secondary-button" id="markAllRead" type="button">تحديد الكل كمقروء</button></div>
+        <div class="panel notification-list" id="notificationsList"></div>
+      </section>
+
+      <section class="dashboard-section" id="section-account">
+        <div class="page-heading"><div><p>الملف الشخصي</p><h1>إعدادات الحساب</h1><span>حدّث معلومات التواصل الأساسية المرتبطة بحسابك.</span></div></div>
+        <form class="panel account-form" id="accountForm">
+          <div class="form-grid">
+            <label>الاسم الكامل<input id="accountName" type="text" maxlength="80" required></label>
+            <label>البريد الإلكتروني<input id="accountEmail" type="email" disabled></label>
+            <label>رقم الهاتف<input id="accountPhone" type="tel" maxlength="30"></label>
+          </div>
+          <div class="form-footer"><span id="accountMessage"></span><button class="primary-button" type="submit">حفظ التعديلات</button></div>
+        </form>
+      </section>
+    </main>
   </div>
-
-  <script type="module">
-    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { auth, db } from "./js/firebase.js";
-
-    window.logout = async function() {
-      await signOut(auth);
-      window.location.href = 'index.html';
-    };
-
-    onAuthStateChanged(auth, async user => {
-      if (!user) {
-        window.location.replace('login.html');
-        return;
-      }
-      const snapshot = await getDoc(doc(db, 'users', user.uid));
-      if (!snapshot.exists()) {
-        await signOut(auth);
-        window.location.replace('login.html');
-        return;
-      }
-      const profile = snapshot.data();
-      document.getElementById('profileAvatar').textContent = (profile.name || user.email).charAt(0);
-      document.getElementById('profileName').textContent = profile.name || '';
-      document.getElementById('profileEmail').textContent = user.email || '';
-      document.getElementById('infoName').textContent = profile.name || '';
-      document.getElementById('infoEmail').textContent = user.email || '';
-
-      if (profile.accountType === 'freelancer') {
-        document.getElementById('infoType').textContent = 'مستقل';
-        document.getElementById('freelancerServices').style.display = 'block';
-      } else {
-        document.getElementById('infoType').textContent = 'عميل';
-        document.getElementById('buyerHistory').style.display = 'block';
-      }
-    });
-  </script>
-  <script type="module" src="js/site-header.js"></script>
+  <div class="dashboard-toast" id="dashboardToast" role="status"></div>
+  <script type="module" src="js/client-dashboard.js"></script>
 </body>
 </html>

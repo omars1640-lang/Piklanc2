@@ -1,35 +1,67 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>الدعم - PikLance</title>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مركز الدعم والنزاعات | PikLance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/site-header.css">
+  <link rel="stylesheet" href="css/support-center.css">
 </head>
 <body>
-  <header class="site-header" id="navbar">
+  <header class="site-header">
     <div class="site-header-inner">
-      <a class="site-header-brand" href="index.html" aria-label="PikLance home">
-        <span class="site-header-brand-mark">P</span>
-        <strong>Pik<span>Lance</span></strong>
-      </a>
-      <nav class="site-header-nav" id="siteHeaderNav" aria-label="التنقل الرئيسي">
-        <a href="index.html">الرئيسية</a>
-        <a href="services.html">الخدمات</a>
-        <a href="freelancers.html">المستقلون</a>
-        <a href="how-it-works.html">كيف تعمل المنصة</a>
-      </nav>
-      <div class="site-header-actions" id="siteHeaderActions">
-        <button class="site-header-theme" id="themeToggle" type="button" aria-label="تبديل المظهر">☾</button>
-        <a class="site-header-button ghost" href="login.html">دخول</a>
-        <a class="site-header-button primary" href="register.html">انضم مجاناً</a>
-      </div>
-      <button class="site-header-mobile" id="siteHeaderMobile" type="button" aria-controls="siteHeaderNav" aria-expanded="false" aria-label="فتح القائمة">☰</button>
+      <a class="site-header-brand" href="index.html"><span class="site-header-brand-mark">P</span><strong>Pik<span>Lance</span></strong></a>
+      <nav class="site-header-nav" id="siteHeaderNav"><a href="index.html">الرئيسية</a><a href="services.html">الخدمات</a><a href="freelancers.html">المستقلون</a><a href="support.html">الدعم</a></nav>
+      <div class="site-header-actions" id="siteHeaderActions"><button class="site-header-theme" id="themeToggle" type="button">☀</button></div>
+      <button class="site-header-mobile" id="siteHeaderMobile" type="button" aria-expanded="false">☰</button>
     </div>
   </header>
-  <main class="site-simple-page">
-    <a href="index.html">← الرئيسية</a>
-    <h1>الدعم الفني</h1>
-    <p>للمساعدة استخدم صفحة <a href="contact.html">تواصل معنا</a>. لا ترسل كلمات المرور أو رموز الدخول أو صور الهوية عبر الرسائل.</p>
+
+  <main>
+    <section class="support-hero">
+      <div><p>مركز المساعدة</p><h1>الدعم والنزاعات في مكان واحد</h1><span>قدّم التفاصيل بوضوح، تابع كل تحديث، واحتفظ بسجل كامل للمراسلات والقرارات.</span></div>
+      <button class="primary-button" id="newTicketButton" type="button">+ تذكرة جديدة</button>
+    </section>
+
+    <section class="support-stats" id="supportStats">
+      <article><span>كل التذاكر</span><strong id="allTicketsCount">0</strong></article>
+      <article><span>قيد المعالجة</span><strong id="activeTicketsCount">0</strong></article>
+      <article><span>بانتظار ردك</span><strong id="waitingTicketsCount">0</strong></article>
+      <article><span>تم حلها</span><strong id="resolvedTicketsCount">0</strong></article>
+    </section>
+
+    <section class="support-layout">
+      <aside class="tickets-panel">
+        <div class="panel-heading"><div><small>سجل المساعدة</small><h2>تذاكري</h2></div><select id="ticketFilter"><option value="all">كل الحالات</option><option value="open">مفتوحة</option><option value="in_progress">قيد المعالجة</option><option value="waiting_user">بانتظار ردي</option><option value="resolved">محلولة</option><option value="closed">مغلقة</option></select></div>
+        <div class="tickets-list" id="ticketsList"></div>
+      </aside>
+      <section class="ticket-detail" id="ticketDetail">
+        <div class="empty-detail"><span>?</span><h2>اختر تذكرة لعرض تفاصيلها</h2><p>ستظهر الرسائل وتحديثات الحالة هنا.</p></div>
+      </section>
+    </section>
+
+    <section class="help-grid">
+      <article><span>?</span><h3>مشكلة تقنية</h3><p>تعطل صفحة، صعوبة دخول، أو مشكلة في رفع الملفات.</p></article>
+      <article><span>⚖</span><h3>فتح نزاع</h3><p>اربط النزاع برقم الطلب وأرفق وصفاً واضحاً للأحداث.</p></article>
+      <article><span>!</span><h3>الإبلاغ عن مخالفة</h3><p>بلّغ عن محتوى أو حساب مخالف ليتم مراجعته إدارياً.</p></article>
+    </section>
   </main>
+
+  <div class="modal-overlay" id="ticketModal" aria-hidden="true">
+    <form class="ticket-form">
+      <header><div><small>طلب مساعدة جديد</small><h2>إنشاء تذكرة</h2></div><button type="button" data-close-ticket>×</button></header>
+      <label>نوع الطلب<select id="ticketCategory" required><option value="technical">مشكلة تقنية</option><option value="account">الحساب والتوثيق</option><option value="payment">الدفع والفواتير</option><option value="dispute">نزاع مرتبط بطلب</option><option value="report">بلاغ عن مخالفة</option><option value="general">استفسار عام</option></select></label>
+      <label>عنوان مختصر<input id="ticketSubject" type="text" maxlength="120" required placeholder="اكتب ملخص المشكلة"></label>
+      <label id="orderIdWrap" hidden>رقم الطلب<input id="ticketOrderId" type="text" maxlength="100" placeholder="اختياري إن لم يتوفر"></label>
+      <label>التفاصيل<textarea id="ticketMessage" rows="6" maxlength="3000" required placeholder="اشرح ما حدث والخطوات التي جرّبتها"></textarea></label>
+      <footer><button class="secondary-button" type="button" data-close-ticket>إلغاء</button><button class="primary-button" type="submit">إرسال التذكرة</button></footer>
+    </form>
+  </div>
+  <div class="support-toast" id="supportToast"></div>
   <script type="module" src="js/site-header.js"></script>
+  <script type="module" src="js/support-center.js"></script>
 </body>
 </html>

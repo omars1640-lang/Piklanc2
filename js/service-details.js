@@ -1,5 +1,8 @@
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { auth } from "./firebase.js";
+import {
+  deleteDoc, doc, getDoc, serverTimestamp, setDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { auth, db } from "./firebase.js";
 
 const services = [
   {
@@ -240,6 +243,7 @@ const service = services.find(item => item.id === params.get("id")) || services[
 const sellerUid = params.get("sellerUid") || "";
 let selectedPackage = 0;
 let signedIn = false;
+let currentUser = null;
 
 function showToast(message) {
   const toast = document.getElementById("serviceToast");
@@ -407,6 +411,41 @@ document.getElementById("favoriteService").addEventListener("click", event => {
   showToast(active ? "تمت إضافة الخدمة إلى المحفوظات." : "تمت إزالة الخدمة من المحفوظات.");
 });
 
+document.getElementById("favoriteService").addEventListener("click", async event => {
+  event.stopImmediatePropagation();
+  if (!currentUser) {
+    location.href = `login.html?returnUrl=${encodeURIComponent(location.pathname + location.search)}`;
+    return;
+  }
+  const button = event.currentTarget;
+  const active = button.getAttribute("aria-pressed") !== "true";
+  button.disabled = true;
+  try {
+    const reference = doc(db, "favorites", currentUser.uid, "services", service.id);
+    if (active) {
+      await setDoc(reference, {
+        serviceId: service.id,
+        title: service.title,
+        category: service.category,
+        price: packagesFor(service)[selectedPackage].price,
+        sellerUid,
+        savedAt: serverTimestamp()
+      });
+    } else {
+      await deleteDoc(reference);
+    }
+    button.setAttribute("aria-pressed", String(active));
+    button.classList.toggle("active", active);
+    button.textContent = active ? "♥ محفوظة" : "♡ حفظ";
+    showToast(active ? "تمت إضافة الخدمة إلى المحفوظات." : "تمت إزالة الخدمة من المحفوظات.");
+  } catch (error) {
+    console.error("Unable to update favorite", error);
+    showToast("تعذر تحديث قائمة المحفوظات.");
+  } finally {
+    button.disabled = false;
+  }
+}, true);
+
 document.getElementById("shareService").addEventListener("click", async () => {
   try {
     if (navigator.share) await navigator.share({ title: service.title, url: location.href });
@@ -428,6 +467,20 @@ document.querySelectorAll(".detail-tabs a").forEach(link => {
 onAuthStateChanged(auth, user => {
   signedIn = Boolean(user);
   updateContactLinks();
+});
+
+onAuthStateChanged(auth, async user => {
+  currentUser = user;
+  if (!user) return;
+  try {
+    const snapshot = await getDoc(doc(db, "favorites", user.uid, "services", service.id));
+    const button = document.getElementById("favoriteService");
+    button.setAttribute("aria-pressed", String(snapshot.exists()));
+    button.classList.toggle("active", snapshot.exists());
+    button.textContent = snapshot.exists() ? "♥ محفوظة" : "♡ حفظ";
+  } catch {
+    // The account may not have access to favorites yet.
+  }
 });
 
 renderService();

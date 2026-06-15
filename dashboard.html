@@ -190,10 +190,72 @@
       </div>
     </section>
 
-    <section class="admin-section future-section" id="marketplace-section" data-module="marketplace"></section>
+    <section class="admin-section" id="marketplace-section">
+      <div class="section-heading">
+        <div><p>تشغيل السوق</p><h2>مراجعة خدمات المستقلين</h2><span>راجع الخدمات المرسلة للنشر واتخذ قراراً موثقاً قبل ظهورها للعملاء.</span></div>
+        <div class="heading-stat"><strong id="pendingServicesCount">0</strong><small>بانتظار المراجعة</small></div>
+      </div>
+      <div class="data-panel">
+        <div class="data-toolbar">
+          <label class="search-field"><span>⌕</span><input id="serviceAdminSearch" type="search" placeholder="بحث بعنوان الخدمة أو اسم المستقل"></label>
+          <select id="serviceAdminFilter"><option value="all">كل الحالات</option><option value="pending">قيد المراجعة</option><option value="published">منشورة</option><option value="rejected">مرفوضة</option><option value="draft">مسودة</option></select>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>الخدمة</th><th>المستقل</th><th>السعر</th><th>الحالة</th><th>آخر تحديث</th><th>الإجراء</th></tr></thead><tbody id="adminServicesTable"></tbody></table></div>
+        <div class="empty-state" id="adminServicesEmpty" hidden><span>▦</span><strong>لا توجد خدمات مطابقة</strong></div>
+      </div>
+    </section>
     <section class="admin-section future-section" id="finance-section" data-module="finance"></section>
-    <section class="admin-section future-section" id="support-section" data-module="support"></section>
-    <section class="admin-section future-section" id="content-section" data-module="content"></section>
+    <section class="admin-section" id="support-section">
+      <div class="section-heading">
+        <div><p>تجربة العملاء</p><h2>الدعم والنزاعات</h2><span>صندوق موحّد للتذاكر التقنية والبلاغات والنزاعات المرتبطة بالطلبات.</span></div>
+        <div class="heading-stat"><strong id="openTicketsCount">0</strong><small>تذكرة نشطة</small></div>
+      </div>
+      <div class="metrics-grid compact">
+        <article class="metric-card orange"><span class="metric-icon">?</span><div><small>مفتوحة</small><strong id="ticketOpenMetric">0</strong></div></article>
+        <article class="metric-card blue"><span class="metric-icon">↻</span><div><small>قيد المعالجة</small><strong id="ticketProgressMetric">0</strong></div></article>
+        <article class="metric-card purple"><span class="metric-icon">⚖</span><div><small>نزاعات</small><strong id="ticketDisputeMetric">0</strong></div></article>
+      </div>
+      <div class="data-panel">
+        <div class="data-toolbar">
+          <label class="search-field"><span>⌕</span><input id="ticketAdminSearch" type="search" placeholder="بحث بالعنوان أو اسم المستخدم"></label>
+          <select id="ticketAdminFilter"><option value="all">كل الحالات</option><option value="open">مفتوحة</option><option value="in_progress">قيد المعالجة</option><option value="waiting_user">بانتظار المستخدم</option><option value="resolved">محلولة</option><option value="closed">مغلقة</option></select>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>التذكرة</th><th>المستخدم</th><th>النوع</th><th>الأولوية</th><th>الحالة</th><th>آخر تحديث</th><th>الإجراء</th></tr></thead><tbody id="adminTicketsTable"></tbody></table></div>
+        <div class="empty-state" id="adminTicketsEmpty" hidden><span>?</span><strong>لا توجد تذاكر مطابقة</strong></div>
+      </div>
+    </section>
+    <section class="admin-section" id="content-section">
+      <div class="section-heading">
+        <div><p>إدارة الموقع</p><h2>المحتوى والتصنيفات</h2><span>أنشئ المقالات والأسئلة الشائعة وتصنيفات الخدمات وانشرها من لوحة واحدة.</span></div>
+      </div>
+      <div class="content-admin-grid">
+        <form class="content-editor" id="articleForm">
+          <header><div><small>المدونة</small><h3>مقال جديد</h3></div></header>
+          <label>العنوان<input id="articleTitle" type="text" maxlength="160" required></label>
+          <div class="content-form-row"><label>التصنيف<input id="articleCategory" type="text" maxlength="60"></label><label>الحالة<select id="articleStatus"><option value="draft">مسودة</option><option value="published">منشور</option></select></label></div>
+          <label>الملخص<textarea id="articleExcerpt" rows="2" maxlength="300" required></textarea></label>
+          <label>المحتوى<textarea id="articleBody" rows="6" maxlength="12000" required></textarea></label>
+          <button class="primary-button" type="submit">حفظ المقال</button>
+        </form>
+        <div class="content-list-panel"><div class="panel-head"><div><p>المحتوى الحالي</p><h3>المقالات</h3></div><b id="articlesCount">0</b></div><div class="admin-content-list" id="articlesList"></div></div>
+        <form class="content-editor" id="faqForm">
+          <header><div><small>مركز المساعدة</small><h3>سؤال شائع جديد</h3></div></header>
+          <label>السؤال<input id="faqQuestion" type="text" maxlength="200" required></label>
+          <label>الإجابة<textarea id="faqAnswer" rows="4" maxlength="2000" required></textarea></label>
+          <div class="content-form-row"><label>التصنيف<input id="faqCategory" type="text" maxlength="60"></label><label class="content-check"><input id="faqPublished" type="checkbox" checked> منشور</label></div>
+          <button class="primary-button" type="submit">إضافة السؤال</button>
+        </form>
+        <div class="content-list-panel"><div class="panel-head"><div><p>قاعدة المعرفة</p><h3>الأسئلة الشائعة</h3></div><b id="faqsCount">0</b></div><div class="admin-content-list" id="faqsList"></div></div>
+        <form class="content-editor" id="categoryForm">
+          <header><div><small>تنظيم السوق</small><h3>تصنيف خدمة جديد</h3></div></header>
+          <label>اسم التصنيف<input id="categoryName" type="text" maxlength="80" required></label>
+          <label>الوصف<textarea id="categoryDescription" rows="3" maxlength="400"></textarea></label>
+          <label class="content-check"><input id="categoryActive" type="checkbox" checked> تصنيف نشط</label>
+          <button class="primary-button" type="submit">إضافة التصنيف</button>
+        </form>
+        <div class="content-list-panel"><div class="panel-head"><div><p>هيكل الخدمات</p><h3>التصنيفات</h3></div><b id="categoriesCount">0</b></div><div class="admin-content-list" id="categoriesList"></div></div>
+      </div>
+    </section>
 
     <section class="admin-section" id="audit-section">
       <div class="section-heading">
@@ -255,7 +317,21 @@
     </form>
   </div>
 
+  <div class="modal-overlay" id="ticketAdminModal" aria-hidden="true">
+    <form class="modal-dialog ticket-admin-dialog" id="ticketAdminForm">
+      <header><div><p>معالجة التذكرة</p><h2 id="ticketAdminTitle">تفاصيل التذكرة</h2></div><button type="button" data-close-ticket-admin>×</button></header>
+      <div class="modal-body">
+        <div class="ticket-admin-meta" id="ticketAdminMeta"></div>
+        <div class="ticket-admin-thread" id="ticketAdminThread"></div>
+        <div class="content-form-row"><label>الحالة<select id="ticketAdminStatus"><option value="open">مفتوحة</option><option value="in_progress">قيد المعالجة</option><option value="waiting_user">بانتظار المستخدم</option><option value="resolved">محلولة</option><option value="closed">مغلقة</option></select></label><label>الأولوية<select id="ticketAdminPriority"><option value="low">منخفضة</option><option value="normal">عادية</option><option value="high">عالية</option><option value="urgent">عاجلة</option></select></label></div>
+        <label class="ticket-reply-label">الرد على المستخدم<textarea id="ticketAdminReply" rows="4" maxlength="2000" placeholder="يمكن تحديث الحالة دون كتابة رد"></textarea></label>
+      </div>
+      <footer><button class="secondary-button" type="button" data-close-ticket-admin>إلغاء</button><button class="primary-button" type="submit">حفظ وإرسال</button></footer>
+    </form>
+  </div>
+
   <div class="admin-toast" id="adminToast" role="status"></div>
   <script type="module" src="js/admin-dashboard.js"></script>
+  <script type="module" src="js/admin-operations.js"></script>
 </body>
 </html>

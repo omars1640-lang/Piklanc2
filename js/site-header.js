@@ -1,5 +1,7 @@
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+  collection, doc, getDoc, onSnapshot, query, where
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth, db } from "./firebase.js";
 
 const header = document.querySelector(".site-header");
@@ -7,6 +9,7 @@ const nav = document.getElementById("siteHeaderNav");
 const actions = document.getElementById("siteHeaderActions");
 const mobileButton = document.getElementById("siteHeaderMobile");
 const themeButton = document.getElementById("themeToggle");
+let stopNotifications = null;
 
 function setTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
@@ -37,6 +40,8 @@ function createLink(href, text, className) {
 
 function renderSignedOutActions() {
   if (!actions) return;
+  stopNotifications?.();
+  stopNotifications = null;
   const login = createLink("login.html", "دخول", "site-header-button ghost");
   const join = createLink("register.html", "انضم مجاناً", "site-header-button primary");
   actions.replaceChildren(themeButton, login, join);
@@ -46,6 +51,10 @@ function renderSignedInActions(user, profile) {
   if (!actions) return;
   const messages = createLink("messages.html", "الرسائل", "site-header-button ghost");
   const accountHref = profile.accountType === "freelancer" ? "freelancer-dashboard.html" : "profile.html";
+  const notifications = createLink(`${accountHref}#notifications`, "الإشعارات", "site-header-button ghost site-header-notifications");
+  const notificationCount = document.createElement("b");
+  notificationCount.hidden = true;
+  notifications.appendChild(notificationCount);
   const account = createLink(accountHref, "", "site-header-account");
   const avatar = document.createElement("span");
   avatar.className = "site-header-avatar";
@@ -69,7 +78,16 @@ function renderSignedInActions(user, profile) {
     await signOut(auth);
     location.href = "index.html";
   });
-  actions.replaceChildren(themeButton, messages, account, logout);
+  actions.replaceChildren(themeButton, notifications, messages, account, logout);
+  stopNotifications?.();
+  stopNotifications = onSnapshot(
+    query(collection(db, "notifications", user.uid, "items"), where("read", "==", false)),
+    snapshot => {
+      notificationCount.textContent = snapshot.size;
+      notificationCount.hidden = snapshot.empty;
+    },
+    () => { notificationCount.hidden = true; }
+  );
 }
 
 if (header) {

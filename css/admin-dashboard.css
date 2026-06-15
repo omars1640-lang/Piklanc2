@@ -161,3 +161,27 @@ button { cursor: pointer; }
   .details-grid, .identity-grid { grid-template-columns: 1fr; }
   .settings-save { align-items: flex-start; flex-direction: column; gap: 10px; }
 }
+.content-admin-grid { display: grid; grid-template-columns: minmax(320px,.85fr) minmax(0,1.15fr); gap: 16px; }
+.content-editor, .content-list-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 18px; display: grid; gap: 12px; }
+.content-editor header h3, .content-list-panel h3 { margin: 2px 0; }
+.content-editor header small { color: var(--primary); font-weight: 800; }
+.content-editor label, .ticket-reply-label { display: grid; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 700; }
+.content-editor input, .content-editor select, .content-editor textarea, .ticket-admin-dialog select, .ticket-admin-dialog textarea { width: 100%; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-alt); color: var(--ink); padding: 10px; font: 600 11px "Cairo"; }
+.content-form-row { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
+.content-check { display: flex !important; align-items: center; gap: 8px; align-self: end; min-height: 39px; }
+.content-check input { width: auto; }
+.content-list-panel { align-content: start; }
+.admin-content-list { display: grid; gap: 8px; max-height: 430px; overflow: auto; }
+.content-list-item { display: flex; align-items: center; gap: 10px; padding: 11px; border: 1px solid var(--border); border-radius: 10px; }
+.content-list-item > div { display: grid; gap: 2px; }
+.content-list-item small { color: var(--muted); font-size: 9px; }
+.content-list-item .table-actions { margin-right: auto; }
+.ticket-admin-dialog { width: min(760px,calc(100vw - 30px)); }
+.ticket-admin-meta { padding: 12px; border-radius: 10px; background: var(--surface-alt); font-size: 11px; }
+.ticket-admin-thread { display: grid; gap: 8px; max-height: 260px; overflow: auto; margin: 12px 0; }
+.ticket-admin-message { padding: 10px 12px; border-radius: 10px; background: var(--surface-alt); }
+.ticket-admin-message.admin { border: 1px solid var(--primary); }
+.ticket-admin-message strong { display: block; font-size: 10px; }
+.ticket-admin-message p { margin: 4px 0; white-space: pre-wrap; font-size: 10px; }
+.ticket-admin-message small { color: var(--muted); font-size: 8px; }
+@media(max-width:900px){.content-admin-grid{grid-template-columns:1fr}.content-form-row{grid-template-columns:1fr}}
