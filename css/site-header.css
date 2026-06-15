@@ -313,3 +313,97 @@
 }
 .site-header-notifications { position: relative; }
 .site-header-notifications b { position: absolute; top: -7px; left: -6px; min-width: 18px; padding: 1px 5px; border-radius: 10px; background: #e34c68; color: #fff; font-size: 9px; text-align: center; }
+
+.cookie-consent {
+  position: fixed;
+  z-index: 2500;
+  right: 22px;
+  bottom: 22px;
+  left: 22px;
+  width: min(920px, calc(100% - 44px));
+  margin: auto;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  direction: rtl;
+  color: var(--text-primary, #242938);
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e5e8ef);
+  border-radius: 16px;
+  box-shadow: 0 18px 55px rgba(22, 27, 45, .2);
+  font-family: "Cairo", sans-serif;
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.cookie-consent.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.cookie-consent[hidden] {
+  display: none;
+}
+
+.cookie-consent-copy strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 1.05rem;
+}
+
+.cookie-consent-copy p {
+  margin: 0;
+  color: var(--text-secondary, #626b7d);
+  font-size: .9rem;
+  line-height: 1.8;
+}
+
+.cookie-consent-copy a {
+  display: inline-block;
+  margin-top: 5px;
+  color: #6c5ce7;
+  font-size: .85rem;
+  font-weight: 700;
+}
+
+.cookie-consent-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 9px;
+}
+
+.cookie-consent-actions button {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid #d8dce7;
+  border-radius: 9px;
+  color: var(--text-primary, #242938);
+  background: transparent;
+  font: 700 .85rem "Cairo", sans-serif;
+  cursor: pointer;
+}
+
+.cookie-consent-actions button.primary {
+  color: #fff;
+  background: #6c5ce7;
+  border-color: #6c5ce7;
+}
+
+@media (max-width: 700px) {
+  .cookie-consent {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: calc(100% - 24px);
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cookie-consent-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
