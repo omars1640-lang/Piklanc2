@@ -67,8 +67,19 @@
           <span class="nav-icon">▣</span><span>الخدمات والمشاريع</span>
           <span class="nav-count" id="servicesNavCount">0</span>
         </button>
+        <button class="side-link" type="button" data-section="orders">
+          <span class="nav-icon">▣</span><span>الطلبات</span>
+          <span class="nav-count" id="ordersNavCount">0</span>
+        </button>
         <a class="side-link" href="messages.html">
           <span class="nav-icon">✉</span><span>الرسائل</span>
+        </a>
+        <button class="side-link" type="button" data-section="notifications">
+          <span class="nav-icon">♧</span><span>الإشعارات</span>
+          <span class="nav-count" id="notificationsNavCount">0</span>
+        </button>
+        <a class="side-link" href="support.html">
+          <span class="nav-icon">?</span><span>الدعم والنزاعات</span>
         </a>
         <button class="side-link" type="button" data-section="reviews">
           <span class="nav-icon">★</span><span>التقييمات</span>
@@ -232,6 +243,29 @@
             <span>▣</span><strong>لا توجد خدمات مطابقة</strong><p>أضف خدمة جديدة أو غيّر خيارات البحث.</p>
           </div>
         </div>
+      </section>
+
+      <section class="dashboard-section" id="section-orders">
+        <div class="page-heading">
+          <div><p class="eyebrow">إدارة التنفيذ</p><h1>الطلبات</h1><p>تابع الطلبات الفعلية ومراحل التنفيذ والتسليم من مكان واحد.</p></div>
+        </div>
+        <div class="panel">
+          <div class="responsive-table">
+            <table>
+              <thead><tr><th>الخدمة</th><th>العميل</th><th>القيمة</th><th>الحالة</th><th>التاريخ</th></tr></thead>
+              <tbody id="ordersTable"></tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="ordersEmpty"><span>▣</span><strong>لا توجد طلبات بعد</strong><p>ستظهر الطلبات هنا فور تشغيل دورة الشراء والدفع.</p></div>
+        </div>
+      </section>
+
+      <section class="dashboard-section" id="section-notifications">
+        <div class="page-heading">
+          <div><p class="eyebrow">مركز التنبيهات</p><h1>الإشعارات</h1><p>قرارات مراجعة الخدمات وتحديثات الحساب والدعم.</p></div>
+          <button class="button button-secondary" id="markAllNotificationsRead" type="button">تحديد الكل كمقروء</button>
+        </div>
+        <div class="panel notification-list" id="notificationsList"></div>
       </section>
 
       <section class="dashboard-section" id="section-finance">

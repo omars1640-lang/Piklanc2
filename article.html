@@ -1,55 +1,41 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>مقال - PikLance</title>
+  <title>مقال | PikLance</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    body{margin:0;font-family:Cairo,sans-serif;background:#f8f9fd;color:#2d3436;line-height:1.9}
-    article{max-width:800px;margin:4rem auto;padding:2rem;background:#fff;border-radius:20px}
-    a{color:#6c5ce7;text-decoration:none}
-  </style>
   <link rel="stylesheet" href="css/site-header.css">
+  <style>
+    :root{--bg:#f7f7fb;--panel:#fff;--text:#24202d;--muted:#777182;--primary:#7042bd}
+    [data-theme="dark"]{--bg:#121119;--panel:#1d1b27;--text:#f5f2fb;--muted:#aaa4b5;--primary:#a77aeb}
+    body{margin:0;font-family:Cairo,sans-serif;background:var(--bg);color:var(--text);line-height:2}
+    main{max-width:900px;margin:auto;padding:130px 20px 60px}
+    article{padding:clamp(24px,5vw,55px);background:var(--panel);border-radius:22px}
+    article>a{color:var(--primary);text-decoration:none;font-weight:700;font-size:12px}
+    .article-meta{display:flex;gap:12px;margin:22px 0 8px;color:var(--muted);font-size:11px}
+    h1{font-size:clamp(27px,5vw,42px);line-height:1.45;margin:8px 0 18px}
+    .excerpt{font-size:17px;color:var(--muted);border-right:4px solid var(--primary);padding-right:16px}
+    .article-body{margin-top:32px;font-size:15px;white-space:pre-wrap}
+    .article-state{text-align:center;padding:50px;color:var(--muted)}
+  </style>
 </head>
 <body>
-  <header class="site-header" id="navbar">
+  <header class="site-header">
     <div class="site-header-inner">
-      <a class="site-header-brand" href="index.html" aria-label="PikLance home">
-        <span class="site-header-brand-mark">P</span>
-        <strong>Pik<span>Lance</span></strong>
-      </a>
-      <nav class="site-header-nav" id="siteHeaderNav" aria-label="التنقل الرئيسي">
-        <a href="index.html">الرئيسية</a>
-        <a href="services.html">الخدمات</a>
-        <a href="freelancers.html">المستقلون</a>
-        <a href="how-it-works.html">كيف تعمل المنصة</a>
-      </nav>
-      <div class="site-header-actions" id="siteHeaderActions">
-        <button class="site-header-theme" id="themeToggle" type="button" aria-label="تبديل المظهر">☾</button>
-        <a class="site-header-button ghost" href="login.html">دخول</a>
-        <a class="site-header-button primary" href="register.html">انضم مجاناً</a>
-      </div>
-      <button class="site-header-mobile" id="siteHeaderMobile" type="button" aria-controls="siteHeaderNav" aria-expanded="false" aria-label="فتح القائمة">☰</button>
+      <a class="site-header-brand" href="index.html"><span class="site-header-brand-mark">P</span><strong>Pik<span>Lance</span></strong></a>
+      <nav class="site-header-nav" id="siteHeaderNav"><a href="index.html">الرئيسية</a><a href="services.html">الخدمات</a><a href="freelancers.html">المستقلون</a><a href="blog.html">المدونة</a></nav>
+      <div class="site-header-actions" id="siteHeaderActions"><button class="site-header-theme" id="themeToggle" type="button">☀</button></div>
+      <button class="site-header-mobile" id="siteHeaderMobile" type="button" aria-expanded="false">☰</button>
     </div>
   </header>
-  <article>
-    <a href="blog.html">← العودة إلى المدونة</a>
-    <h1 id="title">المقال</h1>
-    <p>هذه الصفحة جاهزة لعرض محتوى المقال عند ربط المدونة بقاعدة البيانات.</p>
-  </article>
-  <script>
-    const titles = {
-      1:'كيف تبني ملفًا شخصيًا قويًا على منصات العمل الحر؟',
-      2:'اتجاهات التصميم الجرافيكي',
-      3:'أفضل أدوات المبرمج المستقل',
-      4:'استراتيجيات تسويق خدماتك الرقمية',
-      5:'نصائح لزيادة أرباحك كمستقل',
-      6:'كيف تتفاوض على سعر خدمتك بثقة؟'
-    };
-    document.getElementById('title').textContent =
-      titles[new URLSearchParams(location.search).get('id')] || 'المقال غير موجود';
-  </script>
+  <main>
+    <article id="articleContent">
+      <a href="blog.html">← العودة إلى المدونة</a>
+      <div class="article-state">جاري تحميل المقال...</div>
+    </article>
+  </main>
   <script type="module" src="js/site-header.js"></script>
+  <script type="module" src="js/article-content.js"></script>
 </body>
 </html>

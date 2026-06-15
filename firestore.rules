@@ -19,6 +19,11 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
     }
 
+    function isAccountType(type) {
+      return activeUser()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.accountType == type;
+    }
+
     function isChatParticipant(chatId) {
       return activeUser()
         && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantUids;
@@ -265,6 +270,124 @@ service cloud.firestore {
       }
     }
 
+    match /services/{serviceId} {
+      allow read: if isAdmin()
+        || resource.data.status == "published"
+        || (activeUser() && resource.data.ownerUid == request.auth.uid);
+      allow create: if isAccountType("freelancer")
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == "draft"
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if isAdmin()
+        || (
+          isAccountType("freelancer")
+          && resource.data.ownerUid == request.auth.uid
+          && request.resource.data.ownerUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "title", "category", "description", "price", "deliveryDays",
+            "revisions", "keywords", "status", "updatedAt"
+          ])
+          && (
+            request.resource.data.status == "draft"
+            || (
+              request.resource.data.status == "pending"
+              && resource.data.status in ["draft", "rejected"]
+            )
+            || (
+              request.resource.data.status == "paused"
+              && resource.data.status == "published"
+            )
+          )
+          && request.resource.data.updatedAt == request.time
+        );
+      allow delete: if isAdmin()
+        || (
+          isAccountType("freelancer")
+          && resource.data.ownerUid == request.auth.uid
+          && resource.data.status in ["draft", "rejected"]
+        );
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAdmin()
+        || (
+          activeUser()
+          && request.auth.uid in [resource.data.buyerUid, resource.data.freelancerUid]
+        );
+      allow create, update, delete: if false;
+    }
+
+    match /favorites/{userId}/services/{serviceId} {
+      allow read, create, update, delete: if activeUser() && request.auth.uid == userId;
+    }
+
+    match /supportTickets/{ticketId} {
+      allow create: if activeUser()
+        && request.resource.data.requesterUid == request.auth.uid
+        && request.resource.data.status == "open"
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow read: if isAdmin()
+        || (activeUser() && resource.data.requesterUid == request.auth.uid);
+      allow update: if isAdmin();
+      allow delete: if false;
+
+      match /replies/{replyId} {
+        function ticket() {
+          return get(/databases/$(database)/documents/supportTickets/$(ticketId)).data;
+        }
+
+        allow read: if isAdmin()
+          || (activeUser() && ticket().requesterUid == request.auth.uid);
+        allow create: if (
+            isAdmin()
+            || (activeUser() && ticket().requesterUid == request.auth.uid)
+          )
+          && request.resource.data.authorUid == request.auth.uid
+          && (
+            (isAdmin() && request.resource.data.authorRole == "admin")
+            || (
+              activeUser()
+              && ticket().requesterUid == request.auth.uid
+              && request.resource.data.authorRole == "user"
+            )
+          )
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+    }
+
+    match /notifications/{userId}/items/{notificationId} {
+      allow read: if activeUser() && request.auth.uid == userId;
+      allow create: if isAdmin()
+        || (
+          activeUser()
+          && request.auth.uid == userId
+          && request.resource.data.read == false
+          && request.resource.data.createdAt == request.time
+        );
+      allow update: if activeUser()
+        && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["read"]);
+      allow delete: if activeUser() && request.auth.uid == userId;
+    }
+
+    match /articles/{articleId} {
+      allow read: if isAdmin() || resource.data.status == "published";
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /faqItems/{itemId} {
+      allow read: if isAdmin() || resource.data.published == true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /serviceCategories/{categoryId} {
+      allow read: if isAdmin() || resource.data.active == true;
+      allow create, update, delete: if isAdmin();
+    }
+
     match /adminAuditLogs/{logId} {
       allow read: if isAdmin();
       allow create: if isAdmin()
@@ -279,7 +402,10 @@ service cloud.firestore {
         && request.resource.data.actorUid == request.auth.uid
         && request.resource.data.action in [
           "approve_user", "reject_user", "suspend_user",
-          "activate_user", "update_settings"
+          "activate_user", "update_settings", "update_ticket",
+          "reply_ticket", "create_article", "update_article",
+          "delete_article", "manage_faq", "manage_category",
+          "approve_service", "reject_service"
         ]
         && request.resource.data.reason is string
         && request.resource.data.reason.size() <= 500

@@ -311,3 +311,5 @@
 .site-simple-page a {
   color: #6c5ce7;
 }
+.site-header-notifications { position: relative; }
+.site-header-notifications b { position: absolute; top: -7px; left: -6px; min-width: 18px; padding: 1px 5px; border-radius: 10px; background: #e34c68; color: #fff; font-size: 9px; text-align: center; }

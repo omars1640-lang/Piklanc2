@@ -308,6 +308,16 @@ td { padding: 13px 12px; border-bottom: 1px solid var(--border); font-size: 10px
 .empty-state p { margin: 3px 0 13px; font-size: 10px; }
 .empty-state.compact { padding: 28px 20px; }
 .empty-state[hidden] { display: none; }
+.notification-list { display: grid; gap: 9px; }
+.notification-item { display: flex; align-items: center; gap: 12px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; }
+.notification-item.unread { border-color: var(--primary); background: var(--primary-soft); }
+.notification-item > span { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; background: var(--primary-soft); color: var(--primary); }
+.notification-item > div { display: grid; gap: 2px; }
+.notification-item small, .notification-item time { color: var(--muted); font-size: 9px; }
+.notification-item time { margin-right: auto; }
+.notification-item button { border: 0; background: transparent; color: var(--primary); font: 700 9px "Cairo"; cursor: pointer; }
+.status-pill.danger { color: var(--danger); background: rgba(220,53,69,.1); }
+.table-button.primary { color: var(--primary); border-color: var(--primary); }
 
 .finance-hero { margin-bottom: 18px; padding: 26px; display: grid; grid-template-columns: 1fr 1fr; gap: 25px; color: #fff; background: linear-gradient(120deg, #5143c7, #7e70e9); border-radius: var(--radius); box-shadow: var(--shadow); }
 .finance-hero > div:first-child > span { font-size: 11px; opacity: .8; }.finance-hero > div:first-child > strong { display: block; margin: 7px 0; font-size: 30px; }.finance-hero small { font-size: 11px; }.finance-hero p { margin: 0; font-size: 9px; opacity: .75; }
