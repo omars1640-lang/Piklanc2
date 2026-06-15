@@ -3,154 +3,397 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>تسجيل الدخول - PikLance</title>
+  <title>تسجيل الدخول | PikLance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
+    * { box-sizing: border-box; }
     body {
-      font-family: 'Cairo', sans-serif;
-      background: #F8F9FD;
       min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 15% 15%, rgba(108,92,231,.14), transparent 32%),
+        #f7f8fc;
+      color: #1e1e2d;
+      font-family: "Cairo", sans-serif;
+    }
+    button, input { font-family: inherit; }
+    .login-box {
+      width: min(460px, 100%);
+      padding: 42px;
+      border: 1px solid #eceaf2;
+      border-radius: 22px;
+      background: #fff;
+      box-shadow: 0 18px 55px rgba(35, 27, 65, .09);
+    }
+    .logo {
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      font-size: 24px;
+      font-weight: 800;
     }
-    .login-box {
-      background: #fff;
-      border-radius: 20px;
-      padding: 3rem;
-      width: 450px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    .logo-mark {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 13px;
+      color: #fff;
+      background: linear-gradient(135deg, #6c5ce7, #9386f1);
     }
-    .logo { text-align: center; font-size: 1.8rem; font-weight: 800; margin-bottom: 2rem; }
-    .logo span { color: #6C5CE7; }
-    h2 { text-align: center; margin-bottom: 1.5rem; color: #1E1E2D; }
-    .form-group { margin-bottom: 1.2rem; }
-    label { display: block; margin-bottom: 0.4rem; font-weight: 600; }
+    .logo em { color: #6c5ce7; font-style: normal; }
+    h1 { margin: 0; text-align: center; font-size: 25px; }
+    .intro { margin: 7px 0 26px; color: #777484; text-align: center; font-size: 13px; }
+    .form-group { margin-bottom: 17px; }
+    .label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      margin-bottom: 7px;
+    }
+    label { display: block; font-size: 13px; font-weight: 700; }
     input {
-      width: 100%; padding: 0.8rem; border: 1px solid #ddd;
-      border-radius: 10px; font-family: 'Cairo', sans-serif; font-size: 1rem;
+      width: 100%;
+      padding: 13px 14px;
+      border: 1px solid #ddd9e7;
+      border-radius: 11px;
+      background: #fbfafd;
+      font-size: 14px;
+      transition: .2s;
     }
-    input:focus { outline: none; border-color: #6C5CE7; }
-    .btn {
-      width: 100%; padding: 0.8rem; background: #6C5CE7; color: #fff;
-      border: none; border-radius: 10px; font-size: 1.1rem; font-weight: 700;
-      cursor: pointer; font-family: 'Cairo', sans-serif; margin-top: 1rem;
+    input:focus {
+      outline: none;
+      border-color: #6c5ce7;
+      box-shadow: 0 0 0 3px rgba(108,92,231,.1);
     }
-    .btn:hover { background: #5A4BD1; }
-    .links { text-align: center; margin-top: 1.5rem; }
-    .links a { color: #6C5CE7; text-decoration: none; font-weight: 600; }
-    .back-link { display: block; text-align: center; margin-top: 1rem; color: #636E72; text-decoration: none; }
+    .forgot-password {
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: #6c5ce7;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .primary-button, .secondary-button {
+      width: 100%;
+      padding: 13px 16px;
+      border: 0;
+      border-radius: 11px;
+      color: #fff;
+      background: #6c5ce7;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .primary-button:hover { background: #5949cf; }
+    .secondary-button {
+      color: #3c3748;
+      background: #fff;
+      border: 1px solid #ddd9e7;
+    }
+    button:disabled { opacity: .65; cursor: wait; }
+    .login-message, .reset-message {
+      display: none;
+      margin: 14px 0 0;
+      padding: 11px 13px;
+      border-radius: 10px;
+      font-size: 11px;
+      line-height: 1.8;
+    }
+    .login-message.show, .reset-message.show { display: block; }
+    .success { color: #0b7048; background: #e5f8ef; }
+    .error { color: #a52c43; background: #fdecef; }
+    .info { color: #5c4689; background: #f0ebfb; }
+    .links { margin-top: 20px; text-align: center; font-size: 12px; }
+    .links a { color: #6c5ce7; text-decoration: none; font-weight: 700; }
+    .back-link {
+      display: block;
+      margin-top: 13px;
+      color: #777484;
+      text-align: center;
+      text-decoration: none;
+      font-size: 11px;
+    }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      place-items: center;
+      padding: 20px;
+      background: rgba(24, 17, 42, .68);
+    }
+    .modal-overlay.open { display: grid; }
+    .reset-dialog {
+      width: min(460px, 100%);
+      padding: 28px;
+      border-radius: 19px;
+      background: #fff;
+      box-shadow: 0 24px 70px rgba(0,0,0,.24);
+    }
+    .reset-dialog header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .reset-dialog h2 { margin: 0 0 5px; font-size: 20px; }
+    .reset-dialog header p { margin: 0; color: #777484; font-size: 11px; line-height: 1.8; }
+    .modal-close {
+      border: 0;
+      background: transparent;
+      color: #777484;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .reset-actions { display: flex; gap: 10px; margin-top: 17px; }
+    @media (max-width: 520px) {
+      body { padding: 16px; }
+      .login-box { padding: 30px 20px; }
+      .reset-dialog { padding: 23px 19px; }
+      .reset-actions { flex-direction: column-reverse; }
+    }
   </style>
 </head>
 <body>
-  <div class="login-box">
-    <div class="logo">Pik<span>Lance</span></div>
-    <h2>تسجيل الدخول</h2>
-    
-    <form onsubmit="event.preventDefault(); handleLogin()">
+  <main class="login-box">
+    <a class="logo" href="index.html">
+      <span class="logo-mark">P</span>
+      <span>Pik<em>Lance</em></span>
+    </a>
+    <h1>تسجيل الدخول</h1>
+    <p class="intro">أدخل بيانات حسابك للعودة إلى مساحة عملك.</p>
+
+    <form id="loginForm">
       <div class="form-group">
-        <label>البريد الإلكتروني</label>
-        <input type="email" id="loginEmail" placeholder="example@email.com" required>
+        <label for="loginEmail">البريد الإلكتروني</label>
+        <input type="email" id="loginEmail" placeholder="example@email.com" autocomplete="email" required>
       </div>
       <div class="form-group">
-        <label>كلمة المرور</label>
-        <input type="password" id="loginPassword" placeholder="********" required>
+        <div class="label-row">
+          <label for="loginPassword">كلمة المرور</label>
+          <button class="forgot-password" id="forgotPasswordButton" type="button">نسيت كلمة المرور؟</button>
+        </div>
+        <input type="password" id="loginPassword" placeholder="********" autocomplete="current-password" required>
       </div>
-      <button type="submit" class="btn">دخول</button>
+      <button class="primary-button" id="loginButton" type="submit">دخول</button>
+      <div class="login-message" id="loginMessage" role="status"></div>
     </form>
 
-    <div class="links">
-      <a href="register.html">ليس لديك حساب؟ انضم مجاناً</a>
-    </div>
+    <div class="links"><a href="register.html">ليس لديك حساب؟ انضم مجاناً</a></div>
     <a href="index.html" class="back-link">← العودة للرئيسية</a>
+  </main>
+
+  <div class="modal-overlay" id="resetPasswordModal" aria-hidden="true">
+    <form class="reset-dialog" id="resetPasswordForm">
+      <header>
+        <div>
+          <h2>إعادة تعيين كلمة المرور</h2>
+          <p>أدخل بريد حسابك وسيرسل Firebase رابطاً آمناً لاختيار كلمة مرور جديدة.</p>
+        </div>
+        <button class="modal-close" type="button" data-close-reset aria-label="إغلاق">×</button>
+      </header>
+      <div class="form-group">
+        <label for="resetEmail">البريد الإلكتروني</label>
+        <input type="email" id="resetEmail" placeholder="example@email.com" autocomplete="email" required>
+      </div>
+      <div class="reset-message" id="resetMessage" role="status"></div>
+      <div class="reset-actions">
+        <button class="secondary-button" type="button" data-close-reset>إلغاء</button>
+        <button class="primary-button" id="sendResetButton" type="submit">إرسال رابط الاستعادة</button>
+      </div>
+    </form>
   </div>
 
   <script type="module">
-    import { sendEmailVerification, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import {
+      sendEmailVerification,
+      sendPasswordResetEmail,
+      signInWithEmailAndPassword,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { auth, db } from "./js/firebase.js";
 
+    const loginForm = document.getElementById("loginForm");
+    const loginButton = document.getElementById("loginButton");
+    const loginMessage = document.getElementById("loginMessage");
+    const resetModal = document.getElementById("resetPasswordModal");
+    const resetForm = document.getElementById("resetPasswordForm");
+    const resetEmail = document.getElementById("resetEmail");
+    const resetMessage = document.getElementById("resetMessage");
+    const sendResetButton = document.getElementById("sendResetButton");
+    let resetCooldown = false;
+
     function safeReturnUrl() {
-      const requested = new URLSearchParams(window.location.search).get('returnUrl');
-      if (!requested) return 'index.html';
+      const requested = new URLSearchParams(location.search).get("returnUrl");
+      if (!requested) return "index.html";
       try {
-        const target = new URL(requested, window.location.href);
-        if (target.origin !== window.location.origin || !target.pathname.endsWith('.html')) return 'index.html';
-        return `${target.pathname.split('/').pop()}${target.search}${target.hash}`;
+        const target = new URL(requested, location.href);
+        if (target.origin !== location.origin || !target.pathname.endsWith(".html")) return "index.html";
+        return `${target.pathname.split("/").pop()}${target.search}${target.hash}`;
       } catch {
-        return 'index.html';
+        return "index.html";
       }
     }
 
-    window.handleLogin = async function() {
-      const email = document.getElementById('loginEmail').value.trim();
-      const password = document.getElementById('loginPassword').value;
+    function showMessage(element, message, type) {
+      element.textContent = message;
+      element.className = `${element === loginMessage ? "login-message" : "reset-message"} show ${type}`;
+    }
 
-      if (!email || !password) {
-        alert('يرجى ملء جميع الحقول');
-        return;
-      }
+    function openResetModal() {
+      resetEmail.value = document.getElementById("loginEmail").value.trim();
+      resetMessage.className = "reset-message";
+      resetMessage.textContent = "";
+      resetModal.classList.add("open");
+      resetModal.setAttribute("aria-hidden", "false");
+      setTimeout(() => resetEmail.focus(), 50);
+    }
+
+    function closeResetModal() {
+      resetModal.classList.remove("open");
+      resetModal.setAttribute("aria-hidden", "true");
+    }
+
+    document.getElementById("forgotPasswordButton").addEventListener("click", openResetModal);
+    document.querySelectorAll("[data-close-reset]").forEach(button => button.addEventListener("click", closeResetModal));
+    resetModal.addEventListener("click", event => {
+      if (event.target === resetModal) closeResetModal();
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") closeResetModal();
+    });
+
+    resetForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      const email = resetEmail.value.trim().toLowerCase();
+      if (!email || resetCooldown) return;
+
+      sendResetButton.disabled = true;
+      sendResetButton.textContent = "جاري الإرسال...";
+      resetMessage.className = "reset-message";
 
       try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-
-          if (!userCredential.user.emailVerified) {
-            let verificationSent = false;
-            try {
-              await sendEmailVerification(userCredential.user);
-              verificationSent = true;
-            } catch (verificationError) {
-              console.error('تعذر إرسال رسالة التحقق', verificationError);
-            }
-            await signOut(auth);
-            alert(verificationSent
-              ? '📧 أرسلنا رسالة تحقق جديدة إلى بريدك الإلكتروني.'
-              : '📧 تحقق من بريدك الإلكتروني قبل تسجيل الدخول، ثم حاول مجدداً لاحقاً.');
-            return;
-          }
-          
-          if (userData.status === 'pending') {
-            await signOut(auth);
-            alert('⏳ حسابك قيد المراجعة. يرجى الانتظار.');
-            return;
-          }
-          
-          if (userData.status === 'rejected') {
-            await signOut(auth);
-            alert('❌ تم رفض حسابك. السبب: ' + (userData.rejectionReason || 'غير محدد'));
-            return;
-          }
-
-          if (userData.status === 'suspended') {
-            await signOut(auth);
-            alert('تم إيقاف حسابك مؤقتاً. السبب: ' + (userData.suspensionReason || 'راجع دعم المنصة'));
-            return;
-          }
-
-          alert('✅ تم تسجيل الدخول بنجاح');
-          const returnUrl = safeReturnUrl();
-          window.location.href = returnUrl !== 'index.html'
-            ? returnUrl
-            : userData.role === 'admin' ? 'dashboard.html' : 'index.html';
-        } else {
-          await signOut(auth);
-          alert('❌ بيانات الحساب غير مكتملة. تواصل مع الدعم.');
-        }
+        auth.languageCode = "ar";
+        await sendPasswordResetEmail(auth, email);
+        resetCooldown = true;
+        showMessage(
+          resetMessage,
+          "إذا كان البريد مرتبطاً بحساب، ستصلك رسالة إعادة التعيين خلال دقائق. افحص مجلد الرسائل غير المرغوب فيها أيضاً.",
+          "success"
+        );
+        setTimeout(() => {
+          resetCooldown = false;
+          sendResetButton.disabled = false;
+          sendResetButton.textContent = "إعادة إرسال الرابط";
+        }, 60000);
       } catch (error) {
-        if (error.code === 'auth/invalid-credential') {
-          alert('❌ البريد الإلكتروني أو كلمة المرور غير صحيحة');
-        } else if (error.code === 'auth/user-not-found') {
-          alert('❌ لا يوجد حساب بهذا البريد');
-        } else {
-          alert('❌ خطأ: ' + error.message);
+        console.error("Password reset email failed", error);
+        if (error.code === "auth/user-not-found") {
+          resetCooldown = true;
+          showMessage(
+            resetMessage,
+            "إذا كان البريد مرتبطاً بحساب، ستصلك رسالة إعادة التعيين خلال دقائق. افحص مجلد الرسائل غير المرغوب فيها أيضاً.",
+            "success"
+          );
+          setTimeout(() => {
+            resetCooldown = false;
+            sendResetButton.disabled = false;
+            sendResetButton.textContent = "إعادة إرسال الرابط";
+          }, 60000);
+          return;
         }
+        const messages = {
+          "auth/invalid-email": "صيغة البريد الإلكتروني غير صحيحة.",
+          "auth/too-many-requests": "تم إرسال عدة طلبات. انتظر قليلاً ثم حاول مجدداً.",
+          "auth/network-request-failed": "تعذر الاتصال بالإنترنت. تحقق من الشبكة وحاول مجدداً."
+        };
+        showMessage(resetMessage, messages[error.code] || "تعذر إرسال رابط الاستعادة حالياً. حاول مجدداً بعد قليل.", "error");
+        sendResetButton.disabled = false;
+        sendResetButton.textContent = "إرسال رابط الاستعادة";
       }
-    };
+    });
+
+    loginForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
+      loginButton.disabled = true;
+      loginButton.textContent = "جاري الدخول...";
+      loginMessage.className = "login-message";
+
+      try {
+        const credential = await signInWithEmailAndPassword(auth, email, password);
+        const userSnapshot = await getDoc(doc(db, "users", credential.user.uid));
+
+        if (!userSnapshot.exists()) {
+          await signOut(auth);
+          showMessage(loginMessage, "بيانات الحساب غير مكتملة. تواصل مع الدعم.", "error");
+          return;
+        }
+
+        const profile = userSnapshot.data();
+        if (!credential.user.emailVerified) {
+          try {
+            auth.languageCode = "ar";
+            await sendEmailVerification(credential.user);
+          } catch (error) {
+            console.error("Verification email failed", error);
+          }
+          await signOut(auth);
+          showMessage(loginMessage, "تحقق من بريدك الإلكتروني أولاً. أرسلنا رسالة تحقق جديدة إن أمكن.", "info");
+          return;
+        }
+
+        if (profile.status === "pending") {
+          await signOut(auth);
+          showMessage(loginMessage, "حسابك قيد المراجعة حالياً.", "info");
+          return;
+        }
+        if (profile.status === "rejected") {
+          await signOut(auth);
+          showMessage(loginMessage, `تم رفض الحساب: ${profile.rejectionReason || "راجع دعم المنصة"}`, "error");
+          return;
+        }
+        if (profile.status === "suspended") {
+          await signOut(auth);
+          showMessage(loginMessage, `الحساب موقوف مؤقتاً: ${profile.suspensionReason || "راجع دعم المنصة"}`, "error");
+          return;
+        }
+
+        const returnUrl = safeReturnUrl();
+        location.href = returnUrl !== "index.html"
+          ? returnUrl
+          : profile.role === "admin"
+            ? "dashboard.html"
+            : profile.accountType === "freelancer"
+              ? "freelancer-dashboard.html"
+              : "profile.html";
+      } catch (error) {
+        console.error("Login failed", error);
+        const messages = {
+          "auth/invalid-credential": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+          "auth/invalid-email": "صيغة البريد الإلكتروني غير صحيحة.",
+          "auth/too-many-requests": "محاولات كثيرة. انتظر قليلاً ثم حاول مجدداً.",
+          "auth/network-request-failed": "تعذر الاتصال بالإنترنت."
+        };
+        showMessage(loginMessage, messages[error.code] || "تعذر تسجيل الدخول حالياً.", "error");
+      } finally {
+        loginButton.disabled = false;
+        loginButton.textContent = "دخول";
+      }
+    });
   </script>
 </body>
 </html>
