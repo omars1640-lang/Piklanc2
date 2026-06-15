@@ -3,6 +3,7 @@ import {
   collection, doc, getDoc, onSnapshot, query, where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth, db } from "./firebase.js";
+import "./cookie-consent.js";
 
 const header = document.querySelector(".site-header");
 const nav = document.getElementById("siteHeaderNav");
