@@ -375,7 +375,51 @@ service cloud.firestore {
 
     match /articles/{articleId} {
       allow read: if isAdmin() || resource.data.status == "published";
-      allow create, update, delete: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (
+          activeUser()
+          && resource.data.status == "published"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["views"])
+          && request.resource.data.views == resource.data.get("views", 0) + 1
+        );
+
+      match /likes/{userId} {
+        allow read: if get(/databases/$(database)/documents/articles/$(articleId)).data.status == "published";
+        allow create: if activeUser()
+          && get(/databases/$(database)/documents/articles/$(articleId)).data.status == "published"
+          && userId == request.auth.uid
+          && request.resource.data.keys().hasOnly(["userUid", "createdAt"])
+          && request.resource.data.userUid == request.auth.uid
+          && request.resource.data.createdAt == request.time;
+        allow delete: if isAdmin() || (activeUser() && userId == request.auth.uid);
+        allow update: if false;
+      }
+
+      match /comments/{commentId} {
+        allow read: if isAdmin()
+          || (
+            get(/databases/$(database)/documents/articles/$(articleId)).data.status == "published"
+            && resource.data.status == "published"
+          );
+        allow create: if activeUser()
+          && get(/databases/$(database)/documents/articles/$(articleId)).data.status == "published"
+          && request.resource.data.keys().hasOnly([
+            "authorUid", "authorName", "text", "status", "createdAt"
+          ])
+          && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.authorName is string
+          && request.resource.data.authorName.size() > 0
+          && request.resource.data.authorName.size() <= 100
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 1500
+          && request.resource.data.status == "published"
+          && request.resource.data.createdAt == request.time;
+        allow delete: if isAdmin() || (activeUser() && resource.data.authorUid == request.auth.uid);
+        allow update: if isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"]);
+      }
     }
 
     match /faqItems/{itemId} {

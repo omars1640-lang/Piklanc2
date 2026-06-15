@@ -1,9 +1,12 @@
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
-  addDoc, collection, deleteDoc, doc, getDoc, getDocs,
+  addDoc, collection, doc, getDoc, getDocs,
   serverTimestamp, updateDoc, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { auth, db } from "./firebase.js";
+import {
+  getDownloadURL, ref as storageRef, uploadBytes
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { auth, db, storage } from "./firebase.js";
 
 const state = { admin: null, services: [], tickets: [], articles: [], faqs: [], categories: [], selectedTicket: null, replies: [] };
 const $ = id => document.getElementById(id);
@@ -195,7 +198,7 @@ async function saveTicket(event) {
   await loadOperations();
 }
 
-function contentItem(title, meta, onToggle, toggleLabel, onDelete) {
+function contentItem(title, meta, onToggle, toggleLabel, onDelete, onEdit = null) {
   const item = document.createElement("article");
   item.className = "content-list-item";
   const copy = document.createElement("div");
@@ -206,6 +209,7 @@ function contentItem(title, meta, onToggle, toggleLabel, onDelete) {
   copy.append(strong, small);
   const actions = document.createElement("div");
   actions.className = "table-actions";
+  if (onEdit) actions.append(actionButton("تعديل", "table-button", onEdit));
   actions.append(actionButton(toggleLabel, "table-button", onToggle), actionButton("حذف", "table-button reject", onDelete));
   item.append(copy, actions);
   return item;
@@ -216,10 +220,11 @@ function renderContent() {
   $("faqsCount").textContent = state.faqs.length;
   $("categoriesCount").textContent = state.categories.length;
   $("articlesList").replaceChildren(...state.articles.map(article => contentItem(
-    article.title, `${article.category || "عام"} · ${article.status === "published" ? "منشور" : "مسودة"}`,
-    () => toggleContent("articles", article, "status", article.status === "published" ? "draft" : "published", "update_article"),
+    article.title, `${article.category || "عام"} · ${article.status === "published" ? "منشور" : "مسودة"}${article.featured ? " · مميز" : ""}`,
+    () => toggleArticleStatus(article),
     article.status === "published" ? "إلغاء النشر" : "نشر",
-    () => removeContent("articles", article, "delete_article")
+    () => removeArticle(article),
+    () => editArticle(article)
   )));
   $("faqsList").replaceChildren(...state.faqs.map(item => contentItem(
     item.question, `${item.category || "عام"} · ${item.published ? "منشور" : "مخفي"}`,
@@ -233,6 +238,20 @@ function renderContent() {
     item.active ? "إيقاف" : "تفعيل",
     () => removeContent("serviceCategories", item, "manage_category")
   )));
+}
+
+async function toggleArticleStatus(article) {
+  const status = article.status === "published" ? "draft" : "published";
+  const updates = {
+    status,
+    updatedAt: serverTimestamp(),
+    updatedBy: state.admin.id
+  };
+  if (status === "published" && !article.publishedAt) updates.publishedAt = serverTimestamp();
+  await updateDoc(doc(db, "articles", article.id), updates);
+  await addDoc(collection(db, "adminAuditLogs"), auditData("update_article", article, `status: ${status}`));
+  toast(status === "published" ? "تم نشر المقال." : "تم تحويل المقال إلى مسودة.");
+  await loadOperations();
 }
 
 async function toggleContent(collectionName, item, field, value, action) {
@@ -252,25 +271,126 @@ async function removeContent(collectionName, item, action) {
   await loadOperations();
 }
 
-async function addArticle(event) {
+async function removeArticle(article) {
+  if (!confirm(`حذف "${article.title}" وتعليقاته وإعجاباته نهائياً؟`)) return;
+  const [likes, comments] = await Promise.all([
+    getDocs(collection(db, "articles", article.id, "likes")),
+    getDocs(collection(db, "articles", article.id, "comments"))
+  ]);
+  const references = [...likes.docs, ...comments.docs].map(item => item.ref);
+  while (references.length) {
+    const batch = writeBatch(db);
+    references.splice(0, 400).forEach(reference => batch.delete(reference));
+    await batch.commit();
+  }
+  const batch = writeBatch(db);
+  batch.delete(doc(db, "articles", article.id));
+  batch.set(doc(collection(db, "adminAuditLogs")), auditData("delete_article", article, "delete"));
+  await batch.commit();
+  if ($("articleId").value === article.id) resetArticleForm();
+  toast("تم حذف المقال وتفاعلاته.");
+  await loadOperations();
+}
+
+function slugify(value) {
+  return value.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\u0600-\u06ff\w-]/g, "");
+}
+
+function updateCoverPreview(url = "") {
+  const preview = $("articleCoverPreview");
+  preview.style.backgroundImage = url ? `url("${url.replace(/"/g, "%22")}")` : "";
+  preview.classList.toggle("has-image", Boolean(url));
+}
+
+function resetArticleForm() {
+  $("articleForm").reset();
+  $("articleId").value = "";
+  $("articleFormTitle").textContent = "مقال جديد";
+  $("articleSubmitButton").textContent = "حفظ المقال";
+  $("articleCancelEdit").hidden = true;
+  $("articleAuthor").value = state.admin?.name || state.admin?.email || "فريق PikLance";
+  updateCoverPreview();
+}
+
+function editArticle(article) {
+  $("articleId").value = article.id;
+  $("articleTitle").value = article.title || "";
+  $("articleCategory").value = article.category || "";
+  $("articleAuthor").value = article.authorName || "";
+  $("articleStatus").value = article.status || "draft";
+  $("articleTags").value = Array.isArray(article.tags) ? article.tags.join("، ") : "";
+  $("articleCoverUrl").value = article.coverUrl || "";
+  $("articleExcerpt").value = article.excerpt || "";
+  $("articleBody").value = article.body || "";
+  $("articleFeatured").checked = Boolean(article.featured);
+  $("articleCoverFile").value = "";
+  $("articleFormTitle").textContent = "تعديل المقال";
+  $("articleSubmitButton").textContent = "حفظ التعديلات";
+  $("articleCancelEdit").hidden = false;
+  updateCoverPreview(article.coverUrl || "");
+  $("articleForm").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function uploadArticleCover(articleId, file) {
+  if (!file) return "";
+  if (file.size > 5 * 1024 * 1024) throw new Error("cover_too_large");
+  const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const target = storageRef(storage, `article-covers/${articleId}/cover-${Date.now()}.${extension}`);
+  await uploadBytes(target, file, { contentType: file.type });
+  return getDownloadURL(target);
+}
+
+async function saveArticle(event) {
   event.preventDefault();
+  const existingId = $("articleId").value;
+  const existing = state.articles.find(article => article.id === existingId);
+  const articleRef = existingId ? doc(db, "articles", existingId) : doc(collection(db, "articles"));
   const status = $("articleStatus").value;
   const title = $("articleTitle").value.trim();
-  await addDoc(collection(db, "articles"), {
+  const file = $("articleCoverFile").files[0];
+  let coverUrl = $("articleCoverUrl").value.trim() || existing?.coverUrl || "";
+  try {
+    if (file) coverUrl = await uploadArticleCover(articleRef.id, file);
+  } catch (error) {
+    if (error.message === "cover_too_large") {
+      toast("حجم صورة الغلاف يجب ألا يتجاوز 5 ميغابايت.");
+      return;
+    }
+    throw error;
+  }
+  const tags = $("articleTags").value.split(/[،,]/).map(tag => tag.trim()).filter(Boolean).slice(0, 12);
+  const data = {
     title,
-    slug: title.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\u0600-\u06ff\w-]/g, ""),
+    slug: slugify(title),
     category: $("articleCategory").value.trim() || "عام",
+    tags,
+    coverUrl,
     excerpt: $("articleExcerpt").value.trim(),
     body: $("articleBody").value.trim(),
     status,
+    featured: $("articleFeatured").checked,
     authorUid: state.admin.id,
-    authorName: state.admin.name || state.admin.email,
-    createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-    publishedAt: status === "published" ? serverTimestamp() : null
-  });
-  await addDoc(collection(db, "adminAuditLogs"), auditData("create_article", { title }, status));
-  event.currentTarget.reset();
-  toast("تم حفظ المقال.");
+    authorName: $("articleAuthor").value.trim() || state.admin.name || state.admin.email,
+    updatedAt: serverTimestamp(),
+    updatedBy: state.admin.id,
+    publishedAt: status === "published" ? (existing?.publishedAt || serverTimestamp()) : (existing?.publishedAt || null)
+  };
+  if (!existing) {
+    data.createdAt = serverTimestamp();
+    data.views = 0;
+  }
+  const batch = writeBatch(db);
+  if (data.featured) {
+    state.articles.filter(article => article.id !== articleRef.id && article.featured).forEach(article => {
+      batch.update(doc(db, "articles", article.id), { featured: false, updatedAt: serverTimestamp(), updatedBy: state.admin.id });
+    });
+  }
+  if (existing) batch.update(articleRef, data);
+  else batch.set(articleRef, data);
+  batch.set(doc(collection(db, "adminAuditLogs")), auditData(existing ? "update_article" : "create_article", { id: articleRef.id, title }, status));
+  await batch.commit();
+  resetArticleForm();
+  toast(existing ? "تم تحديث المقال." : "تم حفظ المقال.");
   await loadOperations();
 }
 
@@ -329,7 +449,18 @@ $("ticketAdminFilter").addEventListener("change", renderTickets);
 $("ticketAdminForm").addEventListener("submit", saveTicket);
 document.querySelectorAll("[data-close-ticket-admin]").forEach(control => control.addEventListener("click", closeTicket));
 $("ticketAdminModal").addEventListener("click", event => { if (event.target === $("ticketAdminModal")) closeTicket(); });
-$("articleForm").addEventListener("submit", addArticle);
+$("articleForm").addEventListener("submit", event => {
+  saveArticle(event).catch(error => {
+    console.error("Unable to save article", error);
+    toast("تعذر حفظ المقال. تحقق من البيانات وصورة الغلاف.");
+  });
+});
+$("articleCancelEdit").addEventListener("click", resetArticleForm);
+$("articleCoverUrl").addEventListener("input", event => updateCoverPreview(event.target.value.trim()));
+$("articleCoverFile").addEventListener("change", event => {
+  const file = event.target.files[0];
+  if (file) updateCoverPreview(URL.createObjectURL(file));
+});
 $("faqForm").addEventListener("submit", addFaq);
 $("categoryForm").addEventListener("submit", addCategory);
 
@@ -339,6 +470,7 @@ onAuthStateChanged(auth, async user => {
     const snapshot = await getDoc(doc(db, "users", user.uid));
     if (!snapshot.exists() || snapshot.data().role !== "admin") return;
     state.admin = { id: user.uid, email: user.email, ...snapshot.data() };
+    resetArticleForm();
     await loadOperations();
   } catch (error) {
     console.error("Unable to load operation modules", error);

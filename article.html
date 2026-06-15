@@ -4,37 +4,64 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>مقال | PikLance</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="description" content="اقرأ أحدث مقالات PikLance حول العمل الحر والخدمات الرقمية.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/site-header.css">
-  <style>
-    :root{--bg:#f7f7fb;--panel:#fff;--text:#24202d;--muted:#777182;--primary:#7042bd}
-    [data-theme="dark"]{--bg:#121119;--panel:#1d1b27;--text:#f5f2fb;--muted:#aaa4b5;--primary:#a77aeb}
-    body{margin:0;font-family:Cairo,sans-serif;background:var(--bg);color:var(--text);line-height:2}
-    main{max-width:900px;margin:auto;padding:130px 20px 60px}
-    article{padding:clamp(24px,5vw,55px);background:var(--panel);border-radius:22px}
-    article>a{color:var(--primary);text-decoration:none;font-weight:700;font-size:12px}
-    .article-meta{display:flex;gap:12px;margin:22px 0 8px;color:var(--muted);font-size:11px}
-    h1{font-size:clamp(27px,5vw,42px);line-height:1.45;margin:8px 0 18px}
-    .excerpt{font-size:17px;color:var(--muted);border-right:4px solid var(--primary);padding-right:16px}
-    .article-body{margin-top:32px;font-size:15px;white-space:pre-wrap}
-    .article-state{text-align:center;padding:50px;color:var(--muted)}
-  </style>
+  <link rel="stylesheet" href="css/article.css">
 </head>
 <body>
   <header class="site-header">
     <div class="site-header-inner">
       <a class="site-header-brand" href="index.html"><span class="site-header-brand-mark">P</span><strong>Pik<span>Lance</span></strong></a>
-      <nav class="site-header-nav" id="siteHeaderNav"><a href="index.html">الرئيسية</a><a href="services.html">الخدمات</a><a href="freelancers.html">المستقلون</a><a href="blog.html">المدونة</a></nav>
-      <div class="site-header-actions" id="siteHeaderActions"><button class="site-header-theme" id="themeToggle" type="button">☀</button></div>
-      <button class="site-header-mobile" id="siteHeaderMobile" type="button" aria-expanded="false">☰</button>
+      <nav class="site-header-nav" id="siteHeaderNav"><a href="index.html">الرئيسية</a><a href="services.html">الخدمات</a><a href="freelancers.html">المستقلون</a><a href="blog.html">المقالات</a></nav>
+      <div class="site-header-actions" id="siteHeaderActions"><button class="site-header-theme" id="themeToggle" type="button" aria-label="تبديل المظهر">☀</button></div>
+      <button class="site-header-mobile" id="siteHeaderMobile" type="button" aria-expanded="false" aria-label="فتح القائمة">☰</button>
     </div>
   </header>
-  <main>
-    <article id="articleContent">
-      <a href="blog.html">← العودة إلى المدونة</a>
-      <div class="article-state">جاري تحميل المقال...</div>
+
+  <main class="article-shell">
+    <div class="article-state" id="articleState">جاري تحميل المقال...</div>
+    <article class="article-page" id="articlePage" hidden>
+      <a class="article-back" href="blog.html">← العودة إلى المقالات</a>
+      <header class="article-header">
+        <span class="article-category" id="articleCategory">عام</span>
+        <h1 id="articleTitle"></h1>
+        <p class="article-excerpt" id="articleExcerpt"></p>
+        <div class="article-meta" id="articleMeta"></div>
+      </header>
+
+      <div class="article-cover" id="articleCover" hidden></div>
+
+      <div class="article-layout">
+        <aside class="article-share-rail" aria-label="التفاعل مع المقال">
+          <button id="likeArticle" type="button" aria-pressed="false"><span>♡</span><b id="likesCount">0</b><small>إعجاب</small></button>
+          <button id="shareArticle" type="button"><span>↗</span><small>مشاركة</small></button>
+        </aside>
+        <div>
+          <div class="article-body" id="articleBody"></div>
+          <div class="article-tags" id="articleTags"></div>
+          <div class="article-actions-mobile">
+            <button id="likeArticleMobile" type="button">♡ إعجاب <b id="likesCountMobile">0</b></button>
+            <button id="shareArticleMobile" type="button">↗ مشاركة</button>
+          </div>
+        </div>
+      </div>
+
+      <section class="comments-section">
+        <div class="comments-heading"><div><span>النقاش</span><h2>التعليقات</h2></div><b id="commentsCount">0</b></div>
+        <form class="comment-form" id="commentForm">
+          <label for="commentText">أضف تعليقك</label>
+          <textarea id="commentText" maxlength="1500" rows="4" placeholder="شارك رأيك أو تجربتك باحترام..." required></textarea>
+          <div><small id="commentHint">يجب تسجيل الدخول لإضافة تعليق.</small><button type="submit">نشر التعليق</button></div>
+        </form>
+        <div class="comments-list" id="commentsList"><div class="comment-empty">جاري تحميل التعليقات...</div></div>
+      </section>
     </article>
   </main>
+
+  <div class="article-toast" id="articleToast" role="status"></div>
   <script type="module" src="js/site-header.js"></script>
   <script type="module" src="js/article-content.js"></script>
 </body>
