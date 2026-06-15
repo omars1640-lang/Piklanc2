@@ -114,12 +114,21 @@
 
     /* Story + Image */
     .story-grid {
-      display:grid; grid-template-columns:1fr 1fr; gap:4rem; align-items:center; margin:4rem 0;
+      display:grid; grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr); gap:4rem; align-items:start; margin:4rem 0;
     }
     .story-text h2 { font-size:2.2rem; color:var(--text-heading); margin-bottom:1.5rem; }
     .story-text p { color:var(--text-secondary); margin-bottom:1.5rem; font-size:1.05rem; line-height:1.9; }
+    .story-text .story-closing {
+      margin-top:2rem; padding:1.5rem; border-right:4px solid var(--primary);
+      border-radius:14px; color:var(--text-heading); background:var(--bg-tertiary);
+      font-size:1.2rem; font-weight:800;
+    }
+    .story-image { position:sticky; top:100px; }
     .story-image img {
       width:100%; border-radius:24px; box-shadow:0 20px 40px var(--shadow-color);
+    }
+    .story-image figcaption {
+      margin-top:1rem; color:var(--text-secondary); font-size:.9rem; line-height:1.8; text-align:center;
     }
 
     /* Cards */
@@ -143,7 +152,9 @@
     .team-member { text-align:center; }
     .team-avatar {
       width:120px; height:120px; border-radius:50%; margin:0 auto 1rem;
-      border:4px solid var(--primary); background-size:cover; background-position:center;
+      display:grid; place-items:center; border:4px solid var(--primary);
+      color:#fff; background:linear-gradient(135deg,var(--primary),var(--secondary));
+      box-shadow:0 12px 28px rgba(108,92,231,.22); font-size:2rem; font-weight:800;
     }
     .team-member h4 { color:var(--text-heading); margin-bottom:0.3rem; }
     .team-member span { color:var(--text-secondary); font-size:0.9rem; }
@@ -170,6 +181,7 @@
 
     @media (max-width: 768px) {
       .story-grid { grid-template-columns:1fr; }
+      .story-image { position:static; order:-1; }
       .stats-grid { grid-template-columns:repeat(2,1fr); }
     }
   </style>
@@ -208,12 +220,20 @@
     <div class="story-grid">
       <div class="story-text">
         <h2>قصتنا</h2>
-        <p>انطلقت PikLance في عام 2023 بهدف خلق فضاء إلكتروني يربط المستقلين السوريين بأصحاب المشاريع والشركات. رأينا أن هناك مواهب استثنائية تحتاج إلى منصة تعرض خدماتها، وفي المقابل هناك أعمال تبحث عن حلول رقمية سريعة واحترافية.</p>
-        <p>اليوم، نحن المنصة الأولى في سوريا التي تتيح بيع وشراء الخدمات الرقمية بأمان عبر طرق دفع محلية، مع ضمان حقوق الطرفين.</p>
+        <p>في أواخر عام 2025، جلس أربعة شباب سوريين في مقهى صغير في حلب القديمة. كان عبدالله، مصمم الواجهات، قد عاد للتو من تجربة مريرة مع إحدى المنصات العالمية. بعد ثلاثة أشهر من العمل المتواصل، حقق 2400 دولار من بيع تصاميمه. لكن فرحته لم تدم طويلاً؛ فقد أوقفت المنصة حسابه فجأة بحجة «نشاط غير اعتيادي». لا تفسير، لا استئناف، ولا حتى رسالة اعتذار. ضاعت الأموال، وضاع معها تعب الشهور.</p>
+        <p>لم يكن عبدالله وحده في هذه المعاناة. صديقه عمر، المبرمج والمصمم الموهوب، كان يضطر لاستخدام حسابات وسيطة للوصول إلى منصات العمل الحر، مما يعني اقتطاع 40% من أرباحه لشخص آخر. أما مصعب، كاتب المحتوى والمسوق المبدع، فلم يكن يعرف أصلاً كيف يتلقى مدفوعاته. «PayPal غير متوفر في سوريا»، قيل له مراراً. وطارق، مصمم الهويات البصرية المبدع، كان يشعر بأن السوق المحلي لا يقدّر قيمة التصميم الاحترافي، بينما المنصات العالمية تغلق أبوابها في وجهه. وكأن العالم الرقمي قرر أن السوريين غير مرحب بهم.</p>
+        <p>في ذلك المساء، وعلى طاولة المقهى المتواضعة، وُلدت الفكرة: لماذا لا نبني نحن المنصة التي نحتاجها؟ منصة يفهم السوريون بعضهم فيها، يدفعون بعملتهم المحلية، ويسحبون أرباحهم دون وسطاء أو حظر.</p>
+        <p>انطلق العمل ليلاً ونهاراً. كان عبدالله يصمم واجهات المستخدم بكل تفاصيلها، بينما كان عمر يكتب مئات الأسطر البرمجية ليجعل المنصة تعمل بسلاسة وأمان. تولى طارق تصميم الهوية البصرية الكاملة للمنصة، من الشعار إلى الألوان والأيقونات، ليخلق شخصية بصرية تعكس روح الإبداع السوري. أما مصعب، فكان يتنقل بين مهمتين: كتابة كل المحتوى النصي للمنصة بلغة عربية سليمة وجذابة، والمشاركة في تصميم تجربة المستخدم لضمان أن تكون المنصة سهلة ومريحة للجميع.</p>
+        <p>كانت الأيام طويلة، والليالي أطول. مرات كثيرة، كانوا يعملون حتى أذان الفجر، يختبرون كل زر، وكل صفحة، وكل ميزة. كان عمر يكتب كوداً، وعبدالله يصحح لوناً، وطارق يضبط تناسقاً، ومصعب يراجع جملة. أربعة أصدقاء، أربع مواهب مختلفة، وحلم واحد يجمعهم.</p>
+        <p>بعد ثمانية أشهر من العمل الشاق، ولدت PikLance. ليست مجرد منصة؛ إنها رد على كل من قال «لا يمكنك». إنها مساحة آمنة للمواهب السورية التي تستحق أن ترى النور. فيها يستطيع المستقل أن يرفع خدماته بكل فخر، ويستقبل طلباته، ويسحب أرباحه عبر محفظته مباشرة، دون خوف من حظر أو تعقيد.</p>
+        <p>اليوم، تضم PikLance آلاف المستقلين السوريين، من مصممي الجرافيك إلى المبرمجين، ومن كتّاب المحتوى إلى المسوقين الإلكترونيين، ومن مهندسي الصوت إلى منتجي الفيديو. كل يوم، تُباع مئات الخدمات على منصتنا. والأجمل من ذلك أن عمولتنا البالغة 20% هي من الأدنى في السوق، لأننا نؤمن بأن المستقل يستحق الجزء الأكبر من تعبه.</p>
+        <p>قصة PikLance ليست قصة أربعة أشخاص. إنها قصة كل شاب سوري يملك موهبة ويحلم بفرصة. إنها قصة تحدٍّ للظروف، وإيمان بأن الإبداع السوري يمكنه أن يصل إلى العالم كله، حتى لو بدأ من مقهى صغير في حلب القديمة.</p>
+        <p class="story-closing">PikLance. صُنعت في سوريا، بُنيت للمستقبل.</p>
       </div>
-      <div class="story-image">
+      <figure class="story-image">
         <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&h=400&fit=crop" alt="فريق العمل">
-      </div>
+        <figcaption>أربعة أصدقاء، أربع خبرات، ورؤية واحدة لبناء مستقبل رقمي أفضل للمواهب السورية.</figcaption>
+      </figure>
     </div>
 
     <div class="cards-grid">
@@ -239,24 +259,24 @@
       <p style="color:var(--text-secondary); margin:1rem 0 2rem;">نخبة من الشباب السوري الطموح</p>
       <div class="team-grid">
         <div class="team-member">
-          <div class="team-avatar" style="background-image:url('https://randomuser.me/api/portraits/men/1.jpg')"></div>
-          <h4>أحمد المحمد</h4>
-          <span>المؤسس والمدير التنفيذي</span>
+          <div class="team-avatar" aria-hidden="true">ع س</div>
+          <h4>عمر سرماني</h4>
+          <span>المؤسس وقائد الفريق</span>
         </div>
         <div class="team-member">
-          <div class="team-avatar" style="background-image:url('https://randomuser.me/api/portraits/women/1.jpg')"></div>
-          <h4>سارة خالد</h4>
-          <span>مديرة العمليات</span>
-        </div>
-        <div class="team-member">
-          <div class="team-avatar" style="background-image:url('https://randomuser.me/api/portraits/men/3.jpg')"></div>
-          <h4>خالد وليد</h4>
+          <div class="team-avatar" aria-hidden="true">ع ح</div>
+          <h4>عبدالله حججاح</h4>
           <span>المدير التقني</span>
         </div>
         <div class="team-member">
-          <div class="team-avatar" style="background-image:url('https://randomuser.me/api/portraits/women/3.jpg')"></div>
-          <h4>نور الحسن</h4>
-          <span>مديرة التسويق</span>
+          <div class="team-avatar" aria-hidden="true">ط ك</div>
+          <h4>طارق كردي</h4>
+          <span>مدير قسم التصميم</span>
+        </div>
+        <div class="team-member">
+          <div class="team-avatar" aria-hidden="true">م ع</div>
+          <h4>مصعب العاصي</h4>
+          <span>مدير قسم التسويق</span>
         </div>
       </div>
     </div>
@@ -281,7 +301,7 @@
         <div><h4>مساعدة</h4><a href="contact.html">تواصل</a><a href="faq.html">أسئلة شائعة</a></div>
         <div><h4>قانوني</h4><a href="terms.html">شروط</a><a href="privacy.html">خصوصية</a></div>
       </div>
-      <div class="footer-bottom">© 2025 PikLance. جميع الحقوق محفوظة.</div>
+      <div class="footer-bottom">© 2026 PikLance. جميع الحقوق محفوظة.</div>
     </div>
   </footer>
 
