@@ -299,7 +299,11 @@ async function saveProfile(event) {
     const avatar = await saveAvatar();
     const batch = writeBatch(db);
     batch.update(doc(db, "users", state.user.uid), updates);
-    batch.update(doc(db, "publicProfiles", state.user.uid), { name: updates.name, avatar });
+    batch.set(doc(db, "publicProfiles", state.user.uid), {
+      name: updates.name,
+      accountType: "freelancer",
+      avatar
+    }, { merge: true });
     await batch.commit();
     state.profile = { ...state.profile, ...updates, avatar };
     state.avatarFile = null;
@@ -312,7 +316,15 @@ async function saveProfile(event) {
     showToast("تم تحديث ملفك الشخصي وصورتك.");
   } catch (error) {
     console.error("Profile update failed", error);
-    elements.profileMessage.textContent = "تعذر حفظ التعديلات أو الصورة.";
+    const message = error.code === "storage/unauthorized"
+      ? "تعذر رفع الصورة بسبب صلاحيات الحساب. حدّث الصفحة وحاول مجدداً."
+      : error.code === "storage/invalid-format" || error.code === "storage/invalid-argument"
+        ? "صيغة الصورة غير مدعومة. استخدم JPG أو PNG أو WebP."
+        : error.code === "permission-denied"
+          ? "تعذر تحديث الملف العام. تم إصلاح دعم الحسابات القديمة، حدّث الصفحة وحاول مجدداً."
+          : "تعذر الحفظ حالياً. تحقق من الاتصال وحاول مجدداً.";
+    elements.profileMessage.textContent = message;
+    showToast(message);
   } finally {
     submit.disabled = false;
   }
