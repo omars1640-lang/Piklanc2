@@ -391,6 +391,7 @@ function realProfileData(publicProfile, privateProfile = null) {
   const specialty = specialtyMap[privateProfile?.specialty] || "مستقل محترف للخدمات الرقمية";
   return {
     name: publicProfile.name || "مستقل PikLance",
+    avatar: publicProfile.avatar || "",
     specialty,
     skills: privateProfile?.specialty ? [specialty] : ["خدمات رقمية"],
     about: ["هذا المستقل عضو موثّق في PikLance ويعمل على إعداد تفاصيل ملفه ومعرض أعماله."],
