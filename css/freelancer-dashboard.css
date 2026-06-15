@@ -113,7 +113,9 @@ button { color: inherit; }
   color: #fff;
   background: linear-gradient(135deg, #7b6bef, #5444c9);
   font-weight: 800;
+  overflow: hidden;
 }
+.avatar img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .account-copy { display: grid; text-align: right; line-height: 1.4; }
 .account-copy strong { font-size: 12px; }
 .account-copy small { color: #9ca6b7; font-size: 10px; }
@@ -333,6 +335,10 @@ td { padding: 13px 12px; border-bottom: 1px solid var(--border); font-size: 10px
 .rating-bars { display: grid; gap: 7px; }.rating-bars p { margin: 0; display: grid; grid-template-columns: 60px 1fr 20px; align-items: center; gap: 9px; color: var(--muted); font-size: 9px; }.rating-bars i { height: 6px; overflow: hidden; border-radius: 6px; background: var(--surface-alt); }.rating-bars b { display: block; height: 100%; background: var(--orange); }
 .profile-layout { display: grid; grid-template-columns: 250px 1fr; gap: 18px; }
 .profile-photo-card { display: grid; align-content: start; justify-items: center; text-align: center; }.profile-avatar { width: 82px; height: 82px; font-size: 27px; }.profile-photo-card h2 { margin: 13px 0 1px; font-size: 14px; }.profile-photo-card p { margin: 0 0 10px; color: var(--muted); font-size: 10px; }
+.profile-photo-actions { margin: 3px 0 7px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; }
+.profile-photo-actions label { margin: 0; cursor: pointer; }
+.profile-photo-hint { margin-bottom: 11px; color: var(--muted); font-size: 8px; }
+.text-button.danger { color: var(--danger); }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
 .form-actions { display: flex; align-items: center; justify-content: flex-end; gap: 13px; margin-top: 7px; }.form-message { color: var(--green); font-size: 10px; }
 .settings-list { padding: 0 19px; }.settings-list label { padding: 17px 2px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--border); }.settings-list label:last-child { border: 0; }.settings-list span { display: grid; }.settings-list strong { font-size: 11px; }.settings-list small { color: var(--muted); font-size: 9px; }

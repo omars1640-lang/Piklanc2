@@ -3,7 +3,10 @@ import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, query,
   serverTimestamp, updateDoc, where, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { auth, db } from "./firebase.js";
+import {
+  deleteObject, getDownloadURL, ref as storageRef, uploadBytes
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { auth, db, storage } from "./firebase.js";
 
 const specialtyLabels = { design: "تصميم", web: "برمجة وتطوير", writing: "كتابة وترجمة", marketing: "تسويق رقمي" };
 const serviceStatus = {
@@ -11,7 +14,10 @@ const serviceStatus = {
   published: ["منشورة", "success"], paused: ["متوقفة", "neutral"], rejected: ["مرفوضة", "danger"]
 };
 const orderStatus = { pending: "بانتظار التأكيد", active: "قيد التنفيذ", delivered: "بانتظار الاستلام", completed: "مكتمل", cancelled: "ملغي" };
-const state = { user: null, profile: null, services: [], orders: [], notifications: [] };
+const state = {
+  user: null, profile: null, services: [], orders: [], notifications: [],
+  avatarFile: null, avatarRemoved: false, avatarPreviewUrl: ""
+};
 const $ = id => document.getElementById(id);
 const elements = {
   loadingScreen: $("loadingScreen"), sidebar: $("sidebar"), sidebarOverlay: $("sidebarOverlay"),
@@ -232,9 +238,8 @@ async function migrateLocalServices() {
 
 function fillProfile(user, profile) {
   const name = profile.name || user.email || "مستقل PikLance";
-  const avatar = name.trim().charAt(0).toUpperCase();
   ["topName", "sidebarName", "profileCardName"].forEach(id => { $(id).textContent = name; });
-  ["topAvatar", "sidebarAvatar", "profileAvatar"].forEach(id => { $(id).textContent = avatar; });
+  renderAvatars(state.avatarPreviewUrl || profile.avatar || "", name);
   $("welcomeName").textContent = name.split(/\s+/)[0];
   $("profileName").value = profile.name || "";
   $("profileEmail").value = user.email || "";
@@ -246,19 +251,70 @@ function fillProfile(user, profile) {
   $("profileProgressBar").style.width = `${progress}%`;
 }
 
+function renderAvatars(url, name) {
+  const initial = (name || "م").trim().charAt(0).toUpperCase();
+  ["topAvatar", "sidebarAvatar", "profileAvatar"].forEach(id => {
+    const target = $(id);
+    target.replaceChildren();
+    if (url) {
+      const image = document.createElement("img");
+      image.src = url;
+      image.alt = `صورة ${name}`;
+      target.appendChild(image);
+    } else {
+      target.textContent = initial;
+    }
+  });
+  $("removeProfileAvatar").hidden = !url;
+}
+
+function previewAvatar(file) {
+  if (state.avatarPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(state.avatarPreviewUrl);
+  state.avatarPreviewUrl = file ? URL.createObjectURL(file) : "";
+  renderAvatars(state.avatarPreviewUrl || state.profile.avatar || "", $("profileName").value || state.profile.name);
+}
+
+async function saveAvatar() {
+  const avatarRef = storageRef(storage, `profile-images/${state.user.uid}/avatar`);
+  if (state.avatarRemoved) {
+    await deleteObject(avatarRef).catch(error => {
+      if (error.code !== "storage/object-not-found") throw error;
+    });
+    return "";
+  }
+  if (!state.avatarFile) return state.profile.avatar || "";
+  await uploadBytes(avatarRef, state.avatarFile, { contentType: state.avatarFile.type });
+  const url = await getDownloadURL(avatarRef);
+  return `${url}&v=${Date.now()}`;
+}
+
 async function saveProfile(event) {
   event.preventDefault();
   const updates = { name: $("profileName").value.trim(), phone: $("profilePhone").value.trim(), specialty: $("profileSpecialty").value };
   if (!updates.name) return;
+  const submit = $("saveProfileButton");
+  submit.disabled = true;
+  elements.profileMessage.textContent = "جاري حفظ التعديلات...";
   try {
-    await updateDoc(doc(db, "users", state.user.uid), updates);
-    state.profile = { ...state.profile, ...updates };
+    const avatar = await saveAvatar();
+    const batch = writeBatch(db);
+    batch.update(doc(db, "users", state.user.uid), updates);
+    batch.update(doc(db, "publicProfiles", state.user.uid), { name: updates.name, avatar });
+    await batch.commit();
+    state.profile = { ...state.profile, ...updates, avatar };
+    state.avatarFile = null;
+    state.avatarRemoved = false;
+    if (state.avatarPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(state.avatarPreviewUrl);
+    state.avatarPreviewUrl = "";
+    $("profileAvatarInput").value = "";
     fillProfile(state.user, state.profile);
     elements.profileMessage.textContent = "تم حفظ التعديلات بنجاح.";
-    showToast("تم تحديث ملفك الشخصي.");
+    showToast("تم تحديث ملفك الشخصي وصورتك.");
   } catch (error) {
     console.error("Profile update failed", error);
-    elements.profileMessage.textContent = "تعذر حفظ التعديلات.";
+    elements.profileMessage.textContent = "تعذر حفظ التعديلات أو الصورة.";
+  } finally {
+    submit.disabled = false;
   }
 }
 
@@ -286,6 +342,28 @@ function bindEvents() {
   elements.sidebarOverlay.addEventListener("click", closeSidebar);
   elements.serviceForm.addEventListener("submit", handleServiceSubmit);
   elements.profileForm.addEventListener("submit", saveProfile);
+  $("profileAvatarInput").addEventListener("change", event => {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      event.target.value = "";
+      showToast("اختر صورة JPG أو PNG أو WebP بحجم لا يتجاوز 5MB.");
+      return;
+    }
+    state.avatarFile = file;
+    state.avatarRemoved = false;
+    previewAvatar(file);
+    elements.profileMessage.textContent = "اضغط حفظ التعديلات لاعتماد الصورة.";
+  });
+  $("removeProfileAvatar").addEventListener("click", () => {
+    state.avatarFile = null;
+    state.avatarRemoved = true;
+    if (state.avatarPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(state.avatarPreviewUrl);
+    state.avatarPreviewUrl = "";
+    $("profileAvatarInput").value = "";
+    renderAvatars("", $("profileName").value || state.profile.name);
+    elements.profileMessage.textContent = "اضغط حفظ التعديلات لإزالة الصورة.";
+  });
   elements.serviceSearch.addEventListener("input", renderServices);
   $("serviceFilter").addEventListener("change", renderServices);
   $("markAllNotificationsRead").addEventListener("click", markAllNotificationsRead);
@@ -301,15 +379,18 @@ bindEvents();
 onAuthStateChanged(auth, async user => {
   if (!user) return location.replace("login.html");
   try {
-    const snapshot = await getDoc(doc(db, "users", user.uid));
+    const [snapshot, publicSnapshot] = await Promise.all([
+      getDoc(doc(db, "users", user.uid)),
+      getDoc(doc(db, "publicProfiles", user.uid))
+    ]);
     const profile = snapshot.exists() ? snapshot.data() : null;
     if (!user.emailVerified || !profile || profile.status !== "active" || profile.accountType !== "freelancer") {
       await signOut(auth);
       return location.replace("login.html");
     }
     state.user = user;
-    state.profile = profile;
-    fillProfile(user, profile);
+    state.profile = { ...profile, avatar: publicSnapshot.exists() ? (publicSnapshot.data().avatar || "") : "" };
+    fillProfile(user, state.profile);
     $("publicProfileLink").href = `freelancer-profile.html?uid=${encodeURIComponent(user.uid)}`;
     await migrateLocalServices();
     await loadWorkspace();

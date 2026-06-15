@@ -324,6 +324,12 @@
             <span class="avatar profile-avatar" id="profileAvatar">م</span>
             <h2 id="profileCardName">مستقل PikLance</h2>
             <p id="profileCardSpecialty">مستقل محترف</p>
+            <div class="profile-photo-actions">
+              <label class="button button-secondary button-small" for="profileAvatarInput">تغيير الصورة</label>
+              <input id="profileAvatarInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+              <button class="text-button danger" id="removeProfileAvatar" type="button" hidden>إزالة الصورة</button>
+            </div>
+            <small class="profile-photo-hint">JPG أو PNG أو WebP، بحد أقصى 5MB</small>
             <span class="status-pill success">حساب نشط</span>
           </div>
           <div class="panel form-panel profile-fields">
