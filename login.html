@@ -249,6 +249,12 @@
       }
     }
 
+    function loginDestination(profile) {
+      const returnUrl = safeReturnUrl();
+      if (returnUrl !== "index.html") return returnUrl;
+      return profile.role === "admin" ? "dashboard.html" : "index.html";
+    }
+
     function showMessage(element, message, type) {
       element.textContent = message;
       element.className = `${element === loginMessage ? "login-message" : "reset-message"} show ${type}`;
@@ -379,14 +385,7 @@
           return;
         }
 
-        const returnUrl = safeReturnUrl();
-        location.href = returnUrl !== "index.html"
-          ? returnUrl
-          : profile.role === "admin"
-            ? "dashboard.html"
-            : profile.accountType === "freelancer"
-              ? "freelancer-dashboard.html"
-              : "profile.html";
+        location.href = loginDestination(profile);
       } catch (error) {
         console.error("Login failed", error);
         const messages = {
