@@ -37,6 +37,13 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(userId)).data.status == "active";
     }
 
+    function validEmail(value) {
+      return value is string
+        && value.size() >= 6
+        && value.size() <= 160
+        && value.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
+    }
+
     function validParticipantMap(data, field) {
       return data[field] is map
         && data[field].keys().hasOnly(data.participantUids);
@@ -376,6 +383,21 @@ service cloud.firestore {
 
     match /favorites/{userId}/services/{serviceId} {
       allow read, create, update, delete: if activeUser() && request.auth.uid == userId;
+    }
+
+    match /launchSubscribers/{subscriberId} {
+      allow create: if request.resource.data.keys().hasOnly([
+          "email", "category", "source", "launchDate", "createdAt"
+        ])
+        && request.resource.data.keys().hasAll([
+          "email", "category", "source", "launchDate", "createdAt"
+        ])
+        && validEmail(request.resource.data.email)
+        && request.resource.data.category == "coming-soon-launch"
+        && request.resource.data.source == "coming-soon-page"
+        && request.resource.data.launchDate == "2026-08-01"
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if isAdmin();
     }
 
     match /supportTickets/{ticketId} {
