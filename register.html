@@ -152,7 +152,7 @@
   </div>
 
   <script type="module">
-    import { createUserWithEmailAndPassword, deleteUser, onAuthStateChanged, sendEmailVerification, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { createUserWithEmailAndPassword, deleteUser, onAuthStateChanged, sendEmailVerification, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { doc, getDoc, serverTimestamp, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { deleteObject, ref, uploadBytes } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
     import { auth, db, storage } from "./js/firebase.js";
@@ -181,6 +181,30 @@
     async function cleanupFailedRegistration(user, uploadedPaths = []) {
       await Promise.allSettled(uploadedPaths.map(path => deleteObject(ref(storage, path))));
       if (user) await deleteUser(user).catch(() => {});
+    }
+
+    async function continueExistingFreelancerApplication(email, password) {
+      try {
+        const credential = await signInWithEmailAndPassword(auth, email, password);
+        const snapshot = await getDoc(doc(db, "users", credential.user.uid));
+        const profile = snapshot.exists() ? snapshot.data() : null;
+
+        if (profile?.accountType === 'freelancer' && profile.status === 'rejected') {
+          alert('هذا البريد لديه طلب مرفوض سابقاً. سيتم تحويلك لتعديل الطلب وإعادة تقديمه.');
+          window.location.href = 'register.html?resubmit=1';
+          return true;
+        }
+
+        await signOut(auth).catch(() => {});
+        alert(profile?.accountType === 'freelancer'
+          ? 'هذا البريد لديه طلب مستقل موجود مسبقاً. سجل الدخول لمتابعة حالة الحساب.'
+          : 'هذا البريد مسجل مسبقاً. استخدم صفحة تسجيل الدخول.');
+        return true;
+      } catch (error) {
+        console.error("Existing freelancer lookup failed", error);
+        alert('هذا البريد مسجل مسبقاً. سجل الدخول بنفس البريد وكلمة المرور، وإذا كان طلبك مرفوضاً سيتم تحويلك لإعادة التقديم.');
+        return true;
+      }
     }
 
     function setFieldValue(id, value = "") {
@@ -422,6 +446,10 @@
     alert('✅ تم تقديم الطلب - تحقق من بريدك الإلكتروني');
     window.location.href = 'login.html';
   } catch (error) {
+    if (error.code === 'auth/email-already-in-use') {
+      await continueExistingFreelancerApplication(email, password);
+      return;
+    }
     if (!profilesCreated) await cleanupFailedRegistration(createdUser, uploadedPaths);
     else await signOut(auth).catch(() => {});
     alert(profilesCreated
