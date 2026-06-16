@@ -465,24 +465,53 @@ function detailField(label, value) {
   return item;
 }
 
-async function identityImage(path, label) {
+function identityImage(path, label) {
   const wrapper = document.createElement("div");
   wrapper.className = "identity-image";
   wrapper.textContent = path ? "جاري تحميل الصورة..." : "لم تُرفع الصورة";
   if (!path) return wrapper;
-  try {
-    const blob = await getBlob(ref(storage, path));
+  getBlob(ref(storage, path)).then(blob => {
     const image = document.createElement("img");
     image.src = URL.createObjectURL(blob);
     image.alt = label;
     wrapper.replaceChildren(image);
-  } catch {
+  }).catch(() => {
     wrapper.textContent = "تعذر تحميل صورة الهوية";
-  }
+  });
   return wrapper;
 }
 
-async function openUserModal(userId) {
+function printableUserHtml(user) {
+  const escapeHtml = value => String(value || "").replace(/[&<>"']/g, character => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+  }[character]));
+  const rows = [
+    ["الاسم", user.name],
+    ["البريد", user.email],
+    ["الهاتف", user.phone],
+    ["نوع الحساب", accountTypeLabel(user.accountType)],
+    ["الحالة", statusLabels[user.status] || user.status],
+    ["التخصص", user.specialty],
+    ["رقم الهوية", user.idNumber],
+    ["الاسم في الهوية", user.idName],
+    ["تاريخ التسجيل", formatDate(user.createdAt, true)],
+    ["معرف الحساب", user.id]
+  ].map(([label, value]) => `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value || "-")}</td></tr>`).join("");
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>طلب توثيق ${escapeHtml(user.name || "")}</title><style>body{font-family:Arial,sans-serif;line-height:1.8;padding:30px;color:#222}h1{margin-top:0}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:10px;text-align:right}th{width:180px;background:#f3f3f7}@media print{button{display:none}}</style></head><body><button onclick="print()">حفظ PDF / طباعة</button><h1>طلب توثيق مستقل</h1><p>تاريخ التصدير: ${new Date().toLocaleString("ar-SY")}</p><table>${rows}</table><p>مسارات صور الهوية محفوظة في النظام: ${escapeHtml(user.idFrontPath || "-")} / ${escapeHtml(user.idBackPath || "-")}</p><script>setTimeout(()=>print(),300)</script></body></html>`;
+}
+
+function exportUserPdf(user) {
+  const view = window.open("", "_blank", "width=900,height=700");
+  if (!view) {
+    showToast("اسمح بالنوافذ المنبثقة لحفظ ملف PDF.");
+    return;
+  }
+  view.document.open();
+  view.document.write(printableUserHtml(user));
+  view.document.close();
+}
+
+function openUserModal(userId) {
   const user = state.users.find(item => item.id === userId);
   if (!user) return;
   state.selectedUser = user;
@@ -513,12 +542,15 @@ async function openUserModal(userId) {
     title.textContent = "مستندات التحقق";
     const images = document.createElement("div");
     images.className = "identity-grid";
-    images.append(await identityImage(user.idFrontPath, "الوجه الأمامي للهوية"), await identityImage(user.idBackPath, "الوجه الخلفي للهوية"));
+    images.append(identityImage(user.idFrontPath, "الوجه الأمامي للهوية"), identityImage(user.idBackPath, "الوجه الخلفي للهوية"));
     section.append(title, images);
     elements.modalBody.appendChild(section);
   }
 
-  elements.modalActions.replaceChildren(button("إغلاق", "secondary-button", closeUserModal));
+  elements.modalActions.replaceChildren(
+    button("حفظ الطلب PDF", "secondary-button", () => exportUserPdf(user)),
+    button("إغلاق", "secondary-button", closeUserModal)
+  );
   if (user.status === "pending") {
     elements.modalActions.append(
       button("رفض الطلب", "danger-button", () => { closeUserModal(); openDecision(user.id, "reject_user"); }),

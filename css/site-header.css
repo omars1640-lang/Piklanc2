@@ -293,6 +293,17 @@
   .site-header-button.ghost {
     display: none;
   }
+
+  .site-header-theme {
+    width: 38px;
+    min-width: 38px;
+    padding: 0;
+    font-size: 17px;
+  }
+
+  .site-header-actions {
+    gap: 6px;
+  }
 }
 
 .site-simple-page {

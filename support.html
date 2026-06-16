@@ -53,6 +53,11 @@
   <div class="modal-overlay" id="ticketModal" aria-hidden="true">
     <form class="ticket-form">
       <header><div><small>طلب مساعدة جديد</small><h2>إنشاء تذكرة</h2></div><button type="button" data-close-ticket>×</button></header>
+      <div class="guest-fields" id="guestFields" hidden>
+        <label>الاسم الكامل<input id="guestName" type="text" maxlength="100" placeholder="اكتب اسمك"></label>
+        <label>البريد الإلكتروني<input id="guestEmail" type="email" maxlength="160" placeholder="example@email.com"></label>
+        <label>رقم الهاتف أو وسيلة التواصل<input id="guestPhone" type="text" maxlength="40" placeholder="اختياري"></label>
+      </div>
       <label>نوع الطلب<select id="ticketCategory" required><option value="technical">مشكلة تقنية</option><option value="account">الحساب والتوثيق</option><option value="payment">الدفع والفواتير</option><option value="dispute">نزاع مرتبط بطلب</option><option value="report">بلاغ عن مخالفة</option><option value="general">استفسار عام</option></select></label>
       <label>عنوان مختصر<input id="ticketSubject" type="text" maxlength="120" required placeholder="اكتب ملخص المشكلة"></label>
       <label id="orderIdWrap" hidden>رقم الطلب<input id="ticketOrderId" type="text" maxlength="100" placeholder="اختياري إن لم يتوفر"></label>

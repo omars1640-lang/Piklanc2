@@ -217,8 +217,10 @@
 
   <script type="module">
     import {
+      browserLocalPersistence,
       sendEmailVerification,
       sendPasswordResetEmail,
+      setPersistence,
       signInWithEmailAndPassword,
       signOut
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -330,6 +332,7 @@
       loginMessage.className = "login-message";
 
       try {
+        await setPersistence(auth, browserLocalPersistence);
         const credential = await signInWithEmailAndPassword(auth, email, password);
         const userSnapshot = await getDoc(doc(db, "users", credential.user.uid));
 

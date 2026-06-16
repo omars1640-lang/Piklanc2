@@ -340,9 +340,61 @@ service cloud.firestore {
     }
 
     match /supportTickets/{ticketId} {
-      allow create: if activeUser()
-        && request.resource.data.requesterUid == request.auth.uid
+      allow create: if (
+        (
+          activeUser()
+          && request.resource.data.requesterUid == request.auth.uid
+          && request.resource.data.requesterEmail == request.auth.token.email
+        ) || (
+          !signedIn()
+          && request.resource.data.requesterUid == ""
+          && request.resource.data.requesterName is string
+          && request.resource.data.requesterName.size() >= 2
+          && request.resource.data.requesterName.size() <= 100
+          && request.resource.data.requesterEmail is string
+          && request.resource.data.requesterEmail.size() >= 6
+          && request.resource.data.requesterEmail.size() <= 160
+          && request.resource.data.requesterPhone is string
+          && request.resource.data.requesterPhone.size() <= 40
+        )
+      )
         && request.resource.data.status == "open"
+        && request.resource.data.keys().hasOnly([
+          "requesterUid", "requesterName", "requesterEmail", "requesterPhone",
+          "subject", "category", "message", "orderId", "status", "priority",
+          "assignedAdminUid", "createdAt", "updatedAt"
+        ])
+        && request.resource.data.keys().hasAll([
+          "requesterUid", "requesterName", "requesterEmail",
+          "subject", "category", "message", "orderId", "status", "priority",
+          "assignedAdminUid", "createdAt", "updatedAt"
+        ])
+        && request.resource.data.category in [
+          "technical", "account", "payment", "dispute", "report", "general"
+        ]
+        && request.resource.data.priority in ["normal", "high"]
+        && request.resource.data.assignedAdminUid == ""
+        && request.resource.data.requesterName is string
+        && request.resource.data.requesterName.size() >= 2
+        && request.resource.data.requesterName.size() <= 100
+        && request.resource.data.requesterEmail is string
+        && request.resource.data.requesterEmail.size() >= 6
+        && request.resource.data.requesterEmail.size() <= 160
+        && (
+          !request.resource.data.keys().hasAny(["requesterPhone"])
+          || (
+            request.resource.data.requesterPhone is string
+            && request.resource.data.requesterPhone.size() <= 40
+          )
+        )
+        && request.resource.data.orderId is string
+        && request.resource.data.orderId.size() <= 100
+        && request.resource.data.subject is string
+        && request.resource.data.subject.size() > 0
+        && request.resource.data.subject.size() <= 120
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 3000
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
       allow read: if isAdmin()
