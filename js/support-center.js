@@ -10,6 +10,9 @@ const statusLabels = { open: "مفتوحة", in_progress: "قيد المعالج
 const categoryLabels = { technical: "مشكلة تقنية", account: "الحساب والتوثيق", payment: "الدفع والفواتير", dispute: "نزاع", report: "بلاغ", general: "استفسار عام" };
 const toDate = value => value?.toDate?.() || (value ? new Date(value) : null);
 const formatDate = value => toDate(value)?.toLocaleString("ar-SY", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) || "-";
+const escapeHtml = value => String(value || "").replace(/[&<>"']/g, character => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+}[character]));
 
 function toast(message) {
   $("supportToast").textContent = message;
@@ -18,7 +21,13 @@ function toast(message) {
   toast.timer = setTimeout(() => $("supportToast").classList.remove("show"), 2800);
 }
 function openModal() { $("ticketModal").classList.add("open"); $("ticketModal").setAttribute("aria-hidden", "false"); }
-function closeModal() { $("ticketModal").classList.remove("open"); $("ticketModal").setAttribute("aria-hidden", "true"); document.querySelector(".ticket-form").reset(); $("orderIdWrap").hidden = true; }
+function closeModal() {
+  $("ticketModal").classList.remove("open");
+  $("ticketModal").setAttribute("aria-hidden", "true");
+  document.querySelector(".ticket-form").reset();
+  $("orderIdWrap").hidden = true;
+  syncGuestFields();
+}
 function sortNewest(items, field = "updatedAt") { return items.sort((a, b) => (toDate(b[field])?.getTime() || 0) - (toDate(a[field])?.getTime() || 0)); }
 
 function renderStats() {
@@ -35,7 +44,7 @@ function renderTickets() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `ticket-item ${state.selectedId === ticket.id ? "active" : ""}`;
-    button.innerHTML = `<header><strong>${ticket.subject}</strong><span class="status">${statusLabels[ticket.status] || ticket.status}</span></header><p>${categoryLabels[ticket.category] || ticket.category}${ticket.orderId ? ` · طلب ${ticket.orderId}` : ""}</p><small>${formatDate(ticket.updatedAt)}</small>`;
+    button.innerHTML = `<header><strong>${escapeHtml(ticket.subject)}</strong><span class="status">${escapeHtml(statusLabels[ticket.status] || ticket.status)}</span></header><p>${escapeHtml(categoryLabels[ticket.category] || ticket.category)}${ticket.orderId ? ` · طلب ${escapeHtml(ticket.orderId)}` : ""}</p><small>${formatDate(ticket.updatedAt)}</small>`;
     button.addEventListener("click", () => selectTicket(ticket.id));
     return button;
   });
@@ -50,9 +59,9 @@ function renderTickets() {
 
 function messageNode(reply) {
   const item = document.createElement("article");
-  const mine = reply.authorUid === state.user.uid;
+  const mine = state.user && reply.authorUid === state.user.uid;
   item.className = `message ${mine ? "mine" : ""} ${reply.authorRole === "admin" ? "admin" : ""}`;
-  item.innerHTML = `<strong>${reply.authorName || (reply.authorRole === "admin" ? "فريق الدعم" : "أنت")}</strong><p></p><time>${formatDate(reply.createdAt)}</time>`;
+  item.innerHTML = `<strong>${escapeHtml(reply.authorName || (reply.authorRole === "admin" ? "فريق الدعم" : "أنت"))}</strong><p></p><time>${formatDate(reply.createdAt)}</time>`;
   item.querySelector("p").textContent = reply.text;
   return item;
 }
@@ -61,7 +70,7 @@ function renderDetail() {
   const ticket = state.tickets.find(item => item.id === state.selectedId);
   if (!ticket) return;
   $("ticketDetail").innerHTML = `
-    <div class="detail-head"><small>${categoryLabels[ticket.category] || ticket.category}</small><h2>${ticket.subject}</h2><div class="detail-meta"><span class="status">${statusLabels[ticket.status] || ticket.status}</span><span>#${ticket.id.slice(0, 8)}</span><span>${formatDate(ticket.createdAt)}</span></div></div>
+    <div class="detail-head"><small>${escapeHtml(categoryLabels[ticket.category] || ticket.category)}</small><h2>${escapeHtml(ticket.subject)}</h2><div class="detail-meta"><span class="status">${escapeHtml(statusLabels[ticket.status] || ticket.status)}</span><span>#${ticket.id.slice(0, 8)}</span><span>${formatDate(ticket.createdAt)}</span></div></div>
     <div class="conversation" id="ticketConversation"></div>
     <form class="reply-form" id="replyForm"><textarea id="replyText" rows="2" maxlength="2000" required placeholder="اكتب ردك أو أضف معلومات جديدة..."></textarea><button class="primary-button" type="submit">إرسال</button></form>`;
   const initial = { authorUid: ticket.requesterUid, authorRole: "user", authorName: ticket.requesterName, text: ticket.message, createdAt: ticket.createdAt };
@@ -85,6 +94,10 @@ async function selectTicket(id) {
 
 async function sendReply(event) {
   event.preventDefault();
+  if (!state.user) {
+    toast("الرد على التذكرة يتطلب تسجيل الدخول. فريق الدعم سيتواصل معك عبر بياناتك.");
+    return;
+  }
   const text = $("replyText").value.trim();
   if (!text) return;
   await addDoc(collection(db, "supportTickets", state.selectedId, "replies"), {
@@ -101,15 +114,18 @@ async function sendReply(event) {
 
 async function createTicket(event) {
   event.preventDefault();
-  if (!state.user) {
-    location.href = `login.html?returnUrl=${encodeURIComponent("support.html")}`;
+  const category = $("ticketCategory").value;
+  const guestName = $("guestName").value.trim();
+  const guestEmail = $("guestEmail").value.trim().toLowerCase();
+  if (!state.user && (!guestName || !guestEmail)) {
+    toast("اكتب الاسم والبريد الإلكتروني ليتمكن الدعم من التواصل معك.");
     return;
   }
-  const category = $("ticketCategory").value;
   const reference = await addDoc(collection(db, "supportTickets"), {
-    requesterUid: state.user.uid,
-    requesterName: state.profile.name || state.user.email || "مستخدم",
-    requesterEmail: state.user.email || "",
+    requesterUid: state.user?.uid || "",
+    requesterName: state.user ? (state.profile.name || state.user.email || "مستخدم") : guestName,
+    requesterEmail: state.user ? (state.user.email || "") : guestEmail,
+    requesterPhone: state.user ? (state.profile.phone || "") : $("guestPhone").value.trim(),
     subject: $("ticketSubject").value.trim(),
     category,
     message: $("ticketMessage").value.trim(),
@@ -121,9 +137,11 @@ async function createTicket(event) {
     updatedAt: serverTimestamp()
   });
   closeModal();
-  await loadTickets();
-  await selectTicket(reference.id);
-  toast("تم إنشاء التذكرة بنجاح.");
+  if (state.user) {
+    await loadTickets();
+    await selectTicket(reference.id);
+  }
+  toast(state.user ? "تم إنشاء التذكرة بنجاح." : "تم إرسال تذكرتك. سيتواصل الدعم معك عبر البريد أو الهاتف.");
 }
 
 async function loadTickets() {
@@ -134,16 +152,25 @@ async function loadTickets() {
   renderTickets();
 }
 
-$("newTicketButton").addEventListener("click", () => state.user ? openModal() : location.href = `login.html?returnUrl=${encodeURIComponent("support.html")}`);
+function syncGuestFields() {
+  const guest = !state.user;
+  $("guestFields").hidden = !guest;
+  $("guestName").required = guest;
+  $("guestEmail").required = guest;
+}
+
+$("newTicketButton").addEventListener("click", openModal);
 document.querySelectorAll("[data-close-ticket]").forEach(button => button.addEventListener("click", closeModal));
 $("ticketModal").addEventListener("click", event => { if (event.target === $("ticketModal")) closeModal(); });
 $("ticketCategory").addEventListener("change", event => { $("orderIdWrap").hidden = event.target.value !== "dispute"; });
 $("ticketFilter").addEventListener("change", renderTickets);
 document.querySelector(".ticket-form").addEventListener("submit", createTicket);
+syncGuestFields();
 
 onAuthStateChanged(auth, async user => {
   state.user = user;
-  if (!user) { renderStats(); renderTickets(); return; }
+  syncGuestFields();
+  if (!user) { state.tickets = []; renderStats(); renderTickets(); return; }
   const snapshot = await getDoc(doc(db, "users", user.uid));
   state.profile = snapshot.exists() ? snapshot.data() : {};
   await loadTickets();

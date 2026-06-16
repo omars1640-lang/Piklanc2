@@ -186,9 +186,17 @@ body {
 }
 
 @media (max-width: 620px) {
-  .legal-hero { padding: 42px 17px 38px; }
-  .legal-layout { width: min(100% - 22px, 1120px); }
-  .policy-grid { width: min(100% - 22px, 1120px); grid-template-columns: 1fr; }
-  .legal-document { padding: 20px 17px; }
-  .legal-section h2 { font-size: 17px; }
+  .legal-hero { padding: 36px 15px 34px; }
+  .legal-hero h1 { font-size: 28px; }
+  .legal-hero .legal-lead { font-size: 15px; }
+  .legal-layout { width: min(100% - 18px, 1120px); margin-top: 16px; gap: 14px; }
+  .policy-grid { width: min(100% - 18px, 1120px); grid-template-columns: 1fr; gap: 12px; }
+  .policy-card { min-height: auto; padding: 18px; }
+  .legal-document { padding: 19px 15px; border-radius: 15px; }
+  .legal-section h2 { font-size: 19px; }
+  .legal-section p, .legal-section li { font-size: 14px; line-height: 2.05; }
+  .legal-note { font-size: 13px; }
+  .legal-table { min-width: 520px; font-size: 12px; }
+  .legal-toc { padding: 13px; }
+  .legal-toc a { font-size: 12px; }
 }
