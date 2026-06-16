@@ -140,6 +140,44 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
+      function validFreelancerResubmission() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        return signedIn()
+          && request.auth.uid == userId
+          && resource.data.accountType == "freelancer"
+          && resource.data.status == "rejected"
+          && request.resource.data.accountType == resource.data.accountType
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.status == "pending"
+          && changed.hasAll([
+            "idNumber", "idName", "idFrontPath", "idBackPath",
+            "status", "resubmittedAt", "updatedAt"
+          ])
+          && changed.hasOnly([
+            "name", "phone", "specialty", "idNumber", "idName",
+            "idFrontPath", "idBackPath", "status", "resubmittedAt", "updatedAt"
+          ])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 80
+          && request.resource.data.phone is string
+          && request.resource.data.phone.size() > 0
+          && request.resource.data.phone.size() <= 30
+          && request.resource.data.specialty is string
+          && request.resource.data.specialty.size() > 0
+          && request.resource.data.idNumber is string
+          && request.resource.data.idNumber.size() > 0
+          && request.resource.data.idNumber.size() <= 60
+          && request.resource.data.idName is string
+          && request.resource.data.idName.size() > 0
+          && request.resource.data.idName.size() <= 120
+          && request.resource.data.idFrontPath == "identity/" + userId + "/front"
+          && request.resource.data.idBackPath == "identity/" + userId + "/back"
+          && request.resource.data.resubmittedAt == request.time
+          && request.resource.data.updatedAt == request.time;
+      }
+
       allow create: if signedIn()
         && request.auth.uid == userId
         && request.resource.data.email == request.auth.token.email
@@ -157,6 +195,7 @@ service cloud.firestore {
       allow list: if isAdmin();
 
       allow update: if isAdmin()
+        || validFreelancerResubmission()
         || (
           signedIn()
           && request.auth.uid == userId

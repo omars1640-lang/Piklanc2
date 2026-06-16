@@ -361,6 +361,14 @@
           return;
         }
         if (profile.status === "rejected") {
+          if (profile.accountType === "freelancer") {
+            sessionStorage.setItem("freelancerRejectionReason", profile.rejectionReason || "");
+            showMessage(loginMessage, `تم رفض الطلب: ${profile.rejectionReason || "راجع بيانات التوثيق"}. سيتم تحويلك لإعادة تقديم الطلب.`, "info");
+            setTimeout(() => {
+              location.href = "register.html?resubmit=1";
+            }, 900);
+            return;
+          }
           await signOut(auth);
           showMessage(loginMessage, `تم رفض الحساب: ${profile.rejectionReason || "راجع دعم المنصة"}`, "error");
           return;

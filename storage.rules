@@ -29,7 +29,7 @@ service firebase.storage {
         && fileName in ["front", "back"]
         && request.resource.size <= 5 * 1024 * 1024
         && request.resource.contentType.matches("image/.*");
-      allow delete: if signedIn() && request.auth.uid == userId;
+      allow delete: if signedIn() && (request.auth.uid == userId || isAdmin());
       allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
     }
 
