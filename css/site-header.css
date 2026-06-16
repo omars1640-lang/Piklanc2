@@ -279,6 +279,7 @@
 @media (max-width: 620px) {
   .site-header-inner {
     width: min(100% - 22px, 1180px);
+    gap: 7px;
   }
 
   .site-header-brand strong {
@@ -286,23 +287,52 @@
   }
 
   .site-header-button {
-    padding: 0 11px;
+    min-height: 36px;
+    padding: 0 10px;
+    font-size: 10px;
   }
 
   .site-header-account-copy,
-  .site-header-button.ghost {
+  .site-header-actions.is-signed-in .site-header-button.ghost {
     display: none;
   }
 
   .site-header-theme {
-    width: 38px;
-    min-width: 38px;
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
     padding: 0;
-    font-size: 17px;
+    font-size: 16px;
+  }
+
+  .site-header-mobile {
+    width: 36px;
+    height: 36px;
+    font-size: 19px;
+  }
+
+  .site-header-brand-mark {
+    width: 34px;
+    height: 34px;
   }
 
   .site-header-actions {
-    gap: 6px;
+    gap: 5px;
+  }
+}
+
+@media (max-width: 360px) {
+  .site-header-inner {
+    width: min(100% - 16px, 1180px);
+    gap: 5px;
+  }
+
+  .site-header-button {
+    padding: 0 8px;
+  }
+
+  .site-header-actions.is-signed-out .site-header-button.primary {
+    display: none;
   }
 }
 
