@@ -50,8 +50,9 @@
     .launch-shell {
       position: relative;
       display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(360px, .8fr);
-      gap: 28px;
+      grid-template-columns: minmax(0, 1fr);
+      justify-items: center;
+      gap: 30px;
       padding: clamp(22px, 4vw, 42px);
       border: 1px solid var(--border);
       border-radius: 32px;
@@ -73,15 +74,21 @@
       z-index: -1;
     }
 
+    .intro {
+      width: min(100%, 980px);
+      text-align: center;
+    }
+
     .brand {
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 32px;
+      margin: 0 auto 28px;
       color: var(--text);
       text-decoration: none;
       font-weight: 900;
       letter-spacing: .2px;
+      justify-content: center;
     }
 
     .brand-mark {
@@ -98,7 +105,7 @@
 
     .eyebrow {
       width: fit-content;
-      margin: 0 0 18px;
+      margin: 0 auto 18px;
       padding: 8px 13px;
       border: 1px solid rgba(94, 224, 184, .28);
       border-radius: 999px;
@@ -110,14 +117,14 @@
 
     h1 {
       max-width: 760px;
-      margin: 0;
+      margin: 0 auto;
       font-size: clamp(34px, 6vw, 68px);
       line-height: 1.18;
       letter-spacing: -.8px;
     }
 
     .lead {
-      max-width: 760px;
+      max-width: 960px;
       margin: 24px 0 0;
       color: var(--muted);
       font-size: clamp(16px, 2vw, 20px);
@@ -131,10 +138,11 @@
     }
 
     .highlights {
+      width: min(100%, 900px);
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
-      margin-top: 28px;
+      margin: 28px auto 0;
     }
 
     .highlight {
@@ -158,6 +166,7 @@
     }
 
     .side-card {
+      width: min(100%, 620px);
       align-self: center;
       padding: 24px;
       border: 1px solid var(--border);
@@ -169,7 +178,7 @@
 
     .countdown {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 12px;
       margin-bottom: 22px;
     }
@@ -199,6 +208,7 @@
     }
 
     .signup-card {
+      text-align: center;
       padding: 18px;
       border-radius: 20px;
       background: var(--panel-strong);
@@ -223,11 +233,13 @@
 
     .email-row {
       display: flex;
+      justify-content: center;
       gap: 8px;
     }
 
     input {
       width: 100%;
+      max-width: 360px;
       min-height: 48px;
       padding: 0 14px;
       border: 1px solid var(--border);
@@ -279,12 +291,12 @@
     .launch-date strong { color: #fff; }
 
     @media (max-width: 920px) {
-      .launch-shell {
+      .highlights {
         grid-template-columns: 1fr;
       }
 
-      .highlights {
-        grid-template-columns: 1fr;
+      .countdown {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
 
@@ -332,7 +344,7 @@
 <body>
   <main class="launch-page">
     <section class="launch-shell" aria-labelledby="launchTitle">
-      <div>
+      <div class="intro">
         <a class="brand" href="index.html" aria-label="Piklanc">
           <span class="brand-mark">P</span>
           <span>Piklanc</span>
