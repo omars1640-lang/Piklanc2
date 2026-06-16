@@ -94,6 +94,7 @@
     </div>
 
     <div id="freelancerForm" class="hidden">
+      <div id="reapplyNotice" class="alert alert-warning hidden"></div>
       <div class="step-indicator">
         <div class="step-dot active" id="dot1">1</div>
         <div class="step-line" id="line1"></div>
@@ -142,7 +143,7 @@
         <div id="summary"></div>
         <div style="display:flex; gap:1rem;">
           <button class="btn btn-outline" onclick="freelancerNext(2)">السابق</button>
-          <button class="btn" onclick="registerFreelancer()">تقديم الطلب</button>
+          <button class="btn" id="freelancerSubmitButton" onclick="registerFreelancer()">تقديم الطلب</button>
         </div>
       </div>
     </div>
@@ -151,12 +152,16 @@
   </div>
 
   <script type="module">
-    import { createUserWithEmailAndPassword, deleteUser, sendEmailVerification, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { doc, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { createUserWithEmailAndPassword, deleteUser, onAuthStateChanged, sendEmailVerification, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { doc, getDoc, serverTimestamp, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { deleteObject, ref, uploadBytes } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
     import { auth, db, storage } from "./js/firebase.js";
 
     const MAX_ID_IMAGE_SIZE = 5 * 1024 * 1024;
+    const params = new URLSearchParams(location.search);
+    const isResubmission = params.get("resubmit") === "1";
+    let resubmissionUser = null;
+    let resubmissionProfile = null;
 
     function validatePassword(password) {
       return password.length >= 8;
@@ -176,6 +181,54 @@
     async function cleanupFailedRegistration(user, uploadedPaths = []) {
       await Promise.allSettled(uploadedPaths.map(path => deleteObject(ref(storage, path))));
       if (user) await deleteUser(user).catch(() => {});
+    }
+
+    function setFieldValue(id, value = "") {
+      document.getElementById(id).value = value || "";
+    }
+
+    function setResubmissionMode(user, profile) {
+      resubmissionUser = user;
+      resubmissionProfile = profile;
+      document.getElementById('typeSelection').classList.add('hidden');
+      document.getElementById('buyerForm').classList.add('hidden');
+      document.getElementById('freelancerForm').classList.remove('hidden');
+      document.getElementById('freelancerSubmitButton').textContent = 'إعادة تقديم الطلب';
+
+      const passwordGroup = document.getElementById('fPassword').closest('.form-group');
+      if (passwordGroup) passwordGroup.classList.add('hidden');
+
+      const notice = document.getElementById('reapplyNotice');
+      notice.classList.remove('hidden');
+      notice.textContent = `تم رفض طلبك السابق: ${profile.rejectionReason || 'راجع بيانات التوثيق وأعد رفع الهوية بوضوح.'} يمكنك تعديل البيانات وإعادة تقديم الطلب من نفس الحساب.`;
+
+      setFieldValue('fName', profile.name);
+      setFieldValue('fEmail', profile.email || user.email);
+      setFieldValue('fPhone', profile.phone);
+      setFieldValue('fSpecialty', profile.specialty);
+      setFieldValue('fIdNumber', profile.idNumber);
+      setFieldValue('fIdName', profile.idName);
+      document.getElementById('fEmail').disabled = true;
+    }
+
+    if (isResubmission) {
+      onAuthStateChanged(auth, async user => {
+        if (!user) {
+          alert('سجل الدخول أولاً حتى تتمكن من إعادة تقديم طلب التوثيق.');
+          window.location.href = 'login.html?returnUrl=register.html%3Fresubmit%3D1';
+          return;
+        }
+
+        const snapshot = await getDoc(doc(db, "users", user.uid));
+        const profile = snapshot.exists() ? snapshot.data() : null;
+        if (!profile || profile.accountType !== 'freelancer' || profile.status !== 'rejected') {
+          alert('لا يوجد طلب مرفوض قابل لإعادة التقديم على هذا الحساب.');
+          window.location.href = 'login.html';
+          return;
+        }
+
+        setResubmissionMode(user, profile);
+      });
     }
 
     window.selectType = function(type) {
@@ -282,13 +335,50 @@
   const frontFile = document.getElementById('frontImg').files[0];
   const backFile = document.getElementById('backImg').files[0];
 
-  if (!name || !email || !password || !phone || !specialty || !idNumber || !idName) {
+  if (!name || !email || (!isResubmission && !password) || !phone || !specialty || !idNumber || !idName) {
     alert('يرجى ملء جميع الحقول');
     return;
   }
-  if (!validatePassword(password)) { alert('كلمة المرور يجب أن تكون 8 أحرف على الأقل'); return; }
+  if (!isResubmission && !validatePassword(password)) { alert('كلمة المرور يجب أن تكون 8 أحرف على الأقل'); return; }
   if (!validateImage(frontFile) || !validateImage(backFile)) {
     alert('يجب رفع صورتي الهوية بصيغة صورة وبحجم لا يتجاوز 5MB');
+    return;
+  }
+
+  if (isResubmission) {
+    if (!resubmissionUser || !resubmissionProfile) {
+      alert('انتهت جلسة إعادة التقديم. سجل الدخول مجدداً.');
+      window.location.href = 'login.html?returnUrl=register.html%3Fresubmit%3D1';
+      return;
+    }
+
+    const uid = resubmissionUser.uid;
+    const frontPath = `identity/${uid}/front`;
+    const backPath = `identity/${uid}/back`;
+    try {
+      await Promise.all([
+        uploadBytes(ref(storage, frontPath), frontFile, { contentType: frontFile.type }),
+        uploadBytes(ref(storage, backPath), backFile, { contentType: backFile.type })
+      ]);
+      await updateDoc(doc(db, "users", uid), {
+        name,
+        phone,
+        specialty,
+        idNumber,
+        idName,
+        idFrontPath: frontPath,
+        idBackPath: backPath,
+        status: 'pending',
+        resubmittedAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      await signOut(auth);
+      alert('✅ تم إعادة تقديم طلبك. سنراجعه من جديد خلال 24 ساعة.');
+      window.location.href = 'login.html';
+    } catch (error) {
+      console.error("Freelancer resubmission failed", error);
+      alert('❌ تعذر إعادة تقديم الطلب. تحقق من الصور والاتصال ثم حاول مجدداً.');
+    }
     return;
   }
 

@@ -1,6 +1,7 @@
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
   collection,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -10,7 +11,7 @@ import {
   serverTimestamp,
   writeBatch
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getBlob, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { deleteObject, getBlob, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { auth, db, storage } from "./firebase.js";
 
 const sectionMeta = {
@@ -612,6 +613,21 @@ function auditData(action, target = {}, reason = "") {
   };
 }
 
+async function cleanupRejectedIdentity(user) {
+  const paths = [user.idFrontPath, user.idBackPath].filter(Boolean);
+  if (!paths.length) return;
+  await Promise.allSettled(paths.map(path => deleteObject(ref(storage, path))));
+}
+
+function openRejectionEmail(user, reason) {
+  if (!user.email) return;
+  const subject = encodeURIComponent("نتيجة طلب توثيق حسابك في PikLance");
+  const body = encodeURIComponent(
+    `مرحباً ${user.name || ""}\n\nتمت مراجعة طلب توثيق حسابك في PikLance، ولم نتمكن من قبوله حالياً.\n\nسبب الرفض:\n${reason}\n\nيمكنك تسجيل الدخول إلى حسابك وإعادة تقديم الطلب بعد تعديل البيانات ورفع صور الهوية من جديد.\n\nفريق PikLance`
+  );
+  window.location.href = `mailto:${user.email}?subject=${subject}&body=${body}`;
+}
+
 async function executeDecision(event) {
   event.preventDefault();
   const decision = state.pendingDecision;
@@ -623,7 +639,16 @@ async function executeDecision(event) {
   }
   const updates = {
     approve_user: { status: "active", approvedAt: serverTimestamp(), approvedBy: state.admin.id },
-    reject_user: { status: "rejected", rejectionReason: reason, rejectedAt: serverTimestamp(), rejectedBy: state.admin.id },
+    reject_user: {
+      status: "rejected",
+      rejectionReason: reason,
+      rejectedAt: serverTimestamp(),
+      rejectedBy: state.admin.id,
+      idNumber: deleteField(),
+      idName: deleteField(),
+      idFrontPath: deleteField(),
+      idBackPath: deleteField()
+    },
     suspend_user: { status: "suspended", suspensionReason: reason, suspendedAt: serverTimestamp(), suspendedBy: state.admin.id },
     activate_user: { status: "active", reactivatedAt: serverTimestamp(), reactivatedBy: state.admin.id }
   }[decision.action];
@@ -633,8 +658,14 @@ async function executeDecision(event) {
     batch.update(doc(db, "users", decision.user.id), updates);
     batch.set(doc(collection(db, "adminAuditLogs")), auditData(decision.action, decision.user, reason));
     await batch.commit();
+    if (decision.action === "reject_user") {
+      await cleanupRejectedIdentity(decision.user);
+      openRejectionEmail(decision.user, reason);
+    }
     closeDecision();
-    showToast("تم تنفيذ القرار وتسجيله بنجاح.");
+    showToast(decision.action === "reject_user"
+      ? "تم رفض الطلب وتنظيف بيانات الهوية. تم تجهيز رسالة البريد لصاحب الطلب."
+      : "تم تنفيذ القرار وتسجيله بنجاح.");
     await loadData();
   } catch (error) {
     console.error("Admin decision failed", error);
