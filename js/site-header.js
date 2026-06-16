@@ -43,6 +43,8 @@ function renderSignedOutActions() {
   if (!actions) return;
   stopNotifications?.();
   stopNotifications = null;
+  actions.classList.remove("is-signed-in");
+  actions.classList.add("is-signed-out");
   const login = createLink("login.html", "دخول", "site-header-button ghost");
   const join = createLink("register.html", "انضم مجاناً", "site-header-button primary");
   actions.replaceChildren(themeButton, login, join);
@@ -50,6 +52,8 @@ function renderSignedOutActions() {
 
 function renderSignedInActions(user, profile) {
   if (!actions) return;
+  actions.classList.remove("is-signed-out");
+  actions.classList.add("is-signed-in");
   const messages = createLink("messages.html", "الرسائل", "site-header-button ghost");
   const accountHref = profile.accountType === "freelancer" ? "freelancer-dashboard.html" : "profile.html";
   const notifications = createLink(`${accountHref}#notifications`, "الإشعارات", "site-header-button ghost site-header-notifications");
