@@ -54,6 +54,17 @@ service firebase.storage {
       allow delete: if isAdmin();
     }
 
+    match /service-images/{userId}/{serviceId}/{fileName} {
+      allow read: if true;
+      allow create, update: if activeUser()
+        && request.auth.uid == userId
+        && fileName.matches("cover\\.(jpg|png|webp)")
+        && request.resource.size > 0
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches("image/(jpeg|png|webp)");
+      allow delete: if activeUser() && request.auth.uid == userId;
+    }
+
     match /profile-images/{userId}/{fileName} {
       allow read: if true;
       allow create, update: if activeUser()

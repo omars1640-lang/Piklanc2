@@ -27,6 +27,7 @@
       <h1 id="pageTitle">نظرة عامة</h1>
     </div>
     <div class="topbar-actions">
+      <button class="icon-button admin-notification-trigger" id="adminNotificationsButton" type="button" aria-label="الإشعارات" aria-expanded="false"><span>🔔</span><b id="adminNotificationsCount" hidden>0</b></button>
       <button class="icon-button" id="refreshData" type="button" aria-label="تحديث البيانات">↻</button>
       <button class="icon-button" id="themeToggle" type="button" aria-label="تبديل المظهر">☾</button>
       <button class="admin-account" id="accountButton" type="button">
@@ -35,6 +36,11 @@
       </button>
     </div>
   </header>
+
+  <div class="admin-notification-popover" id="adminNotificationsPanel" hidden>
+    <header><strong>الإشعارات</strong><button id="adminNotificationsClose" type="button">×</button></header>
+    <div id="adminNotificationsList"></div>
+  </div>
 
   <aside class="admin-sidebar" id="adminSidebar">
     <nav class="admin-nav" aria-label="أقسام لوحة الإدارة">
