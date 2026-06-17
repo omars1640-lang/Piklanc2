@@ -378,6 +378,8 @@
           <label>السعر<input id="servicePrice" type="number" min="1000" step="1000" placeholder="25000" required></label>
         </div>
         <label>وصف الخدمة<textarea id="serviceDescription" rows="4" maxlength="1000" placeholder="ما الذي سيحصل عليه العميل؟" required></textarea></label>
+        <label>صورة الخدمة<input id="serviceImage" type="file" accept="image/jpeg,image/png,image/webp"></label>
+        <small class="service-image-hint">ارفع صورة واضحة بصيغة JPG أو PNG أو WebP، بحجم لا يتجاوز 5MB. ستظهر هذه الصورة للإدارة قبل الموافقة.</small>
         <div class="form-grid">
           <label>مدة التسليم<select id="serviceDelivery"><option value="1">يوم</option><option value="2" selected>يومان</option><option value="3">3 أيام</option><option value="5">5 أيام</option><option value="7">أسبوع</option></select></label>
           <label>عدد التعديلات<select id="serviceRevisions"><option value="0">بدون تعديلات</option><option value="1" selected>تعديل واحد</option><option value="2">تعديلان</option><option value="3">3 تعديلات</option></select></label>

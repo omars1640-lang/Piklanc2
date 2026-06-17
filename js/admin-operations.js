@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { auth, db, storage } from "./firebase.js";
 
-const state = { admin: null, services: [], tickets: [], articles: [], faqs: [], categories: [], selectedTicket: null, replies: [] };
+const state = { admin: null, services: [], tickets: [], orders: [], articles: [], faqs: [], categories: [], selectedTicket: null, replies: [], verificationCount: 0 };
 const $ = id => document.getElementById(id);
 const toDate = value => value?.toDate?.() || (value ? new Date(value) : null);
 const sortNewest = (items, field = "updatedAt") => items.sort((a, b) => (toDate(b[field])?.getTime() || 0) - (toDate(a[field])?.getTime() || 0));
@@ -65,6 +65,87 @@ function escapeHtml(value) {
 function serviceImageUrl(service) {
   const firstImage = Array.isArray(service.images) ? service.images.find(Boolean) : "";
   return service.imageUrl || service.coverUrl || service.serviceImage || service.thumbnail || firstImage || "";
+}
+
+function ensureNavBadge(section) {
+  const link = document.querySelector(`.nav-link[data-section="${section}"]`);
+  if (!link) return null;
+  let badge = link.querySelector("em[data-admin-badge], em[id]");
+  if (!badge) {
+    badge = document.createElement("em");
+    badge.dataset.adminBadge = section;
+    link.appendChild(badge);
+  } else {
+    badge.dataset.adminBadge = section;
+  }
+  return badge;
+}
+
+function updateNavBadge(section, count) {
+  const badge = ensureNavBadge(section);
+  if (!badge) return;
+  badge.textContent = count > 0 ? String(count) : "";
+  badge.hidden = count <= 0;
+}
+
+function adminNotification(icon, title, body, section, count = 1) {
+  return { icon, title, body, section, count };
+}
+
+function buildAdminNotifications() {
+  const pendingServices = state.services.filter(service => service.status === "pending");
+  const activeTickets = state.tickets.filter(ticket => !["resolved", "closed"].includes(ticket.status));
+  const disputes = state.tickets.filter(ticket => ticket.category === "dispute" && !["resolved", "closed"].includes(ticket.status));
+  const financeOrders = state.orders.filter(order => ["funded", "delivered", "disputed"].includes(order.status));
+  const draftArticles = state.articles.filter(article => article.status === "draft");
+
+  updateNavBadge("verifications", state.verificationCount);
+  updateNavBadge("marketplace", pendingServices.length);
+  updateNavBadge("finance", financeOrders.length);
+  updateNavBadge("support", activeTickets.length);
+  updateNavBadge("content", draftArticles.length);
+
+  return [
+    state.verificationCount ? adminNotification("✓", "طلبات توثيق معلقة", `${state.verificationCount} طلب حساب يحتاج مراجعة بيانات المستخدم قبل الموافقة.`, "verifications", state.verificationCount) : null,
+    pendingServices.length ? adminNotification("▦", "خدمات بانتظار المراجعة", `${pendingServices.length} خدمة تحتاج عرض التفاصيل قبل النشر أو الرفض.`, "marketplace", pendingServices.length) : null,
+    financeOrders.length ? adminNotification("◈", "مدفوعات وطلبات تحتاج متابعة", `${financeOrders.length} طلب مرتبط بالحجز أو التسليم أو النزاع.`, "finance", financeOrders.length) : null,
+    activeTickets.length ? adminNotification("?", "تذاكر دعم نشطة", `${activeTickets.length} تذكرة مفتوحة أو قيد المعالجة.`, "support", activeTickets.length) : null,
+    disputes.length ? adminNotification("⚖", "نزاعات مفتوحة", `${disputes.length} نزاع يحتاج قرار أو متابعة من الإدارة.`, "support", disputes.length) : null,
+    draftArticles.length ? adminNotification("▤", "محتوى غير منشور", `${draftArticles.length} مقال ما زال كمسودة.`, "content", draftArticles.length) : null
+  ].filter(Boolean);
+}
+
+function renderAdminNotifications() {
+  const notifications = buildAdminNotifications();
+  const total = notifications.reduce((sum, item) => sum + item.count, 0);
+  const count = $("adminNotificationsCount");
+  count.textContent = String(total);
+  count.hidden = total === 0;
+
+  const list = $("adminNotificationsList");
+  if (!notifications.length) {
+    list.innerHTML = '<div class="admin-notification-empty">لا توجد إشعارات تشغيلية حالياً.</div>';
+    return;
+  }
+  list.replaceChildren(...notifications.map(item => {
+    const row = document.createElement("article");
+    row.className = "admin-notification-item";
+    row.innerHTML = `<span>${item.icon}</span><div><strong>${item.title}</strong><small>${item.body}</small></div>`;
+    const button = actionButton("عرض", "text-button", () => {
+      toggleAdminNotifications(false);
+      document.querySelector(`.nav-link[data-section="${item.section}"]`)?.click();
+    });
+    row.appendChild(button);
+    return row;
+  }));
+}
+
+function toggleAdminNotifications(force) {
+  const panel = $("adminNotificationsPanel");
+  const button = $("adminNotificationsButton");
+  const isOpen = force ?? panel.hidden;
+  panel.hidden = !isOpen;
+  button.setAttribute("aria-expanded", String(isOpen));
 }
 
 function serviceDetail(label, value) {
@@ -519,24 +600,27 @@ async function addCategory(event) {
 }
 
 async function loadOperations() {
-  const [services, tickets, articles, faqs, categories] = await Promise.all([
+  const [services, tickets, orders, articles, faqs, categories] = await Promise.all([
     getDocs(collection(db, "services")),
     getDocs(collection(db, "supportTickets")),
+    getDocs(collection(db, "orders")),
     getDocs(collection(db, "articles")),
     getDocs(collection(db, "faqItems")),
     getDocs(collection(db, "serviceCategories"))
   ]);
   state.services = sortNewest(services.docs.map(item => ({ id: item.id, ...item.data() })));
   state.tickets = sortNewest(tickets.docs.map(item => ({ id: item.id, ...item.data() })));
+  state.orders = sortNewest(orders.docs.map(item => ({ id: item.id, ...item.data() })));
   state.articles = sortNewest(articles.docs.map(item => ({ id: item.id, ...item.data() })));
   state.faqs = faqs.docs.map(item => ({ id: item.id, ...item.data() })).sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
   state.categories = categories.docs.map(item => ({ id: item.id, ...item.data() })).sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
   renderServices();
   renderTickets();
   renderContent();
+  renderAdminNotifications();
 }
 
-["marketplace", "support", "content"].forEach(section => document.querySelector(`.nav-link[data-section="${section}"] i`)?.remove());
+["marketplace", "finance", "support", "content"].forEach(section => document.querySelector(`.nav-link[data-section="${section}"] i`)?.remove());
 $("serviceAdminSearch").addEventListener("input", renderServices);
 $("serviceAdminFilter").addEventListener("change", renderServices);
 $("ticketAdminSearch").addEventListener("input", renderTickets);
@@ -560,6 +644,19 @@ $("articleCoverFile").addEventListener("change", event => {
 });
 $("faqForm").addEventListener("submit", addFaq);
 $("categoryForm").addEventListener("submit", addCategory);
+$("adminNotificationsButton").addEventListener("click", () => toggleAdminNotifications());
+$("adminNotificationsClose").addEventListener("click", () => toggleAdminNotifications(false));
+document.addEventListener("click", event => {
+  const panel = $("adminNotificationsPanel");
+  const button = $("adminNotificationsButton");
+  if (!panel.hidden && !panel.contains(event.target) && !button.contains(event.target)) {
+    toggleAdminNotifications(false);
+  }
+});
+window.addEventListener("admin:verification-count", event => {
+  state.verificationCount = Number(event.detail?.count || 0);
+  renderAdminNotifications();
+});
 
 onAuthStateChanged(auth, async user => {
   if (!user) return;

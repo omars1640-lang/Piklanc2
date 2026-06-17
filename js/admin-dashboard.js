@@ -205,7 +205,10 @@ function renderMetrics() {
   document.getElementById("activeFreelancers").textContent = activeFreelancers.length;
   document.getElementById("pendingUsers").textContent = pending.length;
   document.getElementById("totalChats").textContent = state.chats.length;
-  document.getElementById("verificationBadge").textContent = pending.length;
+  const verificationBadge = document.getElementById("verificationBadge");
+  verificationBadge.textContent = pending.length ? String(pending.length) : "";
+  verificationBadge.hidden = pending.length === 0;
+  window.dispatchEvent(new CustomEvent("admin:verification-count", { detail: { count: pending.length } }));
   document.getElementById("pendingHeadingCount").textContent = pending.length;
   document.getElementById("freelancerShare").textContent = `${users.length ? Math.round(activeFreelancers.length / users.length * 100) : 0}% من المستخدمين`;
   document.getElementById("buyersCount").textContent = buyers.length;

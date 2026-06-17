@@ -252,9 +252,14 @@ async function submitService(id) {
 async function handleServiceSubmit(event) {
   event.preventDefault();
   const submit = elements.serviceForm.querySelector('[type="submit"]');
+  const imageFile = $("serviceImage").files[0];
+  if (imageFile && (!["image/jpeg", "image/png", "image/webp"].includes(imageFile.type) || imageFile.size > 5 * 1024 * 1024)) {
+    showToast("اختر صورة خدمة بصيغة JPG أو PNG أو WebP وبحجم لا يتجاوز 5MB.");
+    return;
+  }
   submit.disabled = true;
   try {
-    await addDoc(collection(db, "services"), {
+    const serviceRef = await addDoc(collection(db, "services"), {
       ownerUid: state.user.uid, ownerName: state.profile.name || state.user.email || "مستقل",
       title: $("serviceTitle").value.trim(), category: $("serviceCategory").value,
       price: Number($("servicePrice").value), description: $("serviceDescription").value.trim(),
@@ -262,6 +267,18 @@ async function handleServiceSubmit(event) {
       keywords: $("serviceKeywords").value.split(",").map(value => value.trim()).filter(Boolean),
       status: "draft", createdAt: serverTimestamp(), updatedAt: serverTimestamp()
     });
+    if (imageFile) {
+      const extension = imageFile.type.split("/")[1].replace("jpeg", "jpg");
+      const path = `service-images/${state.user.uid}/${serviceRef.id}/cover.${extension}`;
+      const imageRef = storageRef(storage, path);
+      await uploadBytes(imageRef, imageFile, { contentType: imageFile.type });
+      const imageUrl = await getDownloadURL(imageRef);
+      await updateDoc(serviceRef, {
+        imageUrl,
+        imagePath: path,
+        updatedAt: serverTimestamp()
+      });
+    }
     closeServiceModal();
     await loadWorkspace();
     showToast("تم حفظ الخدمة كمسودة في حسابك.");

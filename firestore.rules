@@ -454,8 +454,21 @@ service cloud.firestore {
           && request.resource.data.ownerUid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             "title", "category", "description", "price", "deliveryDays",
-            "revisions", "keywords", "status", "updatedAt"
+            "revisions", "keywords", "status", "imageUrl", "imagePath", "updatedAt"
           ])
+          && (
+            !request.resource.data.keys().hasAny(["imageUrl"])
+            || (
+              request.resource.data.imageUrl is string
+              && request.resource.data.imageUrl.size() <= 1200
+            )
+          )
+          && (
+            !request.resource.data.keys().hasAny(["imagePath"])
+            || request.resource.data.imagePath == "service-images/" + request.auth.uid + "/" + serviceId + "/cover.jpg"
+            || request.resource.data.imagePath == "service-images/" + request.auth.uid + "/" + serviceId + "/cover.png"
+            || request.resource.data.imagePath == "service-images/" + request.auth.uid + "/" + serviceId + "/cover.webp"
+          )
           && (
             request.resource.data.status == "draft"
             || (
