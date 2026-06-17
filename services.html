@@ -314,28 +314,6 @@
       outline: none;
     }
 
-    .view-toggle {
-      display: flex;
-      background: var(--bg-tertiary);
-      border-radius: 30px;
-      padding: 0.3rem;
-    }
-
-    .view-btn {
-      padding: 0.5rem 1rem;
-      border: none;
-      background: transparent;
-      color: var(--text-secondary);
-      font-weight: 700;
-      cursor: pointer;
-      border-radius: 30px;
-      transition: var(--transition);
-    }
-
-    .view-btn.active {
-      background: var(--primary);
-      color: #fff;
-    }
 
     /* ========== Services Grid ========== */
     .services-grid {
@@ -590,10 +568,6 @@
             <option value="price-low">السعر: من الأقل للأعلى</option>
             <option value="price-high">السعر: من الأعلى للأقل</option>
           </select>
-          <div class="view-toggle">
-            <button class="view-btn active" onclick="switchView('grid', this)">📱</button>
-            <button class="view-btn" onclick="switchView('list', this)">📋</button>
-          </div>
         </div>
       </div>
     </div>
@@ -790,19 +764,6 @@
       renderServices(sorted);
     }
 
-    // تبديل العرض (شبكة / قائمة)
-    function switchView(view, button) {
-      const grid = document.getElementById('servicesContainer');
-      const buttons = document.querySelectorAll('.view-btn');
-      buttons.forEach(b => b.classList.remove('active'));
-      button.classList.add('active');
-
-      if (view === 'list') {
-        grid.style.gridTemplateColumns = '1fr';
-      } else {
-        grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
-      }
-    }
 
     // عرض أولي
     document.addEventListener('DOMContentLoaded', () => {
