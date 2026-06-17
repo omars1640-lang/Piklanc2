@@ -388,6 +388,24 @@
       animation-delay: 2s;
     }
 
+    .floating-badge-2::before {
+      content: "★";
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), var(--secondary));
+      box-shadow: 0 10px 24px rgba(255, 107, 107, .22);
+      font-size: 1.25rem;
+      font-weight: 900;
+    }
+
+    .floating-badge-2 > div { font-size: 0; }
+    .floating-badge-2 > div::before { content: "تقييم ممتاز"; font-size: 1rem; }
+    .floating-badge-2 small { display: block; font-size: .82rem; }
+
     @keyframes floatBadge {
       0%, 100% { transform: translateY(0) rotate(0deg); }
       50% { transform: translateY(-15px) rotate(2deg); }
@@ -399,6 +417,19 @@
       border-radius: 50%;
       background-size: cover;
       background-position: center;
+    }
+
+    .floating-icon {
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      box-shadow: 0 10px 24px rgba(108, 92, 231, .24);
+      font-size: 1.35rem;
+      font-weight: 900;
     }
 
     /* ========== Stats Ribbon ========== */
@@ -503,12 +534,29 @@
       margin: 0 auto 1rem;
     }
 
-    .icon-design { background: #EDE9FE; }
-    .icon-code { background: #DBEAFE; }
-    .icon-write { background: #FEF3C7; }
-    .icon-market { background: #D1FAE5; }
-    .icon-audio { background: #FCE7F3; }
-    .icon-video { background: #E0E7FF; }
+    .category-icon { color: transparent; font-size: 0; }
+    .category-icon::before {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      color: currentColor;
+      font-size: 1.45rem;
+      font-weight: 900;
+    }
+    .icon-design::before { content: "D"; color: #6C5CE7; }
+    .icon-code::before { content: "</>"; color: #2563EB; font-size: 1.1rem; }
+    .icon-write::before { content: "T"; color: #B45309; }
+    .icon-market::before { content: "↗"; color: #059669; }
+    .icon-audio::before { content: "♪"; color: #DB2777; }
+    .icon-video::before { content: "▶"; color: #4F46E5; }
+
+    .icon-design { color: #6C5CE7; background: #EDE9FE; }
+    .icon-code { color: #2563EB; background: #DBEAFE; }
+    .icon-write { color: #B45309; background: #FEF3C7; }
+    .icon-market { color: #059669; background: #D1FAE5; }
+    .icon-audio { color: #DB2777; background: #FCE7F3; }
+    .icon-video { color: #4F46E5; background: #E0E7FF; }
 
     .category-title {
       font-weight: 700;
@@ -1124,7 +1172,7 @@
       <div class="footer-grid">
         <div>
           <h4>🏢 PikLance</h4>
-          <p style="opacity:0.7;">منصة الخدمات الرقمية السورية الأولى. نربط المواهب بالمشاريع.</p>
+          <p style="opacity:0.7;">منصة الخدمات الرقمية السورية الأولى.<br>نربط المواهب بالمشاريع.</p>
         </div>
         <div>
           <h4>تصفح</h4>

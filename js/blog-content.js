@@ -1,5 +1,5 @@
 import {
-  collection, getCountFromServer, getDocs, query, where
+  collection, getCountFromServer, getDocs, onSnapshot, query, where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from "./firebase.js";
 
@@ -165,6 +165,16 @@ document.getElementById("blogSearch").addEventListener("input", event => {
   state.search = event.target.value.trim().toLowerCase();
   state.page = 1;
   render();
+});
+
+onSnapshot(query(collection(db, "articles"), where("status", "==", "published")), async snapshot => {
+  const articles = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+  articles.sort((a, b) => (toDate(b.publishedAt || b.createdAt)?.getTime() || 0) - (toDate(a.publishedAt || a.createdAt)?.getTime() || 0));
+  state.articles = await Promise.all(articles.map(loadStats));
+  renderCategories();
+  render();
+}, error => {
+  console.error("Unable to load articles realtime", error);
 });
 
 try {

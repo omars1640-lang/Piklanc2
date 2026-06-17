@@ -331,17 +331,20 @@ service cloud.firestore {
             && request.resource.data.avatar.size() <= 1200
           )
         );
-      allow update: if activeUser()
-        && request.auth.uid == userId
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "avatar"])
-        && request.resource.data.name is string
-        && request.resource.data.name.size() > 0
-        && request.resource.data.name.size() <= 80
-        && (
-          !request.resource.data.keys().hasAny(["avatar"])
-          || (
-            request.resource.data.avatar is string
-            && request.resource.data.avatar.size() <= 1200
+      allow update: if isAdmin()
+        || (
+          activeUser()
+          && request.auth.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "avatar"])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 80
+          && (
+            !request.resource.data.keys().hasAny(["avatar"])
+            || (
+              request.resource.data.avatar is string
+              && request.resource.data.avatar.size() <= 1200
+            )
           )
         );
       allow delete: if false;
