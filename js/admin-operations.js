@@ -52,6 +52,100 @@ function actionButton(label, className, handler) {
   return button;
 }
 
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  })[char]);
+}
+
+function serviceImageUrl(service) {
+  const firstImage = Array.isArray(service.images) ? service.images.find(Boolean) : "";
+  return service.imageUrl || service.coverUrl || service.serviceImage || service.thumbnail || firstImage || "";
+}
+
+function serviceDetail(label, value) {
+  const field = document.createElement("div");
+  field.className = "detail-field";
+  field.innerHTML = `<small>${escapeHtml(label)}</small><strong>${escapeHtml(value ?? "-")}</strong>`;
+  return field;
+}
+
+function closeServicePreview() {
+  $("servicePreviewModal").classList.remove("open");
+  $("servicePreviewModal").setAttribute("aria-hidden", "true");
+  $("servicePreviewBody").replaceChildren();
+  $("servicePreviewActions").replaceChildren();
+}
+
+function openServicePreview(id) {
+  const service = state.services.find(item => item.id === id);
+  if (!service) return;
+  $("servicePreviewTitle").textContent = service.title || "تفاصيل الخدمة";
+  const body = $("servicePreviewBody");
+  body.replaceChildren();
+
+  const imageWrap = document.createElement("div");
+  imageWrap.className = "service-preview-cover";
+  const imageUrl = serviceImageUrl(service);
+  if (imageUrl) {
+    const image = document.createElement("img");
+    image.src = imageUrl;
+    image.alt = service.title || "صورة الخدمة";
+    image.loading = "lazy";
+    imageWrap.appendChild(image);
+  } else {
+    imageWrap.innerHTML = "<span>لا توجد صورة مرفقة لهذه الخدمة</span>";
+  }
+
+  const summary = document.createElement("div");
+  summary.className = "service-preview-summary";
+  summary.append(
+    serviceDetail("المستقل", service.ownerName || "-"),
+    serviceDetail("الحالة", serviceLabels[service.status] || service.status || "-"),
+    serviceDetail("السعر", `${Number(service.price || 0).toLocaleString("ar-SY")} ل.س`),
+    serviceDetail("التصنيف", service.category || "-"),
+    serviceDetail("مدة التسليم", service.deliveryDays ? `${service.deliveryDays} يوم` : "-"),
+    serviceDetail("عدد التعديلات", service.revisions ?? "-"),
+    serviceDetail("آخر تحديث", formatDate(service.updatedAt)),
+    serviceDetail("رقم الخدمة", service.id)
+  );
+
+  const description = document.createElement("section");
+  description.className = "service-preview-section";
+  const keywords = Array.isArray(service.keywords) ? service.keywords.join("، ") : (service.keywords || "");
+  description.innerHTML = `
+    <h3>وصف الخدمة</h3>
+    <p>${escapeHtml(service.description || "لا يوجد وصف مضاف.")}</p>
+    <h3>الكلمات المفتاحية</h3>
+    <p>${escapeHtml(keywords || "لا توجد كلمات مفتاحية.")}</p>
+    ${service.moderationReason ? `<h3>ملاحظة المراجعة السابقة</h3><p>${escapeHtml(service.moderationReason)}</p>` : ""}
+  `;
+
+  body.append(imageWrap, summary, description);
+
+  const actions = $("servicePreviewActions");
+  actions.replaceChildren(actionButton("إغلاق", "secondary-button", closeServicePreview));
+  if (service.status === "pending") {
+    actions.append(
+      actionButton("رفض الخدمة", "danger-button", async () => {
+        closeServicePreview();
+        await reviewService(service.id, false);
+      }),
+      actionButton("نشر الخدمة", "primary-button", async () => {
+        closeServicePreview();
+        await reviewService(service.id, true);
+      })
+    );
+  }
+
+  $("servicePreviewModal").classList.add("open");
+  $("servicePreviewModal").setAttribute("aria-hidden", "false");
+}
+
 function renderServices() {
   const term = $("serviceAdminSearch").value.trim().toLowerCase();
   const filter = $("serviceAdminFilter").value;
@@ -64,6 +158,7 @@ function renderServices() {
     const row = document.createElement("tr");
     const actions = document.createElement("div");
     actions.className = "table-actions";
+    actions.append(actionButton("عرض الخدمة", "table-button", () => openServicePreview(service.id)));
     if (service.status === "pending") {
       actions.append(
         actionButton("نشر", "table-button approve", () => reviewService(service.id, true)),
@@ -449,6 +544,8 @@ $("ticketAdminFilter").addEventListener("change", renderTickets);
 $("ticketAdminForm").addEventListener("submit", saveTicket);
 document.querySelectorAll("[data-close-ticket-admin]").forEach(control => control.addEventListener("click", closeTicket));
 $("ticketAdminModal").addEventListener("click", event => { if (event.target === $("ticketAdminModal")) closeTicket(); });
+document.querySelectorAll("[data-close-service-preview]").forEach(control => control.addEventListener("click", closeServicePreview));
+$("servicePreviewModal").addEventListener("click", event => { if (event.target === $("servicePreviewModal")) closeServicePreview(); });
 $("articleForm").addEventListener("submit", event => {
   saveArticle(event).catch(error => {
     console.error("Unable to save article", error);

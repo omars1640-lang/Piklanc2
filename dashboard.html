@@ -336,6 +336,14 @@
     </form>
   </div>
 
+  <div class="modal-overlay" id="servicePreviewModal" aria-hidden="true">
+    <div class="modal-dialog service-preview-dialog">
+      <header><div><p>معاينة الخدمة</p><h2 id="servicePreviewTitle">تفاصيل الخدمة</h2></div><button type="button" data-close-service-preview>×</button></header>
+      <div class="modal-body" id="servicePreviewBody"></div>
+      <footer id="servicePreviewActions"></footer>
+    </div>
+  </div>
+
   <div class="admin-toast" id="adminToast" role="status"></div>
   <script type="module" src="js/admin-dashboard.js"></script>
   <script type="module" src="js/admin-operations.js"></script>

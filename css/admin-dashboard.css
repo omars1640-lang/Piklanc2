@@ -187,4 +187,13 @@ button { cursor: pointer; }
 .ticket-admin-message strong { display: block; font-size: 10px; }
 .ticket-admin-message p { margin: 4px 0; white-space: pre-wrap; font-size: 10px; }
 .ticket-admin-message small { color: var(--muted); font-size: 8px; }
+.service-preview-dialog { width: min(860px,calc(100vw - 30px)); }
+.service-preview-cover { min-height: 260px; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; color: var(--muted); background: var(--surface-alt); font-size: 11px; }
+.service-preview-cover img { width: 100%; max-height: 360px; display: block; object-fit: contain; background: #fff; }
+.service-preview-summary { margin-top: 14px; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 9px; }
+.service-preview-section { margin-top: 16px; padding: 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-alt); }
+.service-preview-section h3 { margin: 0 0 6px; color: var(--ink); font-size: 12px; }
+.service-preview-section h3:not(:first-child) { margin-top: 14px; }
+.service-preview-section p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
 @media(max-width:900px){.content-admin-grid{grid-template-columns:1fr}.content-form-row{grid-template-columns:1fr}}
+@media(max-width:700px){.service-preview-summary{grid-template-columns:1fr 1fr}.service-preview-cover{min-height:190px}}
