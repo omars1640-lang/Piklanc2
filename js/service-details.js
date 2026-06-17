@@ -432,7 +432,6 @@ function renderService() {
     ? `freelancer-profile.html?uid=${encodeURIComponent(sellerUid)}`
     : `freelancer-profile.html?id=${service.profileId}`;
   document.getElementById("sellerProfileLink").href = profileHref;
-  document.getElementById("viewSeller").href = profileHref;
   renderGallery();
   renderPackages();
   renderReviews();

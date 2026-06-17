@@ -15,6 +15,30 @@
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   font-family: "Cairo", sans-serif;
+  font-size: 14px;
+}
+
+footer {
+  font-family: "Cairo", sans-serif;
+}
+
+footer h3,
+footer h4,
+footer strong {
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+footer p,
+footer a {
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+footer small,
+.footer-bottom {
+  font-size: 12px;
+  line-height: 1.9;
 }
 
 [data-theme="dark"] .site-header {

@@ -122,6 +122,12 @@ button { cursor: pointer; }
 .status-badge, .type-badge { padding: 3px 7px; border-radius: 20px; font-size: 7.38px; font-weight: 800; white-space: nowrap; }.status-active { color: var(--green); background: color-mix(in srgb, var(--green) 11%, transparent); }.status-pending { color: var(--orange); background: color-mix(in srgb, var(--orange) 12%, transparent); }.status-rejected, .status-suspended { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); }.type-badge { color: var(--primary); background: var(--primary-soft); }
 .table-actions { display: flex; gap: 5px; }.table-button { min-height: 29px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); background: var(--surface); font-size: 8.61px; font-weight: 800; }.table-button:hover { color: var(--primary); border-color: var(--primary); }.table-button.approve { color: var(--green); }.table-button.reject { color: var(--danger); }
 .table-footer { padding: 10px 15px; color: var(--muted); background: var(--surface-alt); font-size: 8.61px; }
+.rank-guide { margin-bottom: 14px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.rank-guide article { padding: 13px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
+.rank-guide strong { display: block; color: var(--ink); font-size: 12px; }.rank-guide span { color: var(--muted); font-size: 9px; }
+.rank-select { min-width: 150px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 9px; color: var(--ink); background: var(--surface); font: 800 10px "Cairo"; }
+.rank-badge { padding: 4px 8px; border-radius: 20px; font-size: 8px; font-weight: 900; white-space: nowrap; }
+.rank-new { color: var(--muted); background: var(--surface-alt); }.rank-active { color: var(--green); background: color-mix(in srgb, var(--green) 12%, transparent); }.rank-pro { color: var(--primary); background: var(--primary-soft); }.rank-expert { color: var(--orange); background: color-mix(in srgb, var(--orange) 14%, transparent); }.rank-elite { color: #fff; background: linear-gradient(135deg, var(--primary), var(--orange)); }.rank-auto { color: var(--primary); background: var(--primary-soft); }
 .empty-state { padding: 48px 20px; display: grid; justify-items: center; color: var(--muted); text-align: center; }.empty-state[hidden] { display: none; }.empty-state > span { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; color: var(--primary); background: var(--primary-soft); font-size: 20.92px; }.empty-state strong { margin-top: 9px; color: var(--ink); font-size: 11.07px; }.empty-state p { margin: 3px; font-size: 8.61px; }
 .privacy-badge { color: var(--primary); background: var(--primary-soft); }
 
@@ -157,6 +163,7 @@ button { cursor: pointer; }
   .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .overview-grid, .lower-grid { grid-template-columns: 1fr; }
   .settings-layout { grid-template-columns: 1fr; }.settings-save { grid-column: auto; }
+  .rank-guide { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .future-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 780px) {

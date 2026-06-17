@@ -157,6 +157,13 @@ function renderProfile(profile) {
   document.title = `${profile.name} - PikLance`;
   document.getElementById("profileName").textContent = profile.name;
   document.getElementById("profileInitial").textContent = initials(profile.name);
+  const rankBadge = document.getElementById("profileRankBadge");
+  if (profile.rank?.label) {
+    rankBadge.textContent = profile.rank.label;
+    rankBadge.hidden = false;
+  } else {
+    rankBadge.hidden = true;
+  }
   const avatar = document.getElementById("profileAvatar");
   avatar.querySelector("img")?.remove();
   if (profile.avatar) {
@@ -403,7 +410,8 @@ function realProfileData(publicProfile, privateProfile = null) {
     response: "يرد عبر رسائل المنصة",
     languages: "العربية",
     memberSince: "2026",
-    stats: { completed: 0, rating: 0, success: 0, response: "--", repeat: 0 }
+    stats: { completed: 0, rating: 0, success: 0, response: "--", repeat: 0 },
+    rank: publicProfile.rank || null
   };
 }
 

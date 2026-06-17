@@ -18,6 +18,7 @@ const sectionMeta = {
   overview: ["مركز العمليات", "نظرة عامة"],
   verifications: ["الثقة والأمان", "طلبات التوثيق"],
   users: ["إدارة المجتمع", "المستخدمون"],
+  ranks: ["نمو المستقلين", "رتب المستقلين"],
   conversations: ["سلامة التواصل", "المحادثات"],
   marketplace: ["تشغيل السوق", "الخدمات والطلبات"],
   finance: ["الإدارة المالية", "المدفوعات والعمولات"],
@@ -77,17 +78,28 @@ const statusLabels = {
   suspended: "موقوف"
 };
 
+const rankLevels = [
+  { id: "auto", label: "تلقائي", minCompleted: -1, color: "auto" },
+  { id: "new", label: "مستقل جديد", minCompleted: 0, color: "new" },
+  { id: "active", label: "مستقل نشيط", minCompleted: 10, color: "active" },
+  { id: "pro", label: "مستقل محترف", minCompleted: 50, color: "pro" },
+  { id: "expert", label: "خبير خدمات", minCompleted: 100, color: "expert" },
+  { id: "elite", label: "نخبة PikLance", minCompleted: 200, color: "elite" }
+];
+
 const actionLabels = {
   approve_user: "قبول وتفعيل مستخدم",
   reject_user: "رفض طلب مستخدم",
   suspend_user: "إيقاف حساب مستخدم",
   activate_user: "إعادة تفعيل مستخدم",
+  update_freelancer_rank: "تحديث رتبة مستقل",
   update_settings: "تحديث إعدادات المنصة"
 };
 
 const state = {
   admin: null,
   users: [],
+  orders: [],
   chats: [],
   audit: [],
   settings: null,
@@ -164,6 +176,64 @@ function button(label, className, handler) {
   control.textContent = label;
   control.addEventListener("click", handler);
   return control;
+}
+
+function completedOrdersFor(uid) {
+  return state.orders.filter(order => order.freelancerUid === uid && ["completed", "released"].includes(order.status)).length;
+}
+
+function automaticRank(completed) {
+  return [...rankLevels]
+    .filter(rank => rank.id !== "auto" && completed >= rank.minCompleted)
+    .sort((a, b) => b.minCompleted - a.minCompleted)[0] || rankLevels.find(rank => rank.id === "new");
+}
+
+function effectiveRank(user) {
+  const manual = rankLevels.find(rank => rank.id === user.manualRank);
+  return manual && manual.id !== "auto" ? manual : automaticRank(completedOrdersFor(user.id));
+}
+
+function ensureRanksUi() {
+  if (!document.querySelector('[data-section="ranks"]')) {
+    const usersLink = document.querySelector('[data-section="users"]');
+    const ranksLink = document.createElement("button");
+    ranksLink.className = "nav-link";
+    ranksLink.type = "button";
+    ranksLink.dataset.section = "ranks";
+    ranksLink.innerHTML = "<span>◆</span><b>رتب المستقلين</b>";
+    usersLink?.after(ranksLink);
+    ranksLink.addEventListener("click", () => showSection("ranks"));
+  }
+
+  if (!document.getElementById("ranks-section")) {
+    const section = document.createElement("section");
+    section.className = "admin-section";
+    section.id = "ranks-section";
+    section.innerHTML = `
+      <div class="section-heading">
+        <div><p>نمو المستقلين</p><h2>إدارة رتب وشارات المستقلين</h2><span>اضبط رتبة يدوية عند الحاجة، أو اتركها تلقائية حسب عدد الطلبات المكتملة.</span></div>
+        <div class="heading-stat"><strong id="rankedFreelancersCount">0</strong><small>مستقل نشط</small></div>
+      </div>
+      <div class="rank-guide">
+        <article><strong>جديد</strong><span>0 خدمة مكتملة</span></article>
+        <article><strong>نشيط</strong><span>10 خدمات مكتملة</span></article>
+        <article><strong>محترف</strong><span>50 خدمة مكتملة</span></article>
+        <article><strong>خبير</strong><span>100 خدمة مكتملة</span></article>
+        <article><strong>نخبة</strong><span>200 خدمة مكتملة</span></article>
+      </div>
+      <div class="data-panel">
+        <div class="data-toolbar">
+          <label class="search-field"><span>⌕</span><input id="rankSearch" type="search" placeholder="بحث باسم المستقل أو بريده"></label>
+          <select id="rankFilter"><option value="all">كل الرتب</option>${rankLevels.filter(rank => rank.id !== "auto").map(rank => `<option value="${rank.id}">${rank.label}</option>`).join("")}</select>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>المستقل</th><th>الخدمات المكتملة</th><th>الرتبة الحالية</th><th>تعديل الرتبة</th></tr></thead><tbody id="ranksTable"></tbody></table></div>
+        <div class="empty-state" id="ranksEmpty" hidden><span>◆</span><strong>لا يوجد مستقلون مطابقون</strong></div>
+      </div>
+    `;
+    document.getElementById("users-section")?.after(section);
+    document.getElementById("rankSearch").addEventListener("input", renderRanks);
+    document.getElementById("rankFilter").addEventListener("change", renderRanks);
+  }
 }
 
 function showSection(sectionName) {
@@ -349,6 +419,70 @@ function renderUsers() {
   document.getElementById("usersResultCount").textContent = `${users.length} مستخدم`;
 }
 
+async function updateFreelancerRank(user, rankId) {
+  const completed = completedOrdersFor(user.id);
+  const rank = rankId === "auto" ? automaticRank(completed) : rankLevels.find(item => item.id === rankId);
+  if (!rank) return;
+  const rankData = {
+    manualRank: rankId === "auto" ? deleteField() : rankId,
+    rank: { id: rank.id, label: rank.label, color: rank.color, completedServices: completed, updatedAt: serverTimestamp() },
+    updatedAt: serverTimestamp()
+  };
+  const publicRankData = {
+    rank: { id: rank.id, label: rank.label, color: rank.color, completedServices: completed, updatedAt: serverTimestamp() }
+  };
+  try {
+    const batch = writeBatch(db);
+    batch.update(doc(db, "users", user.id), rankData);
+    batch.update(doc(db, "publicProfiles", user.id), publicRankData);
+    batch.set(doc(collection(db, "adminAuditLogs")), auditData("update_freelancer_rank", user, rank.label));
+    await batch.commit();
+    showToast("تم تحديث رتبة المستقل.");
+    await loadData();
+  } catch (error) {
+    console.error("Unable to update freelancer rank", error);
+    showToast("تعذر تحديث الرتبة. تحقق من الصلاحيات وقواعد Firebase.");
+  }
+}
+
+function renderRanks() {
+  ensureRanksUi();
+  const search = document.getElementById("rankSearch")?.value.trim().toLowerCase() || "";
+  const filter = document.getElementById("rankFilter")?.value || "all";
+  const freelancers = state.users
+    .filter(user => user.accountType === "freelancer" && user.status === "active")
+    .filter(user => {
+      const rank = effectiveRank(user);
+      const haystack = `${user.name || ""} ${user.email || ""}`.toLowerCase();
+      return (!search || haystack.includes(search)) && (filter === "all" || rank.id === filter);
+    });
+  const table = document.getElementById("ranksTable");
+  if (!table) return;
+  table.replaceChildren(...freelancers.map(user => {
+    const rank = effectiveRank(user);
+    const completed = completedOrdersFor(user.id);
+    const row = document.createElement("tr");
+    const selector = document.createElement("select");
+    selector.className = "rank-select";
+    selector.append(...rankLevels.map(item => new Option(item.label, item.id)));
+    selector.value = user.manualRank || "auto";
+    selector.addEventListener("change", () => updateFreelancerRank(user, selector.value));
+    [
+      userCell(user),
+      completed.toLocaleString("ar-SY"),
+      badge(rank.label, `rank-badge rank-${rank.color}`),
+      selector
+    ].forEach(value => {
+      const cell = document.createElement("td");
+      cell.append(value instanceof Node ? value : document.createTextNode(value));
+      row.appendChild(cell);
+    });
+    return row;
+  }));
+  document.getElementById("rankedFreelancersCount").textContent = freelancers.length;
+  document.getElementById("ranksEmpty").hidden = freelancers.length > 0;
+}
+
 function renderChats() {
   const term = document.getElementById("chatSearch").value.trim().toLowerCase();
   const chats = state.chats.filter(chat => {
@@ -426,13 +560,15 @@ function renderSettings() {
 async function loadData() {
   document.getElementById("refreshData").disabled = true;
   try {
-    const [usersSnapshot, chatsSnapshot, auditSnapshot, settingsSnapshot] = await Promise.all([
+    const [usersSnapshot, ordersSnapshot, chatsSnapshot, auditSnapshot, settingsSnapshot] = await Promise.all([
       getDocs(collection(db, "users")),
+      getDocs(collection(db, "orders")),
       getDocs(collection(db, "chats")),
       getDocs(query(collection(db, "adminAuditLogs"), orderBy("createdAt", "desc"), limit(100))),
       getDoc(doc(db, "platformSettings", "general"))
     ]);
     state.users = usersSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    state.orders = ordersSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.chats = chatsSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.audit = auditSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.settings = settingsSnapshot.exists() ? settingsSnapshot.data() : null;
@@ -447,12 +583,14 @@ async function loadData() {
 }
 
 function renderAll() {
+  ensureRanksUi();
   populateSpecialties();
   renderMetrics();
   renderRegistrationChart();
   renderAlerts();
   renderVerifications();
   renderUsers();
+  renderRanks();
   renderChats();
   renderAudit();
   renderSettings();
@@ -766,6 +904,7 @@ function bindEvents() {
 document.documentElement.dataset.theme = localStorage.getItem("admin-theme") || "light";
 document.getElementById("themeToggle").textContent = document.documentElement.dataset.theme === "dark" ? "☀" : "☾";
 buildFutureSections();
+ensureRanksUi();
 bindEvents();
 
 onAuthStateChanged(auth, async user => {

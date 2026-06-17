@@ -4,6 +4,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth, db } from "./firebase.js";
 import "./cookie-consent.js";
+import "./footer-copy.js";
 
 const header = document.querySelector(".site-header");
 const nav = document.getElementById("siteHeaderNav");
@@ -11,6 +12,7 @@ const actions = document.getElementById("siteHeaderActions");
 const mobileButton = document.getElementById("siteHeaderMobile");
 const themeButton = document.getElementById("themeToggle");
 let stopNotifications = null;
+const FOOTER_COPY = "© 2026 PikLance. جميع الحقوق محفوظة.";
 
 function setTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
@@ -23,6 +25,19 @@ function setActiveLink() {
   nav?.querySelectorAll("a").forEach(link => {
     const targetPage = new URL(link.href, location.href).pathname.split("/").pop();
     link.classList.toggle("active", targetPage === currentPage);
+  });
+}
+
+function normalizeHeaderLinks() {
+  const currentPage = location.pathname.split("/").pop() || "index.html";
+  if (["blog.html", "article.html"].includes(currentPage)) {
+    nav?.querySelectorAll('a[href="how-it-works.html"]').forEach(link => link.remove());
+  }
+}
+
+function normalizeFooterCopy() {
+  document.querySelectorAll("footer small, .footer-bottom").forEach(element => {
+    element.textContent = FOOTER_COPY;
   });
 }
 
@@ -97,6 +112,7 @@ function renderSignedInActions(user, profile) {
 
 if (header) {
   setTheme(localStorage.getItem("theme") || "light");
+  normalizeHeaderLinks();
   setActiveLink();
 
   themeButton?.addEventListener("click", () => {
@@ -136,3 +152,5 @@ if (header) {
     }
   });
 }
+
+normalizeFooterCopy();
