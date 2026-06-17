@@ -1,12 +1,16 @@
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
-  collection, doc, getDoc, getDocs, query, updateDoc, where, writeBatch
+  addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth, db } from "./firebase.js";
+import {
+  approveEscrowOrder, autoReleaseEscrowOrder, disputeEscrowOrder,
+  formatMoney, orderStatusLabels
+} from "./escrow.js";
 
 const state = { user: null, profile: null, orders: [], favorites: [], tickets: [], notifications: [] };
 const sectionTitles = { overview: "نظرة عامة", orders: "طلباتي", favorites: "الخدمات المحفوظة", support: "الدعم والنزاعات", notifications: "الإشعارات", account: "إعدادات الحساب" };
-const statusLabels = { pending: "بانتظار التأكيد", active: "قيد التنفيذ", delivered: "بانتظار الاستلام", completed: "مكتمل", cancelled: "ملغي", open: "مفتوحة", in_progress: "قيد المعالجة", waiting_user: "بانتظار ردك", resolved: "محلولة", closed: "مغلقة" };
+const statusLabels = { pending: "بانتظار التأكيد", active: "قيد التنفيذ", delivered: "بانتظار الاستلام", completed: "مكتمل", cancelled: "ملغي", disputed: "نزاع مفتوح", funded: "المبلغ محجوز لدى المنصة", open: "مفتوحة", in_progress: "قيد المعالجة", waiting_user: "بانتظار ردك", resolved: "محلولة", closed: "مغلقة", ...orderStatusLabels };
 
 const $ = id => document.getElementById(id);
 const toDate = value => value?.toDate?.() || (value ? new Date(value) : null);
@@ -44,12 +48,36 @@ function emptyState(icon, title, copy, href = "", label = "") {
 
 function renderOrders() {
   $("ordersCount").textContent = state.orders.length;
-  $("activeOrdersCount").textContent = state.orders.filter(order => ["pending", "active", "delivered"].includes(order.status)).length;
+  $("activeOrdersCount").textContent = state.orders.filter(order => ["pending", "funded", "active", "delivered", "disputed"].includes(order.status)).length;
   $("ordersBadge").textContent = state.orders.length;
   const createRow = order => {
     const row = document.createElement("article");
     row.className = "list-row";
-    row.innerHTML = `<span>▣</span><div><strong>${order.serviceTitle || "طلب خدمة"}</strong><small>${statusLabels[order.status] || order.status || "قيد المراجعة"} · ${Number(order.total || 0).toLocaleString("ar-SY")} ل.س</small></div><time>${formatDate(order.createdAt)}</time>`;
+    const releaseAt = toDate(order.autoReleaseAt);
+    row.innerHTML = `<span>▣</span><div><strong>${order.serviceTitle || "طلب خدمة"}</strong><small>${statusLabels[order.status] || order.status || "قيد المراجعة"} · ${formatMoney(order.total)} · محجوز لهذا الطلب فقط${releaseAt && order.status === "delivered" ? ` · يتحرر تلقائياً في ${formatDate(releaseAt)}` : ""}</small></div><time>${formatDate(order.createdAt)}</time>`;
+    const actions = document.createElement("div");
+    actions.className = "order-actions";
+    if (order.status === "delivered") {
+      const approve = document.createElement("button");
+      approve.type = "button";
+      approve.className = "secondary-button";
+      approve.textContent = "قبول وتحرير المبلغ";
+      approve.addEventListener("click", () => approveOrder(order));
+      const dispute = document.createElement("button");
+      dispute.type = "button";
+      dispute.className = "secondary-button danger-button";
+      dispute.textContent = "فتح نزاع";
+      dispute.addEventListener("click", () => openOrderDispute(order));
+      actions.append(approve, dispute);
+    } else if (["funded", "active"].includes(order.status)) {
+      const dispute = document.createElement("button");
+      dispute.type = "button";
+      dispute.className = "secondary-button danger-button";
+      dispute.textContent = "فتح نزاع";
+      dispute.addEventListener("click", () => openOrderDispute(order));
+      actions.append(dispute);
+    }
+    if (actions.children.length) row.appendChild(actions);
     return row;
   };
   $("ordersList").replaceChildren(...(state.orders.length ? state.orders.map(createRow) : [emptyState("▣", "لا توجد طلبات حتى الآن", "ستظهر الطلبات الحقيقية هنا بعد إكمال نظام الشراء والدفع.", "services.html", "استكشف الخدمات")]));
@@ -120,6 +148,42 @@ async function markNotificationRead(id) {
   renderNotifications();
 }
 
+async function approveOrder(order) {
+  if (!confirm("هل تريد قبول التسليم وتحرير مبلغ هذا الطلب للمستقل؟")) return;
+  await approveEscrowOrder(db, order);
+  state.orders = state.orders.map(item => item.id === order.id ? { ...item, status: "completed", escrow: { ...(item.escrow || {}), status: "released" } } : item);
+  renderOrders();
+  showToast("تم قبول التسليم وتحرير مبلغ هذا الطلب.");
+}
+
+async function openOrderDispute(order) {
+  const reason = prompt("اكتب سبب النزاع ليصل إلى فريق الدعم:");
+  if (reason === null) return;
+  if (!reason.trim()) {
+    showToast("يجب كتابة سبب واضح لفتح النزاع.");
+    return;
+  }
+  await disputeEscrowOrder(db, order, state.user, reason);
+  await addDoc(collection(db, "supportTickets"), {
+    requesterUid: state.user.uid,
+    requesterName: state.profile.name || state.user.email || "عميل",
+    requesterEmail: state.user.email || "",
+    requesterPhone: state.profile.phone || "",
+    subject: `نزاع على الطلب ${order.id}`,
+    category: "dispute",
+    message: reason.trim(),
+    orderId: order.id,
+    status: "open",
+    priority: "high",
+    assignedAdminUid: "",
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+  state.orders = state.orders.map(item => item.id === order.id ? { ...item, status: "disputed", escrow: { ...(item.escrow || {}), status: "disputed" } } : item);
+  renderOrders();
+  showToast("تم فتح نزاع وإيقاف مبلغ هذا الطلب فقط حتى قرار الدعم.");
+}
+
 async function markAllRead() {
   const unread = state.notifications.filter(item => !item.read);
   if (!unread.length) return;
@@ -151,6 +215,18 @@ async function loadWorkspace() {
     getDocs(collection(db, "notifications", uid, "items"))
   ]);
   state.orders = sortNewest(ordersSnapshot.docs.map(item => ({ id: item.id, ...item.data() })));
+  const releasable = state.orders.filter(order => order.status === "delivered" && order.escrow?.status === "review_hold" && toDate(order.autoReleaseAt)?.getTime() <= Date.now());
+  if (releasable.length) {
+    await Promise.all(releasable.map(order => autoReleaseEscrowOrder(db, order).catch(error => {
+      console.warn("Auto release skipped", order.id, error);
+      return false;
+    })));
+    releasable.forEach(order => {
+      order.status = "completed";
+      order.releaseType = "auto_after_review_window";
+      order.escrow = { ...(order.escrow || {}), status: "released" };
+    });
+  }
   state.favorites = favoritesSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
   state.tickets = sortNewest(ticketsSnapshot.docs.map(item => ({ id: item.id, ...item.data() })), "updatedAt");
   state.notifications = sortNewest(notificationsSnapshot.docs.map(item => ({ id: item.id, ...item.data() })));
