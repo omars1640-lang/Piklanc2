@@ -146,6 +146,111 @@ service cloud.firestore {
         );
     }
 
+    function isOrderParticipant(data) {
+      return activeUser()
+        && request.auth.uid in [data.buyerUid, data.freelancerUid];
+    }
+
+    function validOrderCreate() {
+      return isAccountType("buyer")
+        && request.resource.data.keys().hasOnly([
+          "buyerUid", "buyerName", "buyerEmail", "freelancerUid", "freelancerName",
+          "serviceId", "serviceTitle", "serviceCategory", "serviceImage",
+          "packageName", "packageDelivery", "packageRevisions", "total",
+          "platformFeePercent", "platformFeeAmount", "freelancerAmount",
+          "reviewDays", "status", "escrow", "payment", "createdAt", "updatedAt"
+        ])
+        && request.resource.data.buyerUid == request.auth.uid
+        && activeParticipant(request.resource.data.freelancerUid)
+        && request.resource.data.freelancerUid != request.auth.uid
+        && request.resource.data.status == "funded"
+        && request.resource.data.total is number
+        && request.resource.data.total > 0
+        && request.resource.data.freelancerAmount is number
+        && request.resource.data.freelancerAmount >= 0
+        && request.resource.data.platformFeeAmount is number
+        && request.resource.data.platformFeeAmount >= 0
+        && request.resource.data.platformFeePercent is number
+        && request.resource.data.platformFeePercent >= 0
+        && request.resource.data.platformFeePercent <= 100
+        && request.resource.data.reviewDays == 15
+        && request.resource.data.escrow is map
+        && request.resource.data.escrow.status == "held"
+        && request.resource.data.escrow.releaseScope == "single_order"
+        && request.resource.data.payment.status == "received_by_platform"
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function validOrderDelivery() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return activeUser()
+        && request.auth.uid == resource.data.freelancerUid
+        && resource.data.status in ["funded", "active"]
+        && request.resource.data.status == "delivered"
+        && request.resource.data.escrow.status == "review_hold"
+        && request.resource.data.autoReleaseAt is timestamp
+        && request.resource.data.autoReleaseAt > request.time
+        && request.resource.data.deliveredAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && changed.hasOnly([
+          "status", "deliveryNote", "deliveredAt", "autoReleaseAt", "escrow", "updatedAt"
+        ]);
+    }
+
+    function validOrderApproval() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return activeUser()
+        && request.auth.uid == resource.data.buyerUid
+        && resource.data.status == "delivered"
+        && request.resource.data.status == "completed"
+        && request.resource.data.escrow.status == "released"
+        && request.resource.data.releaseType == "manual_approval"
+        && request.resource.data.completedAt == request.time
+        && request.resource.data.releasedAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && changed.hasOnly([
+          "status", "releaseType", "completedAt", "releasedAt", "escrow", "updatedAt"
+        ]);
+    }
+
+    function validOrderAutoRelease() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return isOrderParticipant(resource.data)
+        && resource.data.status == "delivered"
+        && resource.data.escrow.status == "review_hold"
+        && resource.data.autoReleaseAt <= request.time
+        && request.resource.data.status == "completed"
+        && request.resource.data.escrow.status == "released"
+        && request.resource.data.releaseType == "auto_after_review_window"
+        && request.resource.data.completedAt == request.time
+        && request.resource.data.releasedAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && changed.hasOnly([
+          "status", "releaseType", "completedAt", "releasedAt", "escrow", "updatedAt"
+        ]);
+    }
+
+    function validOrderDispute() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return isOrderParticipant(resource.data)
+        && resource.data.status in ["funded", "active", "delivered"]
+        && request.resource.data.status == "disputed"
+        && request.resource.data.escrow.status == "disputed"
+        && request.resource.data.dispute is map
+        && request.resource.data.dispute.status == "open"
+        && request.resource.data.dispute.openedByUid == request.auth.uid
+        && request.resource.data.dispute.reason is string
+        && request.resource.data.dispute.reason.size() > 0
+        && request.resource.data.dispute.reason.size() <= 1000
+        && request.resource.data.dispute.createdAt == request.time
+        && request.resource.data.disputedAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && changed.hasOnly([
+          "status", "disputedAt", "escrow", "dispute", "updatedAt"
+        ]);
+    }
+
     match /users/{userId} {
       function validFreelancerResubmission() {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
@@ -378,7 +483,13 @@ service cloud.firestore {
           activeUser()
           && request.auth.uid in [resource.data.buyerUid, resource.data.freelancerUid]
         );
-      allow create, update, delete: if false;
+      allow create: if validOrderCreate();
+      allow update: if isAdmin()
+        || validOrderDelivery()
+        || validOrderApproval()
+        || validOrderAutoRelease()
+        || validOrderDispute();
+      allow delete: if false;
     }
 
     match /favorites/{userId}/services/{serviceId} {
@@ -493,9 +604,23 @@ service cloud.firestore {
       allow create: if isAdmin()
         || (
           activeUser()
-          && request.auth.uid == userId
+          && request.resource.data.keys().hasOnly([
+            "title", "body", "relatedOrderId", "read", "createdAt"
+          ])
           && request.resource.data.read == false
           && request.resource.data.createdAt == request.time
+          && request.resource.data.title is string
+          && request.resource.data.title.size() > 0
+          && request.resource.data.title.size() <= 140
+          && request.resource.data.body is string
+          && request.resource.data.body.size() <= 500
+          && (
+            !request.resource.data.keys().hasAny(["relatedOrderId"])
+            || (
+              request.resource.data.relatedOrderId is string
+              && request.resource.data.relatedOrderId.size() <= 100
+            )
+          )
         );
       allow update: if activeUser()
         && request.auth.uid == userId

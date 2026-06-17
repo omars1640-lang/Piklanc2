@@ -111,8 +111,8 @@ button { color: inherit; font: inherit; }
 .package-body li { display: flex; gap: 7px; color: var(--muted); font-size: 8px; }
 .package-body li::before { content: "✓"; color: var(--green); font-weight: 800; }
 .package-meta { margin: 17px 0; padding: 12px 0; display: flex; justify-content: space-between; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); color: var(--muted); font-size: 8px; }
-.purchase-primary, .purchase-secondary { min-height: 43px; display: flex; align-items: center; justify-content: center; border-radius: 9px; font-size: 10px; font-weight: 800; }
-.purchase-primary { color: #fff; background: var(--primary); box-shadow: 0 8px 20px rgba(108, 92, 231, .22); }
+.purchase-primary, .purchase-secondary { width: 100%; min-height: 43px; display: flex; align-items: center; justify-content: center; border-radius: 9px; font-size: 10px; font-weight: 800; }
+.purchase-primary { border: 0; color: #fff; background: var(--primary); box-shadow: 0 8px 20px rgba(108, 92, 231, .22); cursor: pointer; }
 .purchase-primary:hover { background: var(--primary-dark); }
 .purchase-secondary { margin-top: 8px; border: 1px solid var(--border); color: var(--ink); }
 .trust-card { padding: 18px; }

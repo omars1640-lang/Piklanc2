@@ -3,6 +3,7 @@ import {
   deleteDoc, doc, getDoc, serverTimestamp, setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth, db } from "./firebase.js";
+import { createEscrowOrder } from "./escrow.js";
 
 const services = [
   {
@@ -244,6 +245,7 @@ const sellerUid = params.get("sellerUid") || "";
 let selectedPackage = 0;
 let signedIn = false;
 let currentUser = null;
+let currentProfile = null;
 
 function showToast(message) {
   const toast = document.getElementById("serviceToast");
@@ -278,6 +280,41 @@ function updateContactLinks() {
   primary.textContent = isMessage ? "ناقش الخدمة مع البائع" : "عرض ملف مقدم الخدمة";
   sellerMessage.href = signedIn || !isMessage ? href : `login.html?returnUrl=${encodeURIComponent(href)}`;
   sellerMessage.textContent = isMessage ? "مراسلة مقدم الخدمة" : "عرض الملف الشخصي";
+}
+
+async function handleOrderService() {
+  if (!currentUser) {
+    location.href = `login.html?returnUrl=${encodeURIComponent(location.pathname + location.search)}`;
+    return;
+  }
+  if (!sellerUid) {
+    showToast("اطلب الخدمة من ملف المستقل حتى يتم ربط الطلب بصاحب الخدمة الصحيح.");
+    return;
+  }
+  if (sellerUid === currentUser.uid) {
+    showToast("لا يمكنك طلب خدمة من حسابك نفسه.");
+    return;
+  }
+  const button = document.getElementById("orderService");
+  button.disabled = true;
+  button.textContent = "جاري إنشاء الطلب...";
+  try {
+    const orderId = await createEscrowOrder(db, {
+      user: currentUser,
+      buyerName: currentProfile?.name || currentUser.email || "عميل",
+      service,
+      packageInfo: packagesFor(service)[selectedPackage],
+      sellerUid
+    });
+    console.info("Created escrow order", orderId);
+    showToast("تم إنشاء الطلب وحجز المبلغ لدى المنصة لهذا العمل فقط.");
+    setTimeout(() => { location.href = "profile.html#orders"; }, 900);
+  } catch (error) {
+    console.error("Unable to create escrow order", error);
+    showToast("تعذر إنشاء الطلب حالياً. تحقق من تسجيل الدخول والصلاحيات.");
+    button.disabled = false;
+    button.textContent = "اطلب الخدمة الآن";
+  }
 }
 
 function renderGallery() {
@@ -446,6 +483,8 @@ document.getElementById("favoriteService").addEventListener("click", async event
   }
 }, true);
 
+document.getElementById("orderService").addEventListener("click", handleOrderService);
+
 document.getElementById("shareService").addEventListener("click", async () => {
   try {
     if (navigator.share) await navigator.share({ title: service.title, url: location.href });
@@ -471,9 +510,14 @@ onAuthStateChanged(auth, user => {
 
 onAuthStateChanged(auth, async user => {
   currentUser = user;
+  currentProfile = null;
   if (!user) return;
   try {
-    const snapshot = await getDoc(doc(db, "favorites", user.uid, "services", service.id));
+    const [snapshot, profileSnapshot] = await Promise.all([
+      getDoc(doc(db, "favorites", user.uid, "services", service.id)),
+      getDoc(doc(db, "users", user.uid))
+    ]);
+    currentProfile = profileSnapshot.exists() ? profileSnapshot.data() : null;
     const button = document.getElementById("favoriteService");
     button.setAttribute("aria-pressed", String(snapshot.exists()));
     button.classList.toggle("active", snapshot.exists());

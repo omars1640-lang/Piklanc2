@@ -7,13 +7,16 @@ import {
   deleteObject, getDownloadURL, ref as storageRef, uploadBytes
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { auth, db, storage } from "./firebase.js";
+import {
+  deliverEscrowOrder, orderStatusLabels
+} from "./escrow.js";
 
 const specialtyLabels = { design: "تصميم", web: "برمجة وتطوير", writing: "كتابة وترجمة", marketing: "تسويق رقمي" };
 const serviceStatus = {
   draft: ["مسودة", "warning"], pending: ["قيد المراجعة", "neutral"],
   published: ["منشورة", "success"], paused: ["متوقفة", "neutral"], rejected: ["مرفوضة", "danger"]
 };
-const orderStatus = { pending: "بانتظار التأكيد", active: "قيد التنفيذ", delivered: "بانتظار الاستلام", completed: "مكتمل", cancelled: "ملغي" };
+const orderStatus = { pending: "بانتظار التأكيد", funded: "المبلغ محجوز لدى المنصة", active: "قيد التنفيذ", delivered: "بانتظار مراجعة العميل", completed: "مكتمل", disputed: "نزاع مفتوح", cancelled: "ملغي", ...orderStatusLabels };
 const state = {
   user: null, profile: null, services: [], orders: [], notifications: [],
   avatarFile: null, avatarRemoved: false, avatarPreviewUrl: ""
@@ -123,17 +126,35 @@ function renderOrders() {
   $("completedProjects").textContent = state.orders.filter(order => order.status === "completed").length;
   const rows = state.orders.map(order => {
     const row = document.createElement("tr");
-    [order.serviceTitle || "طلب خدمة", order.buyerName || "عميل", `${formatMoney(order.total)} ل.س`, orderStatus[order.status] || order.status, formatDate(order.createdAt)].forEach(value => {
+    const actions = document.createElement("div");
+    actions.className = "table-actions";
+    if (["funded", "active"].includes(order.status)) {
+      const deliver = document.createElement("button");
+      deliver.type = "button";
+      deliver.className = "table-button primary";
+      deliver.textContent = "تسليم العمل";
+      deliver.addEventListener("click", () => deliverOrder(order));
+      actions.appendChild(deliver);
+    }
+    [
+      order.serviceTitle || "طلب خدمة",
+      order.buyerName || "عميل",
+      `${formatMoney(order.total)} ل.س`,
+      orderStatus[order.status] || order.status,
+      formatDate(order.createdAt),
+      actions
+    ].forEach(value => {
       const cell = document.createElement("td");
-      cell.textContent = value;
+      cell.append(value instanceof Node ? value : document.createTextNode(value));
       row.appendChild(cell);
     });
     return row;
   });
   $("ordersTable").replaceChildren(...rows);
   $("ordersEmpty").hidden = rows.length > 0;
-  const revenue = state.orders.filter(order => order.status === "completed").reduce((sum, order) => sum + Number(order.freelancerAmount || order.total || 0), 0);
+  const revenue = state.orders.filter(order => order.status === "completed").reduce((sum, order) => sum + Number(order.freelancerAmount || order.escrow?.freelancerAmount || order.total || 0), 0);
   $("availableBalance").textContent = formatMoney(revenue);
+  updateFinanceSummary();
 }
 
 function renderNotifications() {
@@ -166,6 +187,38 @@ async function markNotificationRead(id) {
   const item = state.notifications.find(entry => entry.id === id);
   if (item) item.read = true;
   renderNotifications();
+}
+
+function orderFreelancerAmount(order) {
+  return Number(order.freelancerAmount || order.escrow?.freelancerAmount || order.total || 0);
+}
+
+function updateFinanceSummary() {
+  const available = state.orders.filter(order => order.status === "completed").reduce((sum, order) => sum + orderFreelancerAmount(order), 0);
+  const pending = state.orders.filter(order => ["funded", "active", "delivered"].includes(order.status)).reduce((sum, order) => sum + orderFreelancerAmount(order), 0);
+  const disputed = state.orders.filter(order => order.status === "disputed").reduce((sum, order) => sum + orderFreelancerAmount(order), 0);
+  const financeHero = document.querySelector("#section-finance .finance-hero");
+  if (!financeHero) return;
+  const total = financeHero.querySelector("strong");
+  const breakdown = financeHero.querySelectorAll(".finance-breakdown strong");
+  if (total) total.innerHTML = `${formatMoney(available)} <small>ل.س</small>`;
+  if (breakdown[0]) breakdown[0].textContent = `${formatMoney(available)} ل.س`;
+  if (breakdown[1]) breakdown[1].textContent = `${formatMoney(pending)} ل.س`;
+  if (breakdown[2]) breakdown[2].textContent = `${formatMoney(disputed)} ل.س`;
+}
+
+async function deliverOrder(order) {
+  const note = prompt("أضف ملاحظة التسليم أو رابط الملفات للعميل:");
+  if (note === null) return;
+  await deliverEscrowOrder(db, order, note);
+  state.orders = state.orders.map(item => item.id === order.id ? {
+    ...item,
+    status: "delivered",
+    deliveryNote: note.trim(),
+    escrow: { ...(item.escrow || {}), status: "review_hold" }
+  } : item);
+  renderOrders();
+  showToast("تم تسليم العمل وبدأت مهلة مراجعة العميل لمدة 15 يوم.");
 }
 
 async function markAllNotificationsRead() {
