@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>طلبك قيد المراجعة | PikLance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      color: #211d32;
+      background: radial-gradient(circle at 15% 12%, rgba(108,92,231,.16), transparent 34%), #f8f9fd;
+      font-family: "Cairo", sans-serif;
+    }
+    main {
+      width: min(620px, 100%);
+      margin: auto 0;
+      padding: 42px;
+      border: 1px solid #ece8f5;
+      border-radius: 24px;
+      background: #fff;
+      text-align: center;
+      box-shadow: 0 18px 55px rgba(35,27,65,.09);
+    }
+    .mark {
+      width: 68px;
+      height: 68px;
+      margin: 0 auto 20px;
+      display: grid;
+      place-items: center;
+      border-radius: 20px;
+      color: #fff;
+      background: linear-gradient(135deg, #6c5ce7, #9d86f2);
+      font-size: 30px;
+      font-weight: 800;
+    }
+    h1 { margin: 0 0 10px; font-size: 28px; }
+    p { margin: 0 auto 18px; color: #696376; line-height: 1.9; }
+    .steps {
+      display: grid;
+      gap: 10px;
+      margin: 26px 0;
+      text-align: right;
+    }
+    .steps article {
+      padding: 14px 16px;
+      border: 1px solid #ebe7f4;
+      border-radius: 14px;
+      background: #fbf9ff;
+    }
+    .steps strong { display: block; margin-bottom: 3px; color: #4f35b6; }
+    .steps span { color: #6d6878; font-size: 13px; line-height: 1.8; }
+    .actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    a {
+      min-width: 150px;
+      padding: 12px 18px;
+      border-radius: 11px;
+      color: #fff;
+      background: #6c5ce7;
+      text-decoration: none;
+      font-weight: 800;
+    }
+    a.secondary {
+      color: #4d465d;
+      background: #fff;
+      border: 1px solid #ddd8e9;
+    }
+    @media (max-width: 560px) {
+      body { padding: 16px; }
+      main { padding: 30px 20px; }
+      h1 { font-size: 23px; }
+      a { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="mark">✓</div>
+    <h1>طلبك قيد المراجعة</h1>
+    <p>استلمنا طلب حساب المستقل. فعّل بريدك الإلكتروني أولاً، ثم ينتقل الطلب لمراجعة فريق PikLance للتأكد من البيانات وصور الهوية.</p>
+    <section class="steps" aria-label="خطوات المراجعة">
+      <article>
+        <strong>1. تفعيل البريد الإلكتروني</strong>
+        <span>افتح الرسالة التي وصلتك من Firebase واضغط رابط التفعيل.</span>
+      </article>
+      <article>
+        <strong>2. مراجعة الهوية</strong>
+        <span>فريق الإدارة فقط يستطيع رؤية صور الهوية، وهي لا تظهر للعملاء أو على ملفك الشخصي.</span>
+      </article>
+      <article>
+        <strong>3. فتح لوحة المستقل</strong>
+        <span>بعد الموافقة سيصبح بإمكانك تسجيل الدخول ونشر خدماتك من لوحة التحكم.</span>
+      </article>
+    </section>
+    <div class="actions">
+      <a href="login.html">العودة لتسجيل الدخول</a>
+      <a class="secondary" href="support.html">التواصل مع الدعم</a>
+    </div>
+  </main>
+  <script type="module" src="js/footer-copy.js"></script>
+</body>
+</html>

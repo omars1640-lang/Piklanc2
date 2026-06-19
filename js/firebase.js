@@ -1,5 +1,10 @@
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { browserLocalPersistence, getAuth, setPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import {
+  browserLocalPersistence,
+  getAuth,
+  indexedDBLocalPersistence,
+  setPersistence
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
@@ -18,6 +23,8 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-setPersistence(auth, browserLocalPersistence).catch(error => {
-  console.warn("Auth local persistence unavailable", error);
-});
+setPersistence(auth, indexedDBLocalPersistence)
+  .catch(() => setPersistence(auth, browserLocalPersistence))
+  .catch(error => {
+    console.warn("Auth local persistence unavailable", error);
+  });

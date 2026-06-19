@@ -296,8 +296,19 @@ service cloud.firestore {
         && !request.resource.data.keys().hasAny(["role"])
         && request.resource.data.keys().hasOnly([
           "name", "email", "phone", "specialty", "idNumber", "idName",
-          "idFrontPath", "idBackPath", "accountType", "status", "createdAt"
+          "idFrontPath", "idBackPath", "accountType", "status",
+          "legalAccepted", "legalAcceptedAt", "identityConsent", "identityConsentAt",
+          "createdAt"
         ])
+        && request.resource.data.legalAccepted == true
+        && request.resource.data.legalAcceptedAt == request.time
+        && (
+          request.resource.data.accountType == "buyer"
+          || (
+            request.resource.data.identityConsent == true
+            && request.resource.data.identityConsentAt == request.time
+          )
+        )
         && (
           (request.resource.data.accountType == "buyer" && request.resource.data.status == "active")
           || (request.resource.data.accountType == "freelancer" && request.resource.data.status == "pending")

@@ -12,18 +12,19 @@
     body {
       min-height: 100vh;
       margin: 0;
-      display: grid;
-      place-items: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       padding: 24px;
-      background:
-        radial-gradient(circle at 15% 15%, rgba(108,92,231,.14), transparent 32%),
-        #f7f8fc;
+      background: radial-gradient(circle at 15% 15%, rgba(108,92,231,.14), transparent 32%), #f7f8fc;
       color: #1e1e2d;
       font-family: "Cairo", sans-serif;
     }
     button, input { font-family: inherit; }
     .login-box {
       width: min(460px, 100%);
+      margin: auto 0;
       padding: 42px;
       border: 1px solid #eceaf2;
       border-radius: 22px;
@@ -36,6 +37,8 @@
       justify-content: center;
       gap: 10px;
       margin-bottom: 24px;
+      color: inherit;
+      text-decoration: none;
       font-size: 24px;
       font-weight: 800;
     }
@@ -157,6 +160,7 @@
       cursor: pointer;
     }
     .reset-actions { display: flex; gap: 10px; margin-top: 17px; }
+    .piklance-global-footer { flex: 0 0 auto; }
     @media (max-width: 520px) {
       body { padding: 16px; }
       .login-box { padding: 30px 20px; }
@@ -199,7 +203,7 @@
       <header>
         <div>
           <h2>إعادة تعيين كلمة المرور</h2>
-          <p>أدخل بريد حسابك وسيرسل Firebase رابطاً آمناً لاختيار كلمة مرور جديدة.</p>
+          <p>أدخل بريد حسابك وسنرسل رابطاً آمناً لاختيار كلمة مرور جديدة.</p>
         </div>
         <button class="modal-close" type="button" data-close-reset aria-label="إغلاق">×</button>
       </header>
@@ -218,6 +222,7 @@
   <script type="module">
     import {
       browserLocalPersistence,
+      indexedDBLocalPersistence,
       sendEmailVerification,
       sendPasswordResetEmail,
       setPersistence,
@@ -236,6 +241,14 @@
     const resetMessage = document.getElementById("resetMessage");
     const sendResetButton = document.getElementById("sendResetButton");
     let resetCooldown = false;
+
+    async function ensureLocalPersistence() {
+      try {
+        await setPersistence(auth, indexedDBLocalPersistence);
+      } catch {
+        await setPersistence(auth, browserLocalPersistence);
+      }
+    }
 
     function safeReturnUrl() {
       const requested = new URLSearchParams(location.search).get("returnUrl");
@@ -278,11 +291,7 @@
       resetCooldown = true;
       document.getElementById("loginEmail").value = email;
       closeResetModal();
-      showMessage(
-        loginMessage,
-        "تم إرسال رابط استعادة كلمة المرور. تحقق من بريدك الإلكتروني ومجلد الرسائل غير المرغوب فيها.",
-        "success"
-      );
+      showMessage(loginMessage, "تم إرسال رابط استعادة كلمة المرور. تحقق من بريدك الإلكتروني ومجلد الرسائل غير المرغوب فيها.", "success");
       setTimeout(() => {
         resetCooldown = false;
         sendResetButton.disabled = false;
@@ -331,14 +340,14 @@
 
     loginForm.addEventListener("submit", async event => {
       event.preventDefault();
-      const email = document.getElementById("loginEmail").value.trim();
+      const email = document.getElementById("loginEmail").value.trim().toLowerCase();
       const password = document.getElementById("loginPassword").value;
       loginButton.disabled = true;
       loginButton.textContent = "جاري الدخول...";
       loginMessage.className = "login-message";
 
       try {
-        await setPersistence(auth, browserLocalPersistence);
+        await ensureLocalPersistence();
         const credential = await signInWithEmailAndPassword(auth, email, password);
         const userSnapshot = await getDoc(doc(db, "users", credential.user.uid));
 
@@ -357,13 +366,13 @@
             console.error("Verification email failed", error);
           }
           await signOut(auth);
-          showMessage(loginMessage, "تحقق من بريدك الإلكتروني أولاً. أرسلنا رسالة تحقق جديدة إن أمكن.", "info");
+          showMessage(loginMessage, "يجب تفعيل البريد الإلكتروني قبل الدخول. أرسلنا رسالة تحقق جديدة إن أمكن.", "info");
           return;
         }
 
         if (profile.status === "pending") {
           await signOut(auth);
-          showMessage(loginMessage, "حسابك قيد المراجعة حالياً.", "info");
+          location.href = "pending-review.html";
           return;
         }
         if (profile.status === "rejected") {

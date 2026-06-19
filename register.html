@@ -3,94 +3,187 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>إنشاء حساب - PikLance</title>
+  <title>إنشاء حساب | PikLance</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: 'Cairo', sans-serif;
-      background: #F8F9FD;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 2rem;
+      color: #202437;
+      background: radial-gradient(circle at 12% 10%, rgba(108,92,231,.13), transparent 32%), #f8f9fd;
+      font-family: "Cairo", sans-serif;
     }
+    button, input, select { font-family: inherit; }
     .register-box {
+      width: min(720px, 100%);
+      padding: 2.4rem;
+      border: 1px solid #ebe8f4;
+      border-radius: 22px;
       background: #fff;
-      border-radius: 20px;
-      padding: 2.5rem;
-      width: 550px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      box-shadow: 0 18px 55px rgba(35,27,65,.09);
     }
-    .logo { text-align: center; font-size: 1.8rem; font-weight: 800; margin-bottom: 1.5rem; }
-    .logo span { color: #6C5CE7; }
-    h2 { text-align: center; margin-bottom: 1rem; }
+    .logo { text-align: center; font-size: 1.8rem; font-weight: 800; margin-bottom: 1rem; }
+    .logo span { color: #6c5ce7; }
+    h2 { text-align: center; margin-bottom: .45rem; font-size: 1.55rem; }
+    .subtitle { margin-bottom: 1.3rem; color: #747184; text-align: center; font-size: .92rem; line-height: 1.8; }
     .type-selector { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
     .type-btn {
-      flex: 1; padding: 1rem; border: 2px solid #E2E8F0; border-radius: 12px;
-      text-align: center; cursor: pointer; background: #fff;
-      font-family: 'Cairo', sans-serif; font-weight: 600; transition: 0.3s;
+      flex: 1;
+      padding: 1rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 13px;
+      color: #302b42;
+      background: #fff;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 800;
+      transition: .2s;
     }
-    .type-btn.active { border-color: #6C5CE7; background: #F3F0FF; }
+    .type-btn.active, .type-btn:hover { border-color: #6c5ce7; background: #f3f0ff; color: #5a4bd1; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
     .form-group { margin-bottom: 1rem; }
-    label { display: block; margin-bottom: 0.3rem; font-weight: 600; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { display: block; margin-bottom: .35rem; font-weight: 800; font-size: .88rem; }
     input, select {
-      width: 100%; padding: 0.7rem; border: 1px solid #ddd;
-      border-radius: 10px; font-family: 'Cairo', sans-serif; font-size: 1rem;
+      width: 100%;
+      padding: .78rem .85rem;
+      border: 1px solid #ddd9e7;
+      border-radius: 11px;
+      background: #fbfafd;
+      color: #202437;
+      font-size: .96rem;
     }
-    input:focus, select:focus { outline: none; border-color: #6C5CE7; }
+    input:focus, select:focus { outline: none; border-color: #6c5ce7; box-shadow: 0 0 0 3px rgba(108,92,231,.1); }
     .btn {
-      width: 100%; padding: 0.8rem; background: #6C5CE7; color: #fff;
-      border: none; border-radius: 10px; font-size: 1.1rem; font-weight: 700;
-      cursor: pointer; font-family: 'Cairo', sans-serif; margin-top: 1rem;
+      width: 100%;
+      min-height: 46px;
+      padding: .8rem;
+      border: 0;
+      border-radius: 11px;
+      color: #fff;
+      background: #6c5ce7;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      margin-top: 1rem;
     }
-    .btn:hover { background: #5A4BD1; }
-    .btn-outline { background: #fff; color: #6C5CE7; border: 2px solid #6C5CE7; }
-    .back-link { display: block; text-align: center; margin-top: 1rem; color: #636E72; text-decoration: none; }
-    .hidden { display: none; }
+    .btn:hover { background: #5a4bd1; }
+    .btn-outline { background: #fff; color: #6c5ce7; border: 2px solid #6c5ce7; }
+    .back-link { display: block; text-align: center; margin-top: 1rem; color: #636e72; text-decoration: none; }
+    .hidden { display: none !important; }
     .alert {
-      padding: 0.8rem; border-radius: 10px; margin-bottom: 1rem; font-size: 0.9rem;
+      padding: .9rem 1rem;
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      color: #4b4561;
+      background: #f4f0ff;
+      border-right: 4px solid #6c5ce7;
+      font-size: .9rem;
+      line-height: 1.8;
     }
-    .alert-info { background: #E3F2FD; border-right: 4px solid #6C5CE7; }
-    .alert-warning { background: #FFF3CD; border-right: 4px solid #F59E0B; }
-    .step-indicator {
-      display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;
+    .alert-warning { background: #fff8e6; border-right-color: #f59e0b; }
+    .security-note {
+      display: grid;
+      gap: .45rem;
+      margin: .8rem 0 1rem;
+      padding: 1rem;
+      border: 1px solid #e8e1f8;
+      border-radius: 14px;
+      background: #fbf8ff;
+      color: #5a536b;
+      font-size: .86rem;
+      line-height: 1.8;
     }
+    .security-note strong { color: #4f35b6; }
+    .password-rules {
+      margin-top: .45rem;
+      color: #777484;
+      font-size: .78rem;
+      line-height: 1.7;
+    }
+    .check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: .65rem;
+      padding: .85rem;
+      border: 1px solid #e8e4f0;
+      border-radius: 12px;
+      background: #fbfafd;
+      color: #5a536b;
+      font-size: .86rem;
+      line-height: 1.8;
+    }
+    .check-row input { width: auto; margin-top: .35rem; accent-color: #6c5ce7; }
+    .check-row a { color: #6c5ce7; font-weight: 800; text-decoration: none; }
+    .step-indicator { display: flex; align-items: center; gap: .5rem; margin-bottom: 1.5rem; }
     .step-dot {
-      width: 30px; height: 30px; border-radius: 50%; background: #E2E8F0;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: 0.9rem; color: #636E72;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #e2e8f0;
+      color: #636e72;
+      font-weight: 800;
+      font-size: .9rem;
     }
-    .step-dot.active { background: #6C5CE7; color: #fff; }
-    .step-dot.done { background: #10B981; color: #fff; }
-    .step-line { flex: 1; height: 2px; background: #E2E8F0; }
-    .step-line.done { background: #10B981; }
+    .step-dot.active { background: #6c5ce7; color: #fff; }
+    .step-dot.done { background: #10b981; color: #fff; }
+    .step-line { flex: 1; height: 2px; background: #e2e8f0; }
+    .step-line.done { background: #10b981; }
     .id-upload {
-      border: 2px dashed #ddd; border-radius: 12px; padding: 1.5rem;
-      text-align: center; cursor: pointer; margin-bottom: 0.5rem;
+      border: 2px dashed #d8d3e7;
+      border-radius: 13px;
+      padding: 1.25rem;
+      text-align: center;
+      cursor: pointer;
+      margin-bottom: .5rem;
+      background: #fbfafd;
+      color: #6f6a7d;
+      font-weight: 700;
     }
-    .id-upload img { max-height: 150px; margin-top: 0.5rem; display: none; }
+    .id-upload img { max-width: 100%; max-height: 170px; margin: .7rem auto 0; display: none; border-radius: 10px; }
+    .actions-row { display: flex; gap: 1rem; }
+    #summary { margin-top: 1rem; display: grid; gap: .45rem; color: #514b60; }
+    @media (max-width: 680px) {
+      body { padding: 1rem; align-items: flex-start; }
+      .register-box { padding: 1.35rem; }
+      .type-selector, .actions-row { flex-direction: column; }
+      .form-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
   <div class="register-box">
     <div class="logo">Pik<span>Lance</span></div>
     <h2>إنشاء حساب جديد</h2>
+    <p class="subtitle">اختر نوع الحساب وأكمل البيانات. الدخول للمنصة يتطلب تفعيل البريد الإلكتروني أولاً.</p>
 
     <div id="typeSelection">
       <div class="type-selector">
-        <button class="type-btn active" onclick="selectType('buyer')">🛍️ عميل</button>
-        <button class="type-btn" onclick="selectType('freelancer')">🎨 مستقل</button>
+        <button class="type-btn active" type="button" onclick="selectType('buyer')">حساب عميل</button>
+        <button class="type-btn" type="button" onclick="selectType('freelancer')">حساب مستقل</button>
       </div>
     </div>
 
     <div id="buyerForm">
-      <div class="alert alert-info">⚡ تفعيل فوري</div>
-      <div class="form-group"><label>الاسم الكامل</label><input type="text" id="buyerName"></div>
-      <div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="buyerEmail"></div>
-      <div class="form-group"><label>كلمة المرور</label><input type="password" id="buyerPassword"></div>
-      <button class="btn" onclick="registerBuyer()">إنشاء حساب</button>
+      <div class="alert">تفعيل الحساب فوري بعد إنشاء الحساب وتأكيد البريد الإلكتروني.</div>
+      <div class="form-grid">
+        <div class="form-group full"><label for="buyerName">الاسم الكامل</label><input type="text" id="buyerName" autocomplete="name"></div>
+        <div class="form-group full"><label for="buyerEmail">البريد الإلكتروني</label><input type="email" id="buyerEmail" autocomplete="email"></div>
+        <div class="form-group"><label for="buyerPassword">كلمة المرور</label><input type="password" id="buyerPassword" autocomplete="new-password"><p class="password-rules">8 أحرف على الأقل، وتتضمن حرفاً ورقماً.</p></div>
+        <div class="form-group"><label for="buyerPasswordConfirm">تأكيد كلمة المرور</label><input type="password" id="buyerPasswordConfirm" autocomplete="new-password"></div>
+      </div>
+      <label class="check-row">
+        <input type="checkbox" id="buyerLegal">
+        <span>أوافق على <a href="terms.html" target="_blank" rel="noopener">شروط الاستخدام</a> و<a href="privacy.html" target="_blank" rel="noopener">سياسة الخصوصية</a>.</span>
+      </label>
+      <button class="btn" type="button" onclick="registerBuyer()">إنشاء حساب</button>
     </div>
 
     <div id="freelancerForm" class="hidden">
@@ -102,48 +195,71 @@
         <div class="step-line" id="line2"></div>
         <div class="step-dot" id="dot3">3</div>
       </div>
+
       <div id="fstep1">
         <h3>الخطوة 1: المعلومات الأساسية</h3>
-        <div class="form-group"><label>الاسم الكامل</label><input type="text" id="fName"></div>
-        <div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="fEmail"></div>
-        <div class="form-group"><label>رقم الهاتف</label><input type="text" id="fPhone"></div>
-        <div class="form-group"><label>التخصص</label><select id="fSpecialty"><option value="">اختر</option><option value="design">تصميم</option><option value="web">برمجة</option><option value="writing">كتابة</option><option value="marketing">تسويق</option></select></div>
-        <div class="form-group"><label>كلمة المرور</label><input type="password" id="fPassword"></div>
-        <button class="btn" onclick="freelancerNext(2)">التالي</button>
+        <div class="form-grid">
+          <div class="form-group full"><label for="fName">الاسم الكامل</label><input type="text" id="fName" autocomplete="name"></div>
+          <div class="form-group full"><label for="fEmail">البريد الإلكتروني</label><input type="email" id="fEmail" autocomplete="email"></div>
+          <div class="form-group"><label for="fPhone">رقم الهاتف</label><input type="text" id="fPhone" autocomplete="tel"></div>
+          <div class="form-group"><label for="fSpecialty">التخصص</label><select id="fSpecialty"><option value="">اختر</option><option value="design">تصميم</option><option value="web">برمجة</option><option value="writing">كتابة</option><option value="marketing">تسويق</option></select></div>
+          <div class="form-group"><label for="fPassword">كلمة المرور</label><input type="password" id="fPassword" autocomplete="new-password"><p class="password-rules">8 أحرف على الأقل، وتتضمن حرفاً ورقماً.</p></div>
+          <div class="form-group"><label for="fPasswordConfirm">تأكيد كلمة المرور</label><input type="password" id="fPasswordConfirm" autocomplete="new-password"></div>
+        </div>
+        <button class="btn" type="button" onclick="freelancerNext(2)">التالي</button>
       </div>
+
       <div id="fstep2" class="hidden">
         <h3>الخطوة 2: توثيق الهوية</h3>
-        <div class="alert alert-warning">🔒 مطلوب للموافقة على حسابك</div>
-        <div class="form-group"><label>رقم الهوية</label><input type="text" id="fIdNumber"></div>
-        <div class="form-group"><label>الاسم في الهوية</label><input type="text" id="fIdName"></div>
+        <div class="security-note">
+          <strong>لماذا نطلب الهوية؟</strong>
+          <span>نستخدمها للتحقق من أن الحساب حقيقي وتقليل الاحتيال وحماية العميل والمستقل قبل بدء التعاملات المالية.</span>
+          <span>من يستطيع رؤية صور الهوية؟ فريق المراجعة والإدارة المخولة فقط، ولا تظهر للعملاء أو على الملف الشخصي.</span>
+          <span>مدة الاحتفاظ: تبقى بيانات التوثيق محفوظة طوال فترة نشاط الحساب، وقد نحتفظ بها مدة محدودة بعد الحذف عند الحاجة القانونية أو حل النزاعات.</span>
+          <span>يمكنك طلب حذف الحساب والبيانات من الدعم، وسنحذف البيانات التي لا يوجد سبب قانوني للاحتفاظ بها.</span>
+          <strong>تُستخدم هذه البيانات فقط للتحقق من الهوية ولا تظهر للعملاء.</strong>
+        </div>
+        <div class="form-grid">
+          <div class="form-group"><label for="fIdNumber">رقم الهوية</label><input type="text" id="fIdNumber"></div>
+          <div class="form-group"><label for="fIdName">الاسم في الهوية</label><input type="text" id="fIdName"></div>
+        </div>
         <div class="form-group">
           <label>صورة الوجه الأمامي</label>
           <div class="id-upload" onclick="document.getElementById('frontImg').click()">
-            📷 اضغط لرفع الصورة
+            اضغط لرفع الصورة
             <input type="file" id="frontImg" accept="image/*" style="display:none;" onchange="preview(this, 'frontPreview')">
-            <img id="frontPreview">
+            <img id="frontPreview" alt="">
           </div>
         </div>
         <div class="form-group">
           <label>صورة الوجه الخلفي</label>
           <div class="id-upload" onclick="document.getElementById('backImg').click()">
-            📷 اضغط لرفع الصورة
+            اضغط لرفع الصورة
             <input type="file" id="backImg" accept="image/*" style="display:none;" onchange="preview(this, 'backPreview')">
-            <img id="backPreview">
+            <img id="backPreview" alt="">
           </div>
         </div>
-        <div style="display:flex; gap:1rem;">
-          <button class="btn btn-outline" onclick="freelancerNext(1)">السابق</button>
-          <button class="btn" onclick="freelancerNext(3)">التالي</button>
+        <label class="check-row">
+          <input type="checkbox" id="fIdentityConsent">
+          <span>أفهم أن صور الهوية مخصصة للتحقق فقط، ولا تظهر للعملاء، وأوافق على سياسة الاحتفاظ وإمكانية طلب حذف البيانات.</span>
+        </label>
+        <div class="actions-row">
+          <button class="btn btn-outline" type="button" onclick="freelancerNext(1)">السابق</button>
+          <button class="btn" type="button" onclick="freelancerNext(3)">التالي</button>
         </div>
       </div>
+
       <div id="fstep3" class="hidden">
         <h3>الخطوة 3: مراجعة وتقديم</h3>
-        <div class="alert alert-info">📧 سيتم مراجعة طلبك خلال 24 ساعة</div>
+        <div class="alert">سيتم إرسال رسالة تفعيل إلى بريدك، ثم تراجع الإدارة طلب المستقل قبل فتح لوحة التحكم.</div>
         <div id="summary"></div>
-        <div style="display:flex; gap:1rem;">
-          <button class="btn btn-outline" onclick="freelancerNext(2)">السابق</button>
-          <button class="btn" id="freelancerSubmitButton" onclick="registerFreelancer()">تقديم الطلب</button>
+        <label class="check-row">
+          <input type="checkbox" id="fLegal">
+          <span>أوافق على <a href="terms.html" target="_blank" rel="noopener">شروط الاستخدام</a> و<a href="privacy.html" target="_blank" rel="noopener">سياسة الخصوصية</a>.</span>
+        </label>
+        <div class="actions-row">
+          <button class="btn btn-outline" type="button" onclick="freelancerNext(2)">السابق</button>
+          <button class="btn" id="freelancerSubmitButton" type="button" onclick="registerFreelancer()">تقديم الطلب</button>
         </div>
       </div>
     </div>
@@ -152,8 +268,21 @@
   </div>
 
   <script type="module">
-    import { createUserWithEmailAndPassword, deleteUser, onAuthStateChanged, sendEmailVerification, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { doc, getDoc, serverTimestamp, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import {
+      createUserWithEmailAndPassword,
+      deleteUser,
+      onAuthStateChanged,
+      sendEmailVerification,
+      signInWithEmailAndPassword,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import {
+      doc,
+      getDoc,
+      serverTimestamp,
+      updateDoc,
+      writeBatch
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { deleteObject, ref, uploadBytes } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
     import { auth, db, storage } from "./js/firebase.js";
 
@@ -163,12 +292,26 @@
     let resubmissionUser = null;
     let resubmissionProfile = null;
 
+    function normalizeEmail(value) {
+      return value.trim().toLowerCase();
+    }
+
     function validatePassword(password) {
-      return password.length >= 8;
+      return password.length >= 8 && /[A-Za-z\u0600-\u06FF]/.test(password) && /\d/.test(password);
     }
 
     function validateImage(file) {
-      return file && file.type.startsWith('image/') && file.size <= MAX_ID_IMAGE_SIZE;
+      return file && file.type.startsWith("image/") && file.size <= MAX_ID_IMAGE_SIZE;
+    }
+
+    function friendlyAuthError(error) {
+      const messages = {
+        "auth/email-already-in-use": "هذا البريد مستخدم مسبقاً. لا يمكن استخدام نفس البريد لحسابين.",
+        "auth/invalid-email": "صيغة البريد الإلكتروني غير صحيحة.",
+        "auth/weak-password": "كلمة المرور ضعيفة. استخدم 8 أحرف على الأقل مع حرف ورقم.",
+        "auth/network-request-failed": "تعذر الاتصال بالإنترنت. تحقق من الشبكة وحاول مجدداً."
+      };
+      return messages[error.code] || error.message || "تعذر تنفيذ العملية حالياً.";
     }
 
     async function createProfiles(uid, privateProfile, publicProfile) {
@@ -189,20 +332,20 @@
         const snapshot = await getDoc(doc(db, "users", credential.user.uid));
         const profile = snapshot.exists() ? snapshot.data() : null;
 
-        if (profile?.accountType === 'freelancer' && profile.status === 'rejected') {
-          alert('هذا البريد لديه طلب مرفوض سابقاً. سيتم تحويلك لتعديل الطلب وإعادة تقديمه.');
-          window.location.href = 'register.html?resubmit=1';
+        if (profile?.accountType === "freelancer" && profile.status === "rejected") {
+          alert("هذا البريد لديه طلب مرفوض سابقاً. سيتم تحويلك لتعديل الطلب وإعادة تقديمه.");
+          window.location.href = "register.html?resubmit=1";
           return true;
         }
 
         await signOut(auth).catch(() => {});
-        alert(profile?.accountType === 'freelancer'
-          ? 'هذا البريد لديه طلب مستقل موجود مسبقاً. سجل الدخول لمتابعة حالة الحساب.'
-          : 'هذا البريد مسجل مسبقاً. استخدم صفحة تسجيل الدخول.');
+        alert(profile?.accountType === "freelancer"
+          ? "هذا البريد لديه طلب مستقل موجود مسبقاً. سجل الدخول لمتابعة حالة الحساب."
+          : "هذا البريد مسجل مسبقاً كحساب عميل. لا يمكن استخدام نفس البريد لحسابين.");
         return true;
       } catch (error) {
         console.error("Existing freelancer lookup failed", error);
-        alert('هذا البريد مسجل مسبقاً. سجل الدخول بنفس البريد وكلمة المرور، وإذا كان طلبك مرفوضاً سيتم تحويلك لإعادة التقديم.');
+        alert("هذا البريد مسجل مسبقاً. سجل الدخول بنفس البريد وكلمة المرور، وإذا كان طلبك مرفوضاً سيتم تحويلك لإعادة التقديم.");
         return true;
       }
     }
@@ -214,40 +357,42 @@
     function setResubmissionMode(user, profile) {
       resubmissionUser = user;
       resubmissionProfile = profile;
-      document.getElementById('typeSelection').classList.add('hidden');
-      document.getElementById('buyerForm').classList.add('hidden');
-      document.getElementById('freelancerForm').classList.remove('hidden');
-      document.getElementById('freelancerSubmitButton').textContent = 'إعادة تقديم الطلب';
+      document.getElementById("typeSelection").classList.add("hidden");
+      document.getElementById("buyerForm").classList.add("hidden");
+      document.getElementById("freelancerForm").classList.remove("hidden");
+      document.getElementById("freelancerSubmitButton").textContent = "إعادة تقديم الطلب";
 
-      const passwordGroup = document.getElementById('fPassword').closest('.form-group');
-      if (passwordGroup) passwordGroup.classList.add('hidden');
+      const passwordGroup = document.getElementById("fPassword").closest(".form-group");
+      const passwordConfirmGroup = document.getElementById("fPasswordConfirm").closest(".form-group");
+      if (passwordGroup) passwordGroup.classList.add("hidden");
+      if (passwordConfirmGroup) passwordConfirmGroup.classList.add("hidden");
 
-      const notice = document.getElementById('reapplyNotice');
-      notice.classList.remove('hidden');
-      notice.textContent = `تم رفض طلبك السابق: ${profile.rejectionReason || 'راجع بيانات التوثيق وأعد رفع الهوية بوضوح.'} يمكنك تعديل البيانات وإعادة تقديم الطلب من نفس الحساب.`;
+      const notice = document.getElementById("reapplyNotice");
+      notice.classList.remove("hidden");
+      notice.textContent = `تم رفض طلبك السابق: ${profile.rejectionReason || "راجع بيانات التوثيق وأعد رفع الهوية بوضوح."} يمكنك تعديل البيانات وإعادة تقديم الطلب من نفس الحساب.`;
 
-      setFieldValue('fName', profile.name);
-      setFieldValue('fEmail', profile.email || user.email);
-      setFieldValue('fPhone', profile.phone);
-      setFieldValue('fSpecialty', profile.specialty);
-      setFieldValue('fIdNumber', profile.idNumber);
-      setFieldValue('fIdName', profile.idName);
-      document.getElementById('fEmail').disabled = true;
+      setFieldValue("fName", profile.name);
+      setFieldValue("fEmail", profile.email || user.email);
+      setFieldValue("fPhone", profile.phone);
+      setFieldValue("fSpecialty", profile.specialty);
+      setFieldValue("fIdNumber", profile.idNumber);
+      setFieldValue("fIdName", profile.idName);
+      document.getElementById("fEmail").disabled = true;
     }
 
     if (isResubmission) {
       onAuthStateChanged(auth, async user => {
         if (!user) {
-          alert('سجل الدخول أولاً حتى تتمكن من إعادة تقديم طلب التوثيق.');
-          window.location.href = 'login.html?returnUrl=register.html%3Fresubmit%3D1';
+          alert("سجل الدخول أولاً حتى تتمكن من إعادة تقديم طلب التوثيق.");
+          window.location.href = "login.html?returnUrl=register.html%3Fresubmit%3D1";
           return;
         }
 
         const snapshot = await getDoc(doc(db, "users", user.uid));
         const profile = snapshot.exists() ? snapshot.data() : null;
-        if (!profile || profile.accountType !== 'freelancer' || profile.status !== 'rejected') {
-          alert('لا يوجد طلب مرفوض قابل لإعادة التقديم على هذا الحساب.');
-          window.location.href = 'login.html';
+        if (!profile || profile.accountType !== "freelancer" || profile.status !== "rejected") {
+          alert("لا يوجد طلب مرفوض قابل لإعادة التقديم على هذا الحساب.");
+          window.location.href = "login.html";
           return;
         }
 
@@ -256,17 +401,24 @@
     }
 
     window.selectType = function(type) {
-      document.getElementById('buyerForm').classList.toggle('hidden', type !== 'buyer');
-      document.getElementById('freelancerForm').classList.toggle('hidden', type !== 'freelancer');
-      document.getElementById('typeSelection').classList.add('hidden');
+      document.getElementById("buyerForm").classList.toggle("hidden", type !== "buyer");
+      document.getElementById("freelancerForm").classList.toggle("hidden", type !== "freelancer");
+      document.querySelectorAll(".type-btn").forEach(button => button.classList.remove("active"));
+      document.querySelector(`.type-btn[onclick*="${type}"]`)?.classList.add("active");
     };
 
     window.registerBuyer = async function() {
-      const name = document.getElementById('buyerName').value.trim();
-      const email = document.getElementById('buyerEmail').value.trim();
-      const password = document.getElementById('buyerPassword').value;
-      if (!name || !email || !password) { alert('يرجى ملء جميع الحقول'); return; }
-      if (!validatePassword(password)) { alert('كلمة المرور يجب أن تكون 8 أحرف على الأقل'); return; }
+      const name = document.getElementById("buyerName").value.trim();
+      const email = normalizeEmail(document.getElementById("buyerEmail").value);
+      const password = document.getElementById("buyerPassword").value;
+      const passwordConfirm = document.getElementById("buyerPasswordConfirm").value;
+      const legalAccepted = document.getElementById("buyerLegal").checked;
+
+      if (!name || !email || !password || !passwordConfirm) { alert("يرجى ملء جميع الحقول"); return; }
+      if (password !== passwordConfirm) { alert("كلمة المرور وتأكيدها غير متطابقين"); return; }
+      if (!validatePassword(password)) { alert("كلمة المرور يجب أن تكون 8 أحرف على الأقل وتتضمن حرفاً ورقماً"); return; }
+      if (!legalAccepted) { alert("يجب الموافقة على شروط الاستخدام وسياسة الخصوصية"); return; }
+
       let createdUser = null;
       let profilesCreated = false;
       try {
@@ -275,188 +427,235 @@
         await createProfiles(userCredential.user.uid, {
           name,
           email,
-          accountType: 'buyer',
-          status: 'active',
+          accountType: "buyer",
+          status: "active",
+          legalAccepted: true,
+          legalAcceptedAt: serverTimestamp(),
           createdAt: serverTimestamp()
         }, {
           name,
-          accountType: 'buyer'
+          accountType: "buyer"
         });
         profilesCreated = true;
+        auth.languageCode = "ar";
         await sendEmailVerification(userCredential.user);
         await signOut(auth);
-        alert('✅ تم إنشاء الحساب - تحقق من بريدك الإلكتروني');
-        window.location.href = 'login.html';
+        alert("تم إنشاء الحساب. تحقق من بريدك الإلكتروني لتفعيل الدخول.");
+        window.location.href = "login.html";
       } catch (error) {
         if (!profilesCreated) await cleanupFailedRegistration(createdUser);
         else await signOut(auth).catch(() => {});
         alert(profilesCreated
-          ? 'تم إنشاء الحساب، لكن تعذر إرسال رسالة التحقق. سجّل الدخول لاحقاً لإعادة إرسالها.'
-          : '❌ ' + error.message);
+          ? "تم إنشاء الحساب، لكن تعذر إرسال رسالة التحقق. سجل الدخول لاحقاً لإعادة إرسالها."
+          : friendlyAuthError(error));
       }
     };
 
     let freelancerStep = 1;
     window.freelancerNext = function(step) {
-      freelancerStep = step;
-      document.getElementById('fstep1').classList.toggle('hidden', step !== 1);
-      document.getElementById('fstep2').classList.toggle('hidden', step !== 2);
-      document.getElementById('fstep3').classList.toggle('hidden', step !== 3);
-      
-      document.getElementById('dot1').className = 'step-dot' + (step > 1 ? ' done' : ' active');
-      document.getElementById('dot2').className = 'step-dot' + (step > 2 ? ' done' : step === 2 ? ' active' : '');
-      document.getElementById('dot3').className = 'step-dot' + (step === 3 ? ' active' : '');
-      document.getElementById('line1').className = 'step-line' + (step > 1 ? ' done' : '');
-      document.getElementById('line2').className = 'step-line' + (step > 2 ? ' done' : '');
+      if (step === 2 && !validateFreelancerStep1()) return;
+      if (step === 3 && !validateFreelancerStep2()) return;
 
-      if (step === 3) {
-        const summary = document.getElementById('summary');
-        summary.replaceChildren();
-        [
-          ['الاسم', document.getElementById('fName').value],
-          ['البريد', document.getElementById('fEmail').value],
-          ['التخصص', document.getElementById('fSpecialty').value]
-        ].forEach(([label, value]) => {
-          const row = document.createElement('p');
-          const strong = document.createElement('strong');
-          strong.textContent = label + ': ';
-          row.append(strong, document.createTextNode(value));
-          summary.appendChild(row);
-        });
-        const state = document.createElement('p');
-        state.textContent = '⏳ في انتظار المراجعة';
-        state.style.color = '#F59E0B';
-        summary.appendChild(state);
-      }
+      freelancerStep = step;
+      document.getElementById("fstep1").classList.toggle("hidden", step !== 1);
+      document.getElementById("fstep2").classList.toggle("hidden", step !== 2);
+      document.getElementById("fstep3").classList.toggle("hidden", step !== 3);
+
+      document.getElementById("dot1").className = "step-dot" + (step > 1 ? " done" : " active");
+      document.getElementById("dot2").className = "step-dot" + (step > 2 ? " done" : step === 2 ? " active" : "");
+      document.getElementById("dot3").className = "step-dot" + (step === 3 ? " active" : "");
+      document.getElementById("line1").className = "step-line" + (step > 1 ? " done" : "");
+      document.getElementById("line2").className = "step-line" + (step > 2 ? " done" : "");
+
+      if (step === 3) renderSummary();
     };
+
+    function validateFreelancerStep1() {
+      const name = document.getElementById("fName").value.trim();
+      const email = normalizeEmail(document.getElementById("fEmail").value);
+      const phone = document.getElementById("fPhone").value.trim();
+      const specialty = document.getElementById("fSpecialty").value;
+      const password = document.getElementById("fPassword").value;
+      const passwordConfirm = document.getElementById("fPasswordConfirm").value;
+
+      if (!name || !email || !phone || !specialty || (!isResubmission && (!password || !passwordConfirm))) {
+        alert("يرجى ملء جميع الحقول الأساسية");
+        return false;
+      }
+      if (!isResubmission && password !== passwordConfirm) {
+        alert("كلمة المرور وتأكيدها غير متطابقين");
+        return false;
+      }
+      if (!isResubmission && !validatePassword(password)) {
+        alert("كلمة المرور يجب أن تكون 8 أحرف على الأقل وتتضمن حرفاً ورقماً");
+        return false;
+      }
+      return true;
+    }
+
+    function validateFreelancerStep2() {
+      const idNumber = document.getElementById("fIdNumber").value.trim();
+      const idName = document.getElementById("fIdName").value.trim();
+      const frontFile = document.getElementById("frontImg").files[0];
+      const backFile = document.getElementById("backImg").files[0];
+      if (!idNumber || !idName) { alert("يرجى إدخال بيانات الهوية"); return false; }
+      if (!validateImage(frontFile) || !validateImage(backFile)) {
+        alert("يجب رفع صورتي الهوية بصيغة صورة وبحجم لا يتجاوز 5MB");
+        return false;
+      }
+      if (!document.getElementById("fIdentityConsent").checked) {
+        alert("يجب الموافقة على استخدام بيانات الهوية للتحقق فقط");
+        return false;
+      }
+      return true;
+    }
+
+    function renderSummary() {
+      const summary = document.getElementById("summary");
+      summary.replaceChildren();
+      [
+        ["الاسم", document.getElementById("fName").value],
+        ["البريد", document.getElementById("fEmail").value],
+        ["التخصص", document.getElementById("fSpecialty").selectedOptions[0]?.textContent || ""]
+      ].forEach(([label, value]) => {
+        const row = document.createElement("p");
+        const strong = document.createElement("strong");
+        strong.textContent = label + ": ";
+        row.append(strong, document.createTextNode(value));
+        summary.appendChild(row);
+      });
+      const state = document.createElement("p");
+      state.textContent = "بانتظار تفعيل البريد ومراجعة الإدارة";
+      state.style.color = "#f59e0b";
+      summary.appendChild(state);
+    }
 
     window.preview = function(input, previewId) {
       const file = input.files[0];
-      if (file) {
-        if (!validateImage(file)) {
-          input.value = '';
-          alert('اختر صورة صحيحة لا يتجاوز حجمها 5MB');
-          return;
-        }
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const img = document.getElementById(previewId);
-          img.src = e.target.result;
-          img.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
+      if (!file) return;
+      if (!validateImage(file)) {
+        input.value = "";
+        alert("اختر صورة صحيحة لا يتجاوز حجمها 5MB");
+        return;
       }
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const img = document.getElementById(previewId);
+        img.src = event.target.result;
+        img.style.display = "block";
+      };
+      reader.readAsDataURL(file);
     };
 
     window.registerFreelancer = async function() {
-  const name = document.getElementById('fName').value.trim();
-  const email = document.getElementById('fEmail').value.trim();
-  const password = document.getElementById('fPassword').value;
-  const phone = document.getElementById('fPhone').value.trim();
-  const specialty = document.getElementById('fSpecialty').value;
-  const idNumber = document.getElementById('fIdNumber').value.trim();
-  const idName = document.getElementById('fIdName').value.trim();
-  const frontFile = document.getElementById('frontImg').files[0];
-  const backFile = document.getElementById('backImg').files[0];
+      const name = document.getElementById("fName").value.trim();
+      const email = normalizeEmail(document.getElementById("fEmail").value);
+      const password = document.getElementById("fPassword").value;
+      const phone = document.getElementById("fPhone").value.trim();
+      const specialty = document.getElementById("fSpecialty").value;
+      const idNumber = document.getElementById("fIdNumber").value.trim();
+      const idName = document.getElementById("fIdName").value.trim();
+      const frontFile = document.getElementById("frontImg").files[0];
+      const backFile = document.getElementById("backImg").files[0];
 
-  if (!name || !email || (!isResubmission && !password) || !phone || !specialty || !idNumber || !idName) {
-    alert('يرجى ملء جميع الحقول');
-    return;
-  }
-  if (!isResubmission && !validatePassword(password)) { alert('كلمة المرور يجب أن تكون 8 أحرف على الأقل'); return; }
-  if (!validateImage(frontFile) || !validateImage(backFile)) {
-    alert('يجب رفع صورتي الهوية بصيغة صورة وبحجم لا يتجاوز 5MB');
-    return;
-  }
+      if (!validateFreelancerStep1() || !validateFreelancerStep2()) return;
+      if (!document.getElementById("fLegal").checked) {
+        alert("يجب الموافقة على شروط الاستخدام وسياسة الخصوصية");
+        return;
+      }
 
-  if (isResubmission) {
-    if (!resubmissionUser || !resubmissionProfile) {
-      alert('انتهت جلسة إعادة التقديم. سجل الدخول مجدداً.');
-      window.location.href = 'login.html?returnUrl=register.html%3Fresubmit%3D1';
-      return;
-    }
+      if (isResubmission) {
+        if (!resubmissionUser || !resubmissionProfile) {
+          alert("انتهت جلسة إعادة التقديم. سجل الدخول مجدداً.");
+          window.location.href = "login.html?returnUrl=register.html%3Fresubmit%3D1";
+          return;
+        }
 
-    const uid = resubmissionUser.uid;
-    const frontPath = `identity/${uid}/front`;
-    const backPath = `identity/${uid}/back`;
-    try {
-      await Promise.all([
-        uploadBytes(ref(storage, frontPath), frontFile, { contentType: frontFile.type }),
-        uploadBytes(ref(storage, backPath), backFile, { contentType: backFile.type })
-      ]);
-      await updateDoc(doc(db, "users", uid), {
-        name,
-        phone,
-        specialty,
-        idNumber,
-        idName,
-        idFrontPath: frontPath,
-        idBackPath: backPath,
-        status: 'pending',
-        resubmittedAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-      await signOut(auth);
-      alert('✅ تم إعادة تقديم طلبك. سنراجعه من جديد خلال 24 ساعة.');
-      window.location.href = 'login.html';
-    } catch (error) {
-      console.error("Freelancer resubmission failed", error);
-      alert('❌ تعذر إعادة تقديم الطلب. تحقق من الصور والاتصال ثم حاول مجدداً.');
-    }
-    return;
-  }
+        const uid = resubmissionUser.uid;
+        const frontPath = `identity/${uid}/front`;
+        const backPath = `identity/${uid}/back`;
+        try {
+          await Promise.all([
+            uploadBytes(ref(storage, frontPath), frontFile, { contentType: frontFile.type }),
+            uploadBytes(ref(storage, backPath), backFile, { contentType: backFile.type })
+          ]);
+          await updateDoc(doc(db, "users", uid), {
+            name,
+            phone,
+            specialty,
+            idNumber,
+            idName,
+            idFrontPath: frontPath,
+            idBackPath: backPath,
+            status: "pending",
+            resubmittedAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
+          await signOut(auth);
+          alert("تمت إعادة تقديم طلبك. سنراجعه من جديد خلال 24 ساعة.");
+          window.location.href = "pending-review.html";
+        } catch (error) {
+          console.error("Freelancer resubmission failed", error);
+          alert("تعذر إعادة تقديم الطلب. تحقق من الصور والاتصال ثم حاول مجدداً.");
+        }
+        return;
+      }
 
-  let createdUser = null;
-  let profilesCreated = false;
-  const uploadedPaths = [];
-  try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    createdUser = userCredential.user;
-    const uid = userCredential.user.uid;
-    const frontPath = `identity/${uid}/front`;
-    const backPath = `identity/${uid}/back`;
-    const uploadResults = await Promise.allSettled([
-      uploadBytes(ref(storage, frontPath), frontFile, { contentType: frontFile.type })
-        .then(() => uploadedPaths.push(frontPath)),
-      uploadBytes(ref(storage, backPath), backFile, { contentType: backFile.type })
-        .then(() => uploadedPaths.push(backPath))
-    ]);
-    const failedUpload = uploadResults.find(result => result.status === 'rejected');
-    if (failedUpload) throw failedUpload.reason;
+      let createdUser = null;
+      let profilesCreated = false;
+      const uploadedPaths = [];
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        createdUser = userCredential.user;
+        const uid = userCredential.user.uid;
+        const frontPath = `identity/${uid}/front`;
+        const backPath = `identity/${uid}/back`;
+        const uploadResults = await Promise.allSettled([
+          uploadBytes(ref(storage, frontPath), frontFile, { contentType: frontFile.type }).then(() => uploadedPaths.push(frontPath)),
+          uploadBytes(ref(storage, backPath), backFile, { contentType: backFile.type }).then(() => uploadedPaths.push(backPath))
+        ]);
+        const failedUpload = uploadResults.find(result => result.status === "rejected");
+        if (failedUpload) throw failedUpload.reason;
 
-    await createProfiles(uid, {
-      name, email,
-      phone,
-      specialty,
-      idNumber,
-      idName,
-      idFrontPath: frontPath,
-      idBackPath: backPath,
-      accountType: 'freelancer',
-      status: 'pending',
-      createdAt: serverTimestamp()
-    }, {
-      name,
-      accountType: 'freelancer'
-    });
-    profilesCreated = true;
+        await createProfiles(uid, {
+          name,
+          email,
+          phone,
+          specialty,
+          idNumber,
+          idName,
+          idFrontPath: frontPath,
+          idBackPath: backPath,
+          accountType: "freelancer",
+          status: "pending",
+          legalAccepted: true,
+          legalAcceptedAt: serverTimestamp(),
+          identityConsent: true,
+          identityConsentAt: serverTimestamp(),
+          createdAt: serverTimestamp()
+        }, {
+          name,
+          accountType: "freelancer"
+        });
+        profilesCreated = true;
 
-    await sendEmailVerification(userCredential.user);
-    await signOut(auth);
-    alert('✅ تم تقديم الطلب - تحقق من بريدك الإلكتروني');
-    window.location.href = 'login.html';
-  } catch (error) {
-    if (error.code === 'auth/email-already-in-use') {
-      await continueExistingFreelancerApplication(email, password);
-      return;
-    }
-    if (!profilesCreated) await cleanupFailedRegistration(createdUser, uploadedPaths);
-    else await signOut(auth).catch(() => {});
-    alert(profilesCreated
-      ? 'تم تقديم الطلب، لكن تعذر إرسال رسالة التحقق. سجّل الدخول لاحقاً لإعادة إرسالها.'
-      : '❌ ' + error.message);
-  }
-};
+        auth.languageCode = "ar";
+        await sendEmailVerification(userCredential.user);
+        await signOut(auth);
+        alert("تم تقديم الطلب. تحقق من بريدك الإلكتروني، ثم انتظر مراجعة الإدارة.");
+        window.location.href = "pending-review.html";
+      } catch (error) {
+        if (error.code === "auth/email-already-in-use") {
+          await continueExistingFreelancerApplication(email, password);
+          return;
+        }
+        if (!profilesCreated) await cleanupFailedRegistration(createdUser, uploadedPaths);
+        else await signOut(auth).catch(() => {});
+        alert(profilesCreated
+          ? "تم تقديم الطلب، لكن تعذر إرسال رسالة التحقق. سجل الدخول لاحقاً لإعادة إرسالها."
+          : friendlyAuthError(error));
+      }
+    };
   </script>
   <script type="module" src="js/footer-copy.js"></script>
 </body>
