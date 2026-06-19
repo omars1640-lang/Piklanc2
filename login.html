@@ -371,7 +371,6 @@
         }
 
         if (profile.status === "pending") {
-          await signOut(auth);
           location.href = "pending-review.html";
           return;
         }

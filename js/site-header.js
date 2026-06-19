@@ -12,9 +12,20 @@ const actions = document.getElementById("siteHeaderActions");
 const mobileButton = document.getElementById("siteHeaderMobile");
 const themeButton = document.getElementById("themeToggle");
 let stopNotifications = null;
+function getSavedTheme() {
+  try {
+    return localStorage.getItem("theme");
+  } catch {
+    return null;
+  }
+}
 function setTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
-  localStorage.setItem("theme", theme);
+  try {
+    localStorage.setItem("theme", theme);
+  } catch {
+    // Theme still applies for the current page even if storage is blocked.
+  }
   if (themeButton) themeButton.textContent = theme === "dark" ? "☀" : "☾";
 }
 function setActiveLink() {
@@ -61,7 +72,7 @@ function renderSignedInActions(user, profile) {
   actions.classList.remove("is-signed-out");
   actions.classList.add("is-signed-in");
   const messages = createLink("messages.html", "الرسائل", "site-header-button ghost");
-  const accountHref = profile.accountType === "freelancer" ? "freelancer-dashboard.html" : "profile.html";
+  const accountHref = profile.role === "admin" ? "dashboard.html" : profile.accountType === "freelancer" ? "freelancer-dashboard.html" : "profile.html";
   const notifications = createLink(`${accountHref}#notifications`, "الإشعارات", "site-header-button ghost site-header-notifications");
   const notificationCount = document.createElement("b");
   notificationCount.hidden = true;
@@ -69,7 +80,14 @@ function renderSignedInActions(user, profile) {
   const account = createLink(accountHref, "", "site-header-account");
   const avatar = document.createElement("span");
   avatar.className = "site-header-avatar";
-  avatar.textContent = (profile.name || user.email || "م").charAt(0);
+  if (profile.avatar) {
+    const image = document.createElement("img");
+    image.src = profile.avatar;
+    image.alt = `صورة ${profile.name || user.email || "الحساب"}`;
+    avatar.appendChild(image);
+  } else {
+    avatar.textContent = (profile.name || user.email || "م").charAt(0);
+  }
   const copy = document.createElement("span");
   copy.className = "site-header-account-copy";
   const name = document.createElement("strong");
@@ -102,7 +120,7 @@ function renderSignedInActions(user, profile) {
 }
 
 if (header) {
-  setTheme(localStorage.getItem("theme") || "light");
+  setTheme(getSavedTheme() || "light");
   normalizeHeaderLinks();
   setActiveLink();
   renderSignedOutActions();
@@ -134,11 +152,14 @@ if (header) {
       }
       const profile = snapshot.data();
       if (profile.status !== "active" && profile.role !== "admin") {
-        await signOut(auth);
         renderSignedOutActions();
         return;
       }
-      renderSignedInActions(user, profile);
+      const publicSnapshot = await getDoc(doc(db, "publicProfiles", user.uid));
+      renderSignedInActions(user, {
+        ...profile,
+        avatar: publicSnapshot.exists() ? (publicSnapshot.data().avatar || "") : ""
+      });
     } catch {
       renderSignedOutActions();
     }
