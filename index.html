@@ -345,90 +345,241 @@
       flex-wrap: wrap;
     }
 
+    .hero-search {
+      width: min(100%, 560px);
+      margin: -1rem 0 1.6rem;
+      padding: .6rem;
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      background: rgba(255,255,255,.78);
+      box-shadow: 0 18px 45px rgba(31, 24, 70, .08);
+      backdrop-filter: blur(14px);
+    }
+
+    [data-theme="dark"] .hero-search {
+      background: rgba(30,30,45,.78);
+    }
+
+    .hero-search span {
+      width: 44px;
+      height: 44px;
+      flex: 0 0 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      font-weight: 900;
+    }
+
+    .hero-search input {
+      flex: 1;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      color: var(--text-heading);
+      background: transparent;
+      font: 700 .98rem "Cairo", sans-serif;
+    }
+
+    .hero-search input::placeholder { color: var(--text-secondary); }
+
+    .hero-search button {
+      padding: .75rem 1.2rem;
+      border: 0;
+      border-radius: 15px;
+      color: #fff;
+      background: var(--primary);
+      font-size: .9rem;
+      font-weight: 800;
+      white-space: nowrap;
+      cursor: pointer;
+      font-family: "Cairo", sans-serif;
+    }
+
+    .hero-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .65rem;
+      margin-bottom: 1.8rem;
+    }
+
+    .hero-chips a {
+      padding: .45rem .9rem;
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      color: var(--text-secondary);
+      background: var(--card-bg);
+      text-decoration: none;
+      font-size: .82rem;
+      font-weight: 800;
+      transition: var(--transition);
+    }
+
+    .hero-chips a:hover {
+      color: var(--primary);
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
     .hero-visual {
       position: relative;
       display: flex;
       justify-content: center;
     }
 
-    .hero-image {
-      width: 100%;
-      max-width: 550px;
+    .hero-marketplace {
+      width: min(100%, 540px);
+      padding: 1.1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 30px;
+      background: color-mix(in srgb, var(--card-bg) 88%, transparent);
+      box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(18px);
       animation: floatVisual 6s ease-in-out infinite;
     }
 
     @keyframes floatVisual {
       0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-20px); }
+      50% { transform: translateY(-16px); }
     }
 
-    .floating-badge {
-      position: absolute;
-      background: var(--card-bg);
-      border-radius: 12px;
-      padding: 1rem 1.5rem;
-      box-shadow: var(--shadow-lg);
+    .marketplace-top {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 1rem;
-      animation: floatBadge 5s ease-in-out infinite;
-      font-weight: 600;
-      color: var(--text-primary);
+      margin-bottom: 1rem;
     }
 
-    .floating-badge-1 {
-      top: 10%;
-      right: -10%;
-      animation-delay: 0s;
+    .marketplace-top strong {
+      display: block;
+      color: var(--text-heading);
+      font-size: 1rem;
     }
 
-    .floating-badge-2 {
-      bottom: 20%;
-      left: -5%;
-      animation-delay: 2s;
+    .marketplace-top small {
+      color: var(--text-secondary);
+      font-size: .78rem;
     }
 
-    .floating-badge-2::before {
-      content: "★";
-      width: 46px;
-      height: 46px;
+    .live-pill {
+      padding: .35rem .8rem;
+      border-radius: 999px;
+      color: #067647;
+      background: #dcfce7;
+      font-size: .76rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .marketplace-grid {
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: .9rem;
+      align-items: stretch;
+    }
+
+    .market-service {
+      padding: 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 22px;
+      background: var(--bg-secondary);
+    }
+
+    .market-cover {
+      min-height: 130px;
+      margin-bottom: .85rem;
+      border-radius: 18px;
+      background:
+        linear-gradient(135deg, rgba(108,92,231,.9), rgba(255,107,107,.78)),
+        radial-gradient(circle at 25% 25%, rgba(255,255,255,.45), transparent 28%);
       display: grid;
       place-items: center;
-      border-radius: 14px;
       color: #fff;
-      background: linear-gradient(135deg, var(--accent), var(--secondary));
-      box-shadow: 0 10px 24px rgba(255, 107, 107, .22);
-      font-size: 1.25rem;
+      font-size: 2.3rem;
       font-weight: 900;
     }
 
-    .floating-badge-2 > div { font-size: 0; }
-    .floating-badge-2 > div::before { content: "تقييم ممتاز"; font-size: 1rem; }
-    .floating-badge-2 small { display: block; font-size: .82rem; }
-
-    @keyframes floatBadge {
-      0%, 100% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-15px) rotate(2deg); }
+    .market-service h3 {
+      margin: 0 0 .5rem;
+      color: var(--text-heading);
+      font-size: 1rem;
+      line-height: 1.7;
     }
 
-    .badge-avatar {
-      width: 45px;
-      height: 45px;
-      border-radius: 50%;
-      background-size: cover;
-      background-position: center;
+    .market-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .7rem;
+      color: var(--text-secondary);
+      font-size: .78rem;
+      font-weight: 800;
     }
 
-    .floating-icon {
-      width: 46px;
-      height: 46px;
+    .market-price {
+      color: var(--primary);
+      font-size: 1.05rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .market-side {
       display: grid;
+      gap: .9rem;
+    }
+
+    .mini-card {
+      padding: 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      background: var(--bg-secondary);
+    }
+
+    .mini-card span {
+      display: inline-grid;
       place-items: center;
-      border-radius: 14px;
-      color: #fff;
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      box-shadow: 0 10px 24px rgba(108, 92, 231, .24);
-      font-size: 1.35rem;
+      width: 36px;
+      height: 36px;
+      margin-bottom: .55rem;
+      border-radius: 12px;
+      color: var(--primary);
+      background: var(--bg-tertiary);
+      font-weight: 900;
+    }
+
+    .mini-card strong {
+      display: block;
+      color: var(--text-heading);
+      font-size: .9rem;
+    }
+
+    .mini-card small {
+      display: block;
+      margin-top: .25rem;
+      color: var(--text-secondary);
+      font-size: .74rem;
+      line-height: 1.7;
+    }
+
+    .market-flow {
+      margin-top: .9rem;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: .7rem;
+    }
+
+    .flow-step {
+      padding: .75rem .55rem;
+      border-radius: 16px;
+      color: var(--text-secondary);
+      background: var(--bg-tertiary);
+      text-align: center;
+      font-size: .75rem;
       font-weight: 900;
     }
 
@@ -862,8 +1013,11 @@
         text-align: center;
       }
       .hero-text p { margin: 0 auto 2rem; }
+      .hero-search { margin-inline: auto; }
+      .hero-chips { justify-content: center; }
       .hero-buttons { justify-content: center; }
-      .hero-visual { display: none; }
+      .marketplace-grid { grid-template-columns: 1fr; }
+      .market-flow { grid-template-columns: 1fr; }
       .nav-links { display: none; }
       .mobile-toggle { display: block; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
@@ -912,41 +1066,58 @@
             في سوريا
           </h1>
           <p>وظّف أفضل المستقلين في التصميم، البرمجة، الكتابة، التسويق، الصوتيات والإنتاج المرئي. ادفع بأمان واستلم خدمتك بسرعة.</p>
+          <form class="hero-search" action="services.html">
+            <span>⌕</span>
+            <input type="search" name="q" placeholder="ابحث عن تصميم شعار، متجر إلكتروني، كاتب محتوى...">
+            <button type="submit">بحث</button>
+          </form>
+          <div class="hero-chips">
+            <a href="services.html?cat=design">تصميم شعار</a>
+            <a href="services.html?cat=web">متجر إلكتروني</a>
+            <a href="services.html?cat=writing">كتابة محتوى</a>
+            <a href="services.html?cat=marketing">تسويق رقمي</a>
+          </div>
           <div class="hero-buttons">
             <a href="services.html" class="btn btn-primary">تصفح الخدمات ←</a>
             <a href="register.html" class="btn btn-outline-light">ابدأ بالبيع</a>
           </div>
         </div>
         <div class="hero-visual">
-          <svg viewBox="0 0 500 400" xmlns="http://www.w3.org/2000/svg" class="hero-image">
-            <rect x="50" y="50" width="400" height="300" rx="30" fill="var(--bg-tertiary)" opacity="0.5"/>
-            <circle cx="120" cy="120" r="40" fill="#EDE9FE" />
-            <text x="120" y="128" text-anchor="middle" font-size="30">🎨</text>
-            <circle cx="380" cy="120" r="40" fill="#DBEAFE" />
-            <text x="380" y="128" text-anchor="middle" font-size="30">💻</text>
-            <circle cx="120" cy="280" r="40" fill="#FEF3C7" />
-            <text x="120" y="288" text-anchor="middle" font-size="30">✍️</text>
-            <circle cx="380" cy="280" r="40" fill="#D1FAE5" />
-            <text x="380" y="288" text-anchor="middle" font-size="30">📈</text>
-            <circle cx="250" cy="200" r="60" fill="url(#centerGrad)" />
-            <defs>
-              <linearGradient id="centerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#6C5CE7" />
-                <stop offset="100%" style="stop-color:#5A4BD1" />
-              </linearGradient>
-            </defs>
-            <text x="250" y="210" text-anchor="middle" font-size="40" fill="#fff">⚡</text>
-            <line x1="160" y1="130" x2="190" y2="180" stroke="#6C5CE7" stroke-width="2" stroke-dasharray="5,5" />
-            <line x1="340" y1="130" x2="310" y2="180" stroke="#6C5CE7" stroke-width="2" stroke-dasharray="5,5" />
-            <line x1="160" y1="270" x2="190" y2="220" stroke="#6C5CE7" stroke-width="2" stroke-dasharray="5,5" />
-            <line x1="340" y1="270" x2="310" y2="220" stroke="#6C5CE7" stroke-width="2" stroke-dasharray="5,5" />
-          </svg>
-          <div class="floating-badge floating-badge-1">
-            <div class="badge-avatar" style="background-image:url('https://randomuser.me/api/portraits/men/1.jpg');"></div>
-            <div>أحمد <br><small style="color:#10B981;">متاح الآن</small></div>
-          </div>
-          <div class="floating-badge floating-badge-2">
-            <div>⭐⭐⭐⭐⭐<br><small>+1000 تقييم</small></div>
+          <div class="hero-marketplace">
+            <div class="marketplace-top">
+              <div>
+                <strong>سوق خدمات حيّ ومباشر</strong>
+                <small>طلبات، رسائل، دفع آمن، وتسليم من مكان واحد</small>
+              </div>
+              <span class="live-pill">مباشر الآن</span>
+            </div>
+            <div class="marketplace-grid">
+              <article class="market-service">
+                <div class="market-cover">P</div>
+                <h3>تصميم هوية بصرية كاملة لمشروع ناشئ</h3>
+                <div class="market-meta">
+                  <span>تسليم خلال 3 أيام</span>
+                  <strong class="market-price">25,000 ل.س</strong>
+                </div>
+              </article>
+              <div class="market-side">
+                <article class="mini-card">
+                  <span>✓</span>
+                  <strong>مبلغ محجوز بأمان</strong>
+                  <small>لا يتحرر للمستقل إلا بعد التسليم أو انتهاء فترة المراجعة.</small>
+                </article>
+                <article class="mini-card">
+                  <span>↗</span>
+                  <strong>مستقلون جاهزون</strong>
+                  <small>تصميم، برمجة، كتابة، تسويق، فيديو وصوتيات.</small>
+                </article>
+              </div>
+            </div>
+            <div class="market-flow">
+              <div class="flow-step">اختر الخدمة</div>
+              <div class="flow-step">تواصل واتفق</div>
+              <div class="flow-step">استلم بأمان</div>
+            </div>
           </div>
         </div>
       </div>
