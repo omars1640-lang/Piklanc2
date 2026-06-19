@@ -300,14 +300,13 @@ service cloud.firestore {
           "legalAccepted", "legalAcceptedAt", "identityConsent", "identityConsentAt",
           "createdAt"
         ])
-        && request.resource.data.legalAccepted == true
-        && request.resource.data.legalAcceptedAt == request.time
         && (
-          request.resource.data.accountType == "buyer"
-          || (
-            request.resource.data.identityConsent == true
-            && request.resource.data.identityConsentAt == request.time
-          )
+          !request.resource.data.keys().hasAny(["legalAccepted", "legalAcceptedAt"])
+          || (request.resource.data.legalAccepted == true && request.resource.data.legalAcceptedAt == request.time)
+        )
+        && (
+          !request.resource.data.keys().hasAny(["identityConsent", "identityConsentAt"])
+          || (request.resource.data.identityConsent == true && request.resource.data.identityConsentAt == request.time)
         )
         && (
           (request.resource.data.accountType == "buyer" && request.resource.data.status == "active")
