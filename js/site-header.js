@@ -12,14 +12,11 @@ const actions = document.getElementById("siteHeaderActions");
 const mobileButton = document.getElementById("siteHeaderMobile");
 const themeButton = document.getElementById("themeToggle");
 let stopNotifications = null;
-const FOOTER_COPY = "© 2026 PikLance. جميع الحقوق محفوظة.";
-
 function setTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
   localStorage.setItem("theme", theme);
   if (themeButton) themeButton.textContent = theme === "dark" ? "☀" : "☾";
 }
-
 function setActiveLink() {
   const currentPage = location.pathname.split("/").pop() || "index.html";
   nav?.querySelectorAll("a").forEach(link => {
@@ -33,12 +30,6 @@ function normalizeHeaderLinks() {
   if (["blog.html", "article.html"].includes(currentPage)) {
     nav?.querySelectorAll('a[href="how-it-works.html"]').forEach(link => link.remove());
   }
-}
-
-function normalizeFooterCopy() {
-  document.querySelectorAll("footer small, .footer-bottom").forEach(element => {
-    element.textContent = FOOTER_COPY;
-  });
 }
 
 function closeMenu() {
@@ -114,6 +105,7 @@ if (header) {
   setTheme(localStorage.getItem("theme") || "light");
   normalizeHeaderLinks();
   setActiveLink();
+  renderSignedOutActions();
 
   themeButton?.addEventListener("click", () => {
     setTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
@@ -152,5 +144,3 @@ if (header) {
     }
   });
 }
-
-normalizeFooterCopy();

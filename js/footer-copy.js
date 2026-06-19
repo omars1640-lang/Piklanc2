@@ -12,6 +12,7 @@ function ensureFooterCopy() {
   const style = document.createElement("style");
   style.textContent = `
     .piklance-global-footer {
+      width: 100%;
       padding: 18px 14px;
       color: #8b93a3;
       background: transparent;
