@@ -2,13 +2,19 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 import {
   addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { auth, db } from "./firebase.js";
+import {
+  deleteObject, getDownloadURL, ref as storageRef, uploadBytes
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { auth, db, storage } from "./firebase.js";
 import {
   approveEscrowOrder, autoReleaseEscrowOrder, disputeEscrowOrder,
   formatMoney, orderStatusLabels
 } from "./escrow.js";
 
-const state = { user: null, profile: null, orders: [], favorites: [], tickets: [], notifications: [] };
+const state = {
+  user: null, profile: null, orders: [], favorites: [], tickets: [], notifications: [],
+  avatarFile: null, avatarRemoved: false, avatarPreviewUrl: ""
+};
 const sectionTitles = { overview: "نظرة عامة", orders: "طلباتي", favorites: "الخدمات المحفوظة", support: "الدعم والنزاعات", notifications: "الإشعارات", account: "إعدادات الحساب" };
 const statusLabels = { pending: "بانتظار التأكيد", active: "قيد التنفيذ", delivered: "بانتظار الاستلام", completed: "مكتمل", cancelled: "ملغي", disputed: "نزاع مفتوح", funded: "المبلغ محجوز لدى المنصة", open: "مفتوحة", in_progress: "قيد المعالجة", waiting_user: "بانتظار ردك", resolved: "محلولة", closed: "مغلقة", ...orderStatusLabels };
 
@@ -131,14 +137,49 @@ function renderNotifications() {
 
 function renderProfile() {
   const name = state.profile.name || state.user.email || "عميل PikLance";
-  const avatar = name.trim().charAt(0).toUpperCase();
   $("sidebarName").textContent = name;
   $("welcomeName").textContent = name.split(/\s+/)[0];
-  $("topAvatar").textContent = avatar;
-  $("sidebarAvatar").textContent = avatar;
+  renderAvatars(state.avatarPreviewUrl || state.profile.avatar || "", name);
   $("accountName").value = state.profile.name || "";
   $("accountEmail").value = state.user.email || "";
   $("accountPhone").value = state.profile.phone || "";
+}
+
+function renderAvatars(url, name) {
+  const initial = (name || "ع").trim().charAt(0).toUpperCase();
+  ["topAvatar", "sidebarAvatar", "accountAvatar"].forEach(id => {
+    const target = $(id);
+    target.replaceChildren();
+    if (url) {
+      const image = document.createElement("img");
+      image.src = url;
+      image.alt = `صورة ${name}`;
+      target.appendChild(image);
+    } else {
+      target.textContent = initial;
+    }
+  });
+  $("removeAccountAvatar").hidden = !url;
+}
+
+function previewAvatar(file) {
+  if (state.avatarPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(state.avatarPreviewUrl);
+  state.avatarPreviewUrl = file ? URL.createObjectURL(file) : "";
+  renderAvatars(state.avatarPreviewUrl || state.profile.avatar || "", $("accountName").value || state.profile.name);
+}
+
+async function saveAvatar() {
+  const avatarRef = storageRef(storage, `profile-images/${state.user.uid}/avatar`);
+  if (state.avatarRemoved) {
+    await deleteObject(avatarRef).catch(error => {
+      if (error.code !== "storage/object-not-found") throw error;
+    });
+    return "";
+  }
+  if (!state.avatarFile) return state.profile.avatar || "";
+  await uploadBytes(avatarRef, state.avatarFile, { contentType: state.avatarFile.type });
+  const url = await getDownloadURL(avatarRef);
+  return `${url}&v=${Date.now()}`;
 }
 
 async function markNotificationRead(id) {
@@ -199,11 +240,34 @@ async function saveAccount(event) {
   event.preventDefault();
   const updates = { name: $("accountName").value.trim(), phone: $("accountPhone").value.trim(), specialty: state.profile.specialty || "" };
   if (!updates.name) return;
-  await updateDoc(doc(db, "users", state.user.uid), updates);
-  state.profile = { ...state.profile, ...updates };
-  renderProfile();
-  $("accountMessage").textContent = "تم حفظ التعديلات.";
-  showToast("تم تحديث حسابك بنجاح.");
+  $("accountMessage").textContent = "جاري حفظ التعديلات...";
+  try {
+    const avatar = await saveAvatar();
+    const batch = writeBatch(db);
+    batch.update(doc(db, "users", state.user.uid), updates);
+    batch.set(doc(db, "publicProfiles", state.user.uid), {
+      name: updates.name,
+      accountType: "buyer",
+      avatar
+    }, { merge: true });
+    await batch.commit();
+    state.profile = { ...state.profile, ...updates, avatar };
+    state.avatarFile = null;
+    state.avatarRemoved = false;
+    if (state.avatarPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(state.avatarPreviewUrl);
+    state.avatarPreviewUrl = "";
+    $("accountAvatarInput").value = "";
+    renderProfile();
+    $("accountMessage").textContent = "تم حفظ التعديلات.";
+    showToast("تم تحديث حسابك وصورتك بنجاح.");
+  } catch (error) {
+    console.error("Account update failed", error);
+    $("accountMessage").textContent = error.code === "storage/unauthorized"
+      ? "تعذر رفع الصورة بسبب صلاحيات الحساب. حدّث الصفحة وحاول مجدداً."
+      : error.code === "permission-denied"
+        ? "تعذر حفظ الصورة العامة. تأكد من نشر قواعد Firestore وStorage."
+        : "تعذر حفظ التعديلات حالياً. تحقق من الصورة والاتصال.";
+  }
 }
 
 async function loadWorkspace() {
@@ -242,6 +306,28 @@ $("sidebarBackdrop").addEventListener("click", () => { $("sidebar").classList.re
 $("themeButton").addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
 $("markAllRead").addEventListener("click", markAllRead);
 $("accountForm").addEventListener("submit", saveAccount);
+$("accountAvatarInput").addEventListener("change", event => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (!file.type.match(/^image\/(jpeg|png|webp)$/) || file.size > 5 * 1024 * 1024) {
+    event.target.value = "";
+    $("accountMessage").textContent = "اختر صورة JPG أو PNG أو WebP بحجم لا يتجاوز 5MB.";
+    return;
+  }
+  state.avatarFile = file;
+  state.avatarRemoved = false;
+  previewAvatar(file);
+  $("accountMessage").textContent = "اضغط حفظ التعديلات لاعتماد الصورة.";
+});
+$("removeAccountAvatar").addEventListener("click", () => {
+  state.avatarFile = null;
+  state.avatarRemoved = true;
+  if (state.avatarPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(state.avatarPreviewUrl);
+  state.avatarPreviewUrl = "";
+  $("accountAvatarInput").value = "";
+  renderAvatars("", $("accountName").value || state.profile.name);
+  $("accountMessage").textContent = "اضغط حفظ التعديلات لإزالة الصورة.";
+});
 $("logoutButton").addEventListener("click", async () => { await signOut(auth); location.replace("index.html"); });
 setTheme(localStorage.getItem("theme") || "light");
 
@@ -254,8 +340,9 @@ onAuthStateChanged(auth, async user => {
       await signOut(auth);
       return location.replace("login.html");
     }
+    const publicSnapshot = await getDoc(doc(db, "publicProfiles", user.uid));
     state.user = user;
-    state.profile = profile;
+    state.profile = { ...profile, avatar: publicSnapshot.exists() ? (publicSnapshot.data().avatar || "") : "" };
     renderProfile();
     await loadWorkspace();
     showSection(sectionTitles[location.hash.slice(1)] ? location.hash.slice(1) : "overview");
