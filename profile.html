@@ -91,6 +91,18 @@
       <section class="dashboard-section" id="section-account">
         <div class="page-heading"><div><p>الملف الشخصي</p><h1>إعدادات الحساب</h1><span>حدّث معلومات التواصل الأساسية المرتبطة بحسابك.</span></div></div>
         <form class="panel account-form" id="accountForm">
+          <div class="client-photo-card">
+            <span class="avatar client-profile-avatar" id="accountAvatar">ع</span>
+            <div>
+              <strong>صورة الحساب</strong>
+              <small>تظهر بجانب اسمك في لوحة المشتري. JPG أو PNG أو WebP بحد أقصى 5MB.</small>
+              <div class="client-photo-actions">
+                <label class="secondary-button" for="accountAvatarInput">تغيير الصورة</label>
+                <button class="secondary-button" id="removeAccountAvatar" type="button" hidden>إزالة الصورة</button>
+                <input id="accountAvatarInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+              </div>
+            </div>
+          </div>
           <div class="form-grid">
             <label>الاسم الكامل<input id="accountName" type="text" maxlength="80" required></label>
             <label>البريد الإلكتروني<input id="accountEmail" type="email" disabled></label>
