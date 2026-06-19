@@ -429,8 +429,6 @@
           email,
           accountType: "buyer",
           status: "active",
-          legalAccepted: true,
-          legalAcceptedAt: serverTimestamp(),
           createdAt: serverTimestamp()
         }, {
           name,
@@ -628,10 +626,6 @@
           idBackPath: backPath,
           accountType: "freelancer",
           status: "pending",
-          legalAccepted: true,
-          legalAcceptedAt: serverTimestamp(),
-          identityConsent: true,
-          identityConsentAt: serverTimestamp(),
           createdAt: serverTimestamp()
         }, {
           name,
