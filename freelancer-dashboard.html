@@ -372,12 +372,12 @@
       <h2 id="serviceModalTitle">أضف تفاصيل خدمتك</h2>
       <p class="modal-description">ستُحفظ هذه الخدمة كمسودة محلية حتى يتم ربط نظام نشر الخدمات بقاعدة البيانات.</p>
       <form id="serviceForm">
-        <label>عنوان الخدمة<input id="serviceTitle" type="text" maxlength="100" placeholder="مثال: تصميم هوية بصرية متكاملة" required></label>
+        <label>عنوان الخدمة<input id="serviceTitle" type="text" minlength="5" maxlength="100" placeholder="مثال: تصميم هوية بصرية متكاملة" required></label>
         <div class="form-grid">
           <label>الفئة<select id="serviceCategory" required><option value="">اختر الفئة</option><option>تصميم</option><option>برمجة</option><option>كتابة</option><option>تسويق</option><option>صوتيات</option><option>فيديو</option></select></label>
           <label>السعر<input id="servicePrice" type="number" min="1000" step="1000" placeholder="25000" required></label>
         </div>
-        <label>وصف الخدمة<textarea id="serviceDescription" rows="4" maxlength="1000" placeholder="ما الذي سيحصل عليه العميل؟" required></textarea></label>
+        <label>وصف الخدمة<textarea id="serviceDescription" rows="4" minlength="20" maxlength="1000" placeholder="ما الذي سيحصل عليه العميل؟" required></textarea></label>
         <label>صورة الخدمة<input id="serviceImage" type="file" accept="image/jpeg,image/png,image/webp"></label>
         <small class="service-image-hint">ارفع صورة واضحة بصيغة JPG أو PNG أو WebP، بحجم لا يتجاوز 5MB. ستظهر هذه الصورة للإدارة قبل الموافقة.</small>
         <div class="form-grid">

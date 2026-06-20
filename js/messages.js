@@ -464,12 +464,18 @@ async function startRequestedConversation() {
       lastUpdated: serverTimestamp()
     };
     if (serviceId) {
+      const requestedSellerUid = params.get("sellerUid");
+      const contextSellerUid = ids.includes(requestedSellerUid)
+        ? requestedSellerUid
+        : participantTypes[auth.currentUser.uid] === "freelancer"
+          ? auth.currentUser.uid
+          : otherUid;
       data.context = {
         serviceId: safeId(serviceId),
         title: (params.get("serviceTitle") || "خدمة على PikLance").slice(0, 140),
         image: (params.get("serviceImage") || "").slice(0, 600),
         price: Number(params.get("servicePrice") || 0),
-        sellerUid: otherUid
+        sellerUid: contextSellerUid
       };
     }
     await setDoc(chatReference, data);

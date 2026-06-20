@@ -1072,14 +1072,14 @@
         <div class="hero-text">
           <div class="badge">
             <span class="badge-dot"></span>
-            +500 مستقل نشط اليوم
+            <span id="homeHeroFreelancers">مجتمع PikLance قيد الانطلاق</span>
           </div>
           <h1>
             منصتك الأولى<br>
             <span class="gradient-text">للخدمات الرقمية</span><br>
             في سوريا
           </h1>
-          <p>وظّف أفضل المستقلين في التصميم، البرمجة، الكتابة، التسويق، الصوتيات والإنتاج المرئي. ادفع بأمان واستلم خدمتك بسرعة.</p>
+          <p>تواصل مع مستقلين موثّقين في التصميم، البرمجة، الكتابة، التسويق، الصوتيات والإنتاج المرئي، واختبر رحلة الطلب والتسليم داخل المنصة.</p>
           <form class="hero-search" action="services.html">
             <span>⌕</span>
             <input type="search" name="q" placeholder="ابحث عن تصميم شعار، متجر إلكتروني، كاتب محتوى...">
@@ -1087,9 +1087,9 @@
           </form>
           <div class="hero-chips">
             <a href="services.html?cat=design">تصميم شعار</a>
-            <a href="services.html?cat=web">متجر إلكتروني</a>
-            <a href="services.html?cat=writing">كتابة محتوى</a>
-            <a href="services.html?cat=marketing">تسويق رقمي</a>
+            <a href="services.html?cat=code">متجر إلكتروني</a>
+            <a href="services.html?cat=write">كتابة محتوى</a>
+            <a href="services.html?cat=market">تسويق رقمي</a>
           </div>
           <div class="hero-buttons">
             <a href="services.html" class="btn btn-primary">تصفح الخدمات ←</a>
@@ -1101,7 +1101,7 @@
             <div class="marketplace-top">
               <div>
                 <strong>سوق خدمات حيّ ومباشر</strong>
-                <small>طلبات، رسائل، دفع آمن، وتسليم من مكان واحد</small>
+                <small>طلبات تجريبية، رسائل، وتسليم من مكان واحد</small>
               </div>
               <span class="live-pill">مباشر الآن</span>
             </div>
@@ -1117,8 +1117,8 @@
               <div class="market-side">
                 <article class="mini-card">
                   <span>✓</span>
-                  <strong>مبلغ محجوز بأمان</strong>
-                  <small>لا يتحرر للمستقل إلا بعد التسليم أو انتهاء فترة المراجعة.</small>
+                  <strong>رصيد تجريبي لكل طلب</strong>
+                  <small>نختبر دورة الحجز والتسليم قبل ربط بوابة الدفع الحقيقية.</small>
                 </article>
                 <article class="mini-card">
                   <span>↗</span>
@@ -1143,20 +1143,20 @@
     <div class="container">
       <div class="stats-grid">
         <div class="stat-item">
-          <span class="stat-number" style="color:var(--primary);">2,500+</span>
-          <span class="stat-label">مستقل نشط</span>
+          <span class="stat-number" id="homeFreelancersCount" style="color:var(--primary);">0</span>
+          <span class="stat-label">مستقل موثّق</span>
         </div>
         <div class="stat-item">
-          <span class="stat-number" style="color:var(--secondary);">12,000+</span>
-          <span class="stat-label">خدمة منجزة</span>
+          <span class="stat-number" id="homeServicesCount" style="color:var(--secondary);">0</span>
+          <span class="stat-label">خدمة منشورة</span>
         </div>
         <div class="stat-item">
-          <span class="stat-number" style="color:var(--accent);">4.8/5</span>
-          <span class="stat-label">متوسط التقييم</span>
+          <span class="stat-number" id="homeCategoriesCount" style="color:var(--accent);">0</span>
+          <span class="stat-label">فئة متاحة</span>
         </div>
         <div class="stat-item">
-          <span class="stat-number" style="color:#10B981;">₴ 50M+</span>
-          <span class="stat-label">مدفوعات آمنة</span>
+          <span class="stat-number" style="color:#10B981;">20%</span>
+          <span class="stat-label">عمولة المنصة</span>
         </div>
       </div>
     </div>
@@ -1174,32 +1174,32 @@
         <a href="services.html?cat=design" class="category-card">
           <div class="category-icon icon-design">🎨</div>
           <div class="category-title">تصميم</div>
-          <div class="category-count">3,200+ خدمة</div>
+          <div class="category-count" data-category-count="design">0 خدمة</div>
         </a>
         <a href="services.html?cat=code" class="category-card">
           <div class="category-icon icon-code">💻</div>
           <div class="category-title">برمجة</div>
-          <div class="category-count">1,800+ خدمة</div>
+          <div class="category-count" data-category-count="code">0 خدمة</div>
         </a>
         <a href="services.html?cat=write" class="category-card">
           <div class="category-icon icon-write">✍️</div>
           <div class="category-title">كتابة</div>
-          <div class="category-count">2,100+ خدمة</div>
+          <div class="category-count" data-category-count="write">0 خدمة</div>
         </a>
         <a href="services.html?cat=market" class="category-card">
           <div class="category-icon icon-market">📈</div>
           <div class="category-title">تسويق</div>
-          <div class="category-count">1,500+ خدمة</div>
+          <div class="category-count" data-category-count="market">0 خدمة</div>
         </a>
         <a href="services.html?cat=audio" class="category-card">
           <div class="category-icon icon-audio">🎤</div>
           <div class="category-title">صوتيات</div>
-          <div class="category-count">900+ خدمة</div>
+          <div class="category-count" data-category-count="audio">0 خدمة</div>
         </a>
         <a href="services.html?cat=video" class="category-card">
           <div class="category-icon icon-video">🎬</div>
           <div class="category-title">فيديو</div>
-          <div class="category-count">1,100+ خدمة</div>
+          <div class="category-count" data-category-count="video">0 خدمة</div>
         </a>
       </div>
     </div>
@@ -1213,64 +1213,7 @@
         <h2 class="section-title">خدمات يوصي بها العملاء</h2>
         <p class="section-subtitle">خدمات عالية الجودة من مستقلين موثوقين مع ضمان حقوقك</p>
       </div>
-      <div class="services-grid">
-        <a href="service-details.html" class="service-card">
-          <div class="service-img" style="background-image:url('https://images.unsplash.com/photo-1561070791-2526d30994b5?w=500&h=300&fit=crop');">
-            <span class="service-badge">الأكثر طلباً</span>
-          </div>
-          <div class="service-body">
-            <span class="service-category">تصميم</span>
-            <h3 class="service-title">تصميم هوية بصرية كاملة</h3>
-            <div class="service-seller">
-              <div class="service-avatar" style="background-image:url('https://randomuser.me/api/portraits/men/1.jpg');"></div>
-              <div>
-                <div class="service-seller-name">أحمد المصمم</div>
-                <div class="service-seller-level">🏆 مصمم محترف</div>
-              </div>
-            </div>
-            <div class="service-footer">
-              <span class="service-price">25,000 ل.س</span>
-              <span class="service-rating">⭐ 4.9 (128)</span>
-            </div>
-          </div>
-        </a>
-        <a href="service-details.html" class="service-card">
-          <div class="service-img" style="background-image:url('https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=500&h=300&fit=crop');"></div>
-          <div class="service-body">
-            <span class="service-category">برمجة</span>
-            <h3 class="service-title">تطوير متجر إلكتروني متكامل</h3>
-            <div class="service-seller">
-              <div class="service-avatar" style="background-image:url('https://randomuser.me/api/portraits/women/1.jpg');"></div>
-              <div>
-                <div class="service-seller-name">سارة المبرمجة</div>
-                <div class="service-seller-level">💎 مطورة Full-Stack</div>
-              </div>
-            </div>
-            <div class="service-footer">
-              <span class="service-price">150,000 ل.س</span>
-              <span class="service-rating">⭐ 4.8 (35)</span>
-            </div>
-          </div>
-        </a>
-        <a href="service-details.html" class="service-card">
-          <div class="service-img" style="background-image:url('https://images.unsplash.com/photo-1455390582262-044cdead277a?w=500&h=300&fit=crop');"></div>
-          <div class="service-body">
-            <span class="service-category">كتابة</span>
-            <h3 class="service-title">كتابة محتوى SEO احترافي</h3>
-            <div class="service-seller">
-              <div class="service-avatar" style="background-image:url('https://randomuser.me/api/portraits/men/2.jpg');"></div>
-              <div>
-                <div class="service-seller-name">خالد الكاتب</div>
-                <div class="service-seller-level">✍️ كاتب محتوى</div>
-              </div>
-            </div>
-            <div class="service-footer">
-              <span class="service-price">8,000 ل.س</span>
-              <span class="service-rating">⭐ 4.7 (92)</span>
-            </div>
-          </div>
-        </a>
-      </div>
+      <div class="services-grid" id="homeFeaturedServices"></div>
     </div>
   </section>
 
@@ -1295,8 +1238,8 @@
         </div>
         <div class="step-card">
           <div class="step-number">3</div>
-          <h3>ادفع بأمان</h3>
-          <p>الدفع عبر MTN Cash أو Syriatel Cash، واستلم خدمتك</p>
+          <h3>اختبر الطلب والتسليم</h3>
+          <p>حالياً تُسجّل الطلبات في وضع الاختبار دون تحصيل أموال حقيقية</p>
         </div>
       </div>
     </div>
@@ -1310,30 +1253,7 @@
         <h2 class="section-title">ماذا يقول مستخدمونا</h2>
         <p class="section-subtitle">قصص نجاح حقيقية من مستقلين وعملاء على منصتنا</p>
       </div>
-      <div class="testimonials-grid">
-        <div class="testimonial-card">
-          <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
-          <p class="testimonial-text">"حصلت على شعار احترافي لمتجري في يومين فقط. المنصة سهلة الاستخدام والدفع كان آمناً. سأعود بالتأكيد"</p>
-          <div class="testimonial-author">
-            <div class="testimonial-avatar" style="background-image:url('https://randomuser.me/api/portraits/men/3.jpg');"></div>
-            <div>
-              <div class="testimonial-name">محمد الأحمد</div>
-              <div class="testimonial-role">صاحب متجر إلكتروني</div>
-            </div>
-          </div>
-        </div>
-        <div class="testimonial-card">
-          <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
-          <p class="testimonial-text">"كسبت أول مليون ليرة من المنصة خلال 3 أشهر من العمل الحر. النظام واضح والعمولة منافسة جداً"</p>
-          <div class="testimonial-author">
-            <div class="testimonial-avatar" style="background-image:url('https://randomuser.me/api/portraits/women/2.jpg');"></div>
-            <div>
-              <div class="testimonial-name">نور المصممة</div>
-              <div class="testimonial-role">مستقلة - تصميم جرافيك</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <div class="testimonials-grid" id="homeTestimonials"><div class="testimonial-card"><p class="testimonial-text">ستظهر هنا تقييمات العملاء الحقيقية بعد إكمال أول الطلبات على المنصة.</p></div></div>
     </div>
   </section>
 
@@ -1342,7 +1262,7 @@
     <div class="container">
       <div class="cta">
         <h2>🎯 مستعد تبدأ؟</h2>
-        <p>انضم إلى آلاف المستقلين والعملاء على PikLance اليوم</p>
+        <p>كن من أوائل المستقلين والعملاء الذين يبنون مجتمع PikLance</p>
         <div class="cta-buttons">
           <a href="register.html" class="btn btn-primary" style="background:#fff; color:var(--primary);">ابدأ كعميل</a>
           <a href="register.html?role=freelancer" class="btn btn-outline-light">ابدأ كمستقل</a>
@@ -1436,5 +1356,6 @@
     }
   </script>
   <script type="module" src="js/site-header.js"></script>
+  <script type="module" src="js/home-marketplace.js"></script>
 </body>
 </html>

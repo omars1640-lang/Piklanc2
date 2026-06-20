@@ -152,6 +152,9 @@ service cloud.firestore {
     }
 
     function validOrderCreate() {
+      let listedService = get(
+        /databases/$(database)/documents/services/$(request.resource.data.serviceId)
+      ).data;
       return isAccountType("buyer")
         && request.resource.data.keys().hasOnly([
           "buyerUid", "buyerName", "buyerEmail", "freelancerUid", "freelancerName",
@@ -163,6 +166,10 @@ service cloud.firestore {
         && request.resource.data.buyerUid == request.auth.uid
         && activeParticipant(request.resource.data.freelancerUid)
         && request.resource.data.freelancerUid != request.auth.uid
+        && listedService.status == "published"
+        && listedService.ownerUid == request.resource.data.freelancerUid
+        && listedService.title == request.resource.data.serviceTitle
+        && listedService.price == request.resource.data.total
         && request.resource.data.status == "funded"
         && request.resource.data.total is number
         && request.resource.data.total > 0
@@ -171,13 +178,20 @@ service cloud.firestore {
         && request.resource.data.platformFeeAmount is number
         && request.resource.data.platformFeeAmount >= 0
         && request.resource.data.platformFeePercent is number
-        && request.resource.data.platformFeePercent >= 0
-        && request.resource.data.platformFeePercent <= 100
+        && request.resource.data.platformFeePercent == 20
+        && request.resource.data.platformFeeAmount == request.resource.data.total * 20 / 100
+        && request.resource.data.freelancerAmount
+          == request.resource.data.total - request.resource.data.platformFeeAmount
         && request.resource.data.reviewDays == 15
         && request.resource.data.escrow is map
         && request.resource.data.escrow.status == "held"
+        && request.resource.data.escrow.amount == request.resource.data.total
+        && request.resource.data.escrow.freelancerAmount == request.resource.data.freelancerAmount
+        && request.resource.data.escrow.platformFeeAmount == request.resource.data.platformFeeAmount
         && request.resource.data.escrow.releaseScope == "single_order"
-        && request.resource.data.payment.status == "received_by_platform"
+        && request.resource.data.payment.status == "sandbox_confirmed"
+        && request.resource.data.payment.method == "sandbox_test"
+        && request.resource.data.payment.mode == "sandbox"
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
     }
@@ -330,10 +344,17 @@ service cloud.firestore {
       allow read: if true;
       allow create: if signedIn()
         && request.auth.uid == userId
-        && request.resource.data.keys().hasOnly(["name", "accountType", "avatar"])
+        && request.resource.data.keys().hasOnly([
+          "name", "accountType", "avatar", "status", "specialty"
+        ])
         && request.resource.data.accountType in ["buyer", "freelancer"]
         && request.resource.data.name == userAfter(userId).name
         && request.resource.data.accountType == userAfter(userId).accountType
+        && request.resource.data.status == userAfter(userId).status
+        && (
+          !request.resource.data.keys().hasAny(["specialty"])
+          || request.resource.data.specialty == userAfter(userId).specialty
+        )
         && (
           !request.resource.data.keys().hasAny(["avatar"])
           || (
@@ -345,10 +366,17 @@ service cloud.firestore {
         || (
           activeUser()
           && request.auth.uid == userId
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "avatar"])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "avatar", "specialty"])
           && request.resource.data.name is string
           && request.resource.data.name.size() > 0
           && request.resource.data.name.size() <= 80
+          && (
+            !request.resource.data.keys().hasAny(["specialty"])
+            || (
+              request.resource.data.specialty is string
+              && request.resource.data.specialty.size() <= 60
+            )
+          )
           && (
             !request.resource.data.keys().hasAny(["avatar"])
             || (
@@ -456,7 +484,30 @@ service cloud.firestore {
         || resource.data.status == "published"
         || (activeUser() && resource.data.ownerUid == request.auth.uid);
       allow create: if isAccountType("freelancer")
+        && request.resource.data.keys().hasOnly([
+          "ownerUid", "ownerName", "title", "category", "description", "price",
+          "deliveryDays", "revisions", "keywords", "status", "createdAt", "updatedAt"
+        ])
         && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerName is string
+        && request.resource.data.ownerName.size() > 0
+        && request.resource.data.ownerName.size() <= 100
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 5
+        && request.resource.data.title.size() <= 100
+        && request.resource.data.description is string
+        && request.resource.data.description.size() >= 20
+        && request.resource.data.description.size() <= 1000
+        && request.resource.data.price is number
+        && request.resource.data.price >= 1000
+        && request.resource.data.deliveryDays is int
+        && request.resource.data.deliveryDays >= 1
+        && request.resource.data.deliveryDays <= 90
+        && request.resource.data.revisions is int
+        && request.resource.data.revisions >= 0
+        && request.resource.data.revisions <= 20
+        && request.resource.data.keywords is list
+        && request.resource.data.keywords.size() <= 12
         && request.resource.data.status == "draft"
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
@@ -630,6 +681,16 @@ service cloud.firestore {
       allow create: if isAdmin()
         || (
           activeUser()
+          && request.resource.data.relatedOrderId is string
+          && request.resource.data.relatedOrderId.size() > 0
+          && request.auth.uid in [
+            getAfter(/databases/$(database)/documents/orders/$(request.resource.data.relatedOrderId)).data.buyerUid,
+            getAfter(/databases/$(database)/documents/orders/$(request.resource.data.relatedOrderId)).data.freelancerUid
+          ]
+          && userId in [
+            getAfter(/databases/$(database)/documents/orders/$(request.resource.data.relatedOrderId)).data.buyerUid,
+            getAfter(/databases/$(database)/documents/orders/$(request.resource.data.relatedOrderId)).data.freelancerUid
+          ]
           && request.resource.data.keys().hasOnly([
             "title", "body", "relatedOrderId", "read", "createdAt"
           ])

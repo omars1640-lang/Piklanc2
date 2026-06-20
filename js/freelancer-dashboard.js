@@ -16,7 +16,7 @@ const serviceStatus = {
   draft: ["مسودة", "warning"], pending: ["قيد المراجعة", "neutral"],
   published: ["منشورة", "success"], paused: ["متوقفة", "neutral"], rejected: ["مرفوضة", "danger"]
 };
-const orderStatus = { pending: "بانتظار التأكيد", funded: "المبلغ محجوز لدى المنصة", active: "قيد التنفيذ", delivered: "بانتظار مراجعة العميل", completed: "مكتمل", disputed: "نزاع مفتوح", cancelled: "ملغي", ...orderStatusLabels };
+const orderStatus = { pending: "بانتظار التأكيد", funded: "طلب تجريبي جاهز", active: "قيد التنفيذ", delivered: "بانتظار مراجعة العميل", completed: "مكتمل", disputed: "نزاع مفتوح", cancelled: "ملغي", ...orderStatusLabels };
 const state = {
   user: null, profile: null, services: [], orders: [], notifications: [],
   avatarFile: null, avatarRemoved: false, avatarPreviewUrl: ""
@@ -72,7 +72,11 @@ function serviceRow(service) {
   const row = document.createElement("tr");
   const info = document.createElement("div");
   info.className = "table-service";
-  info.innerHTML = `<strong>${service.title || "خدمة بدون عنوان"}</strong><small>${service.category || "غير مصنفة"}</small>`;
+  const title = document.createElement("strong");
+  title.textContent = service.title || "خدمة بدون عنوان";
+  const category = document.createElement("small");
+  category.textContent = service.category || "غير مصنفة";
+  info.append(title, category);
   const actions = document.createElement("div");
   actions.className = "table-actions";
   if (["draft", "rejected"].includes(service.status)) {
@@ -99,7 +103,26 @@ function serviceRow(service) {
 function overviewServiceCard(service) {
   const row = document.createElement("div");
   row.className = "project-row";
-  row.innerHTML = `<div class="project-title"><span class="project-thumb">${(service.category || "خ").charAt(0)}</span><div><strong>${service.title || "خدمة بدون عنوان"}</strong><small>${service.category || "غير مصنفة"} · ${formatMoney(service.price)} ل.س</small></div></div><div class="project-meta"><strong>${service.deliveryDays || 2} أيام</strong><small>مدة التسليم</small></div>`;
+  const project = document.createElement("div");
+  project.className = "project-title";
+  const thumb = document.createElement("span");
+  thumb.className = "project-thumb";
+  thumb.textContent = (service.category || "خ").charAt(0);
+  const copy = document.createElement("div");
+  const title = document.createElement("strong");
+  title.textContent = service.title || "خدمة بدون عنوان";
+  const detail = document.createElement("small");
+  detail.textContent = `${service.category || "غير مصنفة"} · ${formatMoney(service.price)} ل.س`;
+  copy.append(title, detail);
+  project.append(thumb, copy);
+  const meta = document.createElement("div");
+  meta.className = "project-meta";
+  const duration = document.createElement("strong");
+  duration.textContent = `${service.deliveryDays || 2} أيام`;
+  const label = document.createElement("small");
+  label.textContent = "مدة التسليم";
+  meta.append(duration, label);
+  row.append(project, meta);
   row.appendChild(statusPill(service.status));
   return row;
 }
@@ -128,6 +151,15 @@ function renderOrders() {
     const row = document.createElement("tr");
     const actions = document.createElement("div");
     actions.className = "table-actions";
+    const messages = document.createElement("a");
+    messages.className = "table-button";
+    messages.textContent = "المحادثة";
+    messages.href = `messages.html?${new URLSearchParams({
+      withUid: order.buyerUid || "", serviceId: order.serviceId || order.id,
+      serviceTitle: order.serviceTitle || "طلب خدمة", serviceImage: order.serviceImage || "",
+      servicePrice: String(order.total || 0), sellerUid: order.freelancerUid || state.user.uid
+    })}`;
+    actions.appendChild(messages);
     if (["funded", "active"].includes(order.status)) {
       const deliver = document.createElement("button");
       deliver.type = "button";
@@ -163,7 +195,17 @@ function renderNotifications() {
   const rows = state.notifications.map(item => {
     const row = document.createElement("article");
     row.className = `notification-item ${item.read ? "" : "unread"}`;
-    row.innerHTML = `<span>♧</span><div><strong>${item.title || "إشعار جديد"}</strong><small>${item.body || ""}</small></div><time>${formatDate(item.createdAt)}</time>`;
+    const icon = document.createElement("span");
+    icon.textContent = "♧";
+    const copy = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = item.title || "إشعار جديد";
+    const body = document.createElement("small");
+    body.textContent = item.body || "";
+    copy.append(title, body);
+    const time = document.createElement("time");
+    time.textContent = formatDate(item.createdAt);
+    row.append(icon, copy, time);
     if (!item.read) {
       const control = document.createElement("button");
       control.type = "button";
@@ -372,7 +414,8 @@ async function saveProfile(event) {
     batch.set(doc(db, "publicProfiles", state.user.uid), {
       name: updates.name,
       accountType: "freelancer",
-      avatar
+      avatar,
+      specialty: updates.specialty
     }, { merge: true });
     await batch.commit();
     state.profile = { ...state.profile, ...updates, avatar };
