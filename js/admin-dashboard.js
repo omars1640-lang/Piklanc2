@@ -797,6 +797,12 @@ async function executeDecision(event) {
   try {
     const batch = writeBatch(db);
     batch.update(doc(db, "users", decision.user.id), updates);
+    batch.set(doc(db, "publicProfiles", decision.user.id), {
+      name: decision.user.name || "مستخدم PikLance",
+      accountType: decision.user.accountType,
+      status: updates.status,
+      ...(decision.user.specialty ? { specialty: decision.user.specialty } : {})
+    }, { merge: true });
     batch.set(doc(collection(db, "adminAuditLogs")), auditData(decision.action, decision.user, reason));
     await batch.commit();
     if (decision.action === "reject_user") {

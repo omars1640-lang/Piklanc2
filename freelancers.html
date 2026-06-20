@@ -483,6 +483,10 @@
         display: none;
       }
     }
+    .marketplace-empty { grid-column: 1 / -1; padding: 65px 24px; border: 1px dashed var(--border-color); border-radius: 18px; text-align: center; color: var(--text-secondary); }
+    .marketplace-empty strong { display: block; margin-bottom: 7px; color: var(--text-primary); font-size: 18px; }
+    .marketplace-empty p { margin: 0; }
+    .freelancer-avatar { display: grid; place-items: center; color: #fff; font-size: 36px; font-weight: 800; background-color: var(--primary); background-size: cover; background-position: center; }
   </style>
   <link rel="stylesheet" href="css/site-header.css">
 </head>
@@ -523,10 +527,10 @@
       <div class="container" style="padding:0;">
         <div class="filters-grid">
           <div class="search-box">
-            <input type="text" placeholder="ابحث عن مستقل بالاسم أو المهارة..." id="searchInput" onkeyup="filterFreelancers()">
-            <button onclick="filterFreelancers()">بحث</button>
+            <input type="text" placeholder="ابحث عن مستقل بالاسم أو المهارة..." id="searchInput">
+            <button id="freelancerSearchButton" type="button">بحث</button>
           </div>
-          <select class="filter-select" id="categoryFilter" onchange="filterFreelancers()">
+          <select class="filter-select" id="categoryFilter">
             <option value="all">كل التخصصات</option>
             <option value="design">تصميم</option>
             <option value="code">برمجة</option>
@@ -535,7 +539,7 @@
             <option value="audio">صوتيات</option>
             <option value="video">فيديو</option>
           </select>
-          <select class="filter-select" id="ratingFilter" onchange="filterFreelancers()">
+          <select class="filter-select" id="ratingFilter">
             <option value="all">كل التقييمات</option>
             <option value="4.5">4.5 فأعلى</option>
             <option value="4.0">4.0 فأعلى</option>
@@ -552,7 +556,7 @@
     </div>
 
     <!-- Pagination -->
-    <div class="pagination">
+    <div class="pagination" hidden>
       <a href="#" class="page-link">←</a>
       <a href="#" class="page-link active">1</a>
       <a href="#" class="page-link">2</a>
@@ -590,135 +594,7 @@
     </div>
   </footer>
 
-  <script>
-    // ========== Dark Mode ==========
-    const themeToggle = document.getElementById('themeToggle');
-    const htmlElement = document.documentElement;
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    htmlElement.setAttribute('data-theme', savedTheme);
-    themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-
-    function toggleTheme() {
-      const current = htmlElement.getAttribute('data-theme');
-      const next = current === 'light' ? 'dark' : 'light';
-      htmlElement.setAttribute('data-theme', next);
-      localStorage.setItem('theme', next);
-      themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
-    }
-
-    // ========== بيانات المستقلين التجريبية ==========
-    const freelancersData = [
-      {
-        id: 1,
-        name: "أحمد المصمم",
-        title: "مصمم جرافيك وهوية بصرية",
-        category: "design",
-        avatar: "https://randomuser.me/api/portraits/men/1.jpg",
-        rating: 4.9,
-        completed: 347,
-        skills: ["Adobe Illustrator", "Photoshop", "شعارات", "هوية بصرية"],
-        hourlyRate: "25,000",
-      },
-      {
-        id: 2,
-        name: "سارة المبرمجة",
-        title: "مطورة ويب وتطبيقات",
-        category: "code",
-        avatar: "https://randomuser.me/api/portraits/women/1.jpg",
-        rating: 4.8,
-        completed: 215,
-        skills: ["React", "Node.js", "Laravel", "WordPress"],
-        hourlyRate: "35,000",
-      },
-      {
-        id: 3,
-        name: "خالد الكاتب",
-        title: "كاتب محتوى ومحرر",
-        category: "write",
-        avatar: "https://randomuser.me/api/portraits/men/2.jpg",
-        rating: 4.7,
-        completed: 489,
-        skills: ["كتابة إبداعية", "SEO", "تدقيق لغوي", "سيرة ذاتية"],
-        hourlyRate: "12,000",
-      },
-      {
-        id: 4,
-        name: "ليلى المسوقة",
-        title: "مسوقة رقمية وإعلانات",
-        category: "market",
-        avatar: "https://randomuser.me/api/portraits/women/2.jpg",
-        rating: 4.9,
-        completed: 156,
-        skills: ["Facebook Ads", "Google Ads", "تحليلات", "استراتيجية"],
-        hourlyRate: "20,000",
-      },
-      {
-        id: 5,
-        name: "عماد الصوت",
-        title: "مهندس صوت ومعلق",
-        category: "audio",
-        avatar: "https://randomuser.me/api/portraits/men/3.jpg",
-        rating: 4.6,
-        completed: 92,
-        skills: ["تعليق صوتي", "مكساج", "بودكاست", "إنتاج"],
-        hourlyRate: "18,000",
-      },
-      {
-        id: 6,
-        name: "نور المنتجة",
-        title: "منتجة فيديو ومونتاج",
-        category: "video",
-        avatar: "https://randomuser.me/api/portraits/women/3.jpg",
-        rating: 4.8,
-        completed: 118,
-        skills: ["Premiere Pro", "After Effects", "تصوير", "إخراج"],
-        hourlyRate: "30,000",
-      }
-    ];
-
-    // ========== عرض المستقلين ==========
-    function renderFreelancers(freelancers) {
-      const container = document.getElementById('freelancersContainer');
-      container.innerHTML = freelancers.map(f => `
-        <a href="freelancer-profile.html?id=${f.id}" class="freelancer-card">
-          <div class="freelancer-avatar" style="background-image: url('${f.avatar}');"></div>
-          <h3 class="freelancer-name">${f.name}</h3>
-          <p class="freelancer-title">${f.title}</p>
-          <div class="freelancer-stats">
-            <div><span class="stat-value">⭐ ${f.rating}</span><span class="stat-label">تقييم</span></div>
-            <div><span class="stat-value">${f.completed}</span><span class="stat-label">خدمة منجزة</span></div>
-          </div>
-          <div class="freelancer-skills">
-            ${f.skills.slice(0,3).map(s => `<span class="skill-tag">${s}</span>`).join('')}
-          </div>
-          <span class="btn btn-primary">عرض الملف</span>
-        </a>
-      `).join('');
-    }
-
-    // فلترة المستقلين
-    function filterFreelancers() {
-      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-      const category = document.getElementById('categoryFilter').value;
-      const minRating = parseFloat(document.getElementById('ratingFilter').value) || 0;
-
-      let filtered = freelancersData.filter(f => {
-        if (searchTerm && !f.name.toLowerCase().includes(searchTerm) && !f.skills.some(s => s.toLowerCase().includes(searchTerm))) {
-          return false;
-        }
-        if (category !== 'all' && f.category !== category) return false;
-        if (f.rating < minRating) return false;
-        return true;
-      });
-
-      renderFreelancers(filtered);
-    }
-
-    // عرض أولي
-    document.addEventListener('DOMContentLoaded', () => {
-      renderFreelancers(freelancersData);
-    });
-  </script>
+  <script type="module" src="js/freelancers-marketplace.js"></script>
   <script type="module" src="js/site-header.js"></script>
 </body>
 </html>

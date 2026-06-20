@@ -16,12 +16,26 @@ const state = {
   avatarFile: null, avatarRemoved: false, avatarPreviewUrl: ""
 };
 const sectionTitles = { overview: "نظرة عامة", orders: "طلباتي", favorites: "الخدمات المحفوظة", support: "الدعم والنزاعات", notifications: "الإشعارات", account: "إعدادات الحساب" };
-const statusLabels = { pending: "بانتظار التأكيد", active: "قيد التنفيذ", delivered: "بانتظار الاستلام", completed: "مكتمل", cancelled: "ملغي", disputed: "نزاع مفتوح", funded: "المبلغ محجوز لدى المنصة", open: "مفتوحة", in_progress: "قيد المعالجة", waiting_user: "بانتظار ردك", resolved: "محلولة", closed: "مغلقة", ...orderStatusLabels };
+const statusLabels = { pending: "بانتظار التأكيد", active: "قيد التنفيذ", delivered: "بانتظار الاستلام", completed: "مكتمل", cancelled: "ملغي", disputed: "نزاع مفتوح", funded: "طلب تجريبي جاهز", open: "مفتوحة", in_progress: "قيد المعالجة", waiting_user: "بانتظار ردك", resolved: "محلولة", closed: "مغلقة", ...orderStatusLabels };
 
 const $ = id => document.getElementById(id);
 const toDate = value => value?.toDate?.() || (value ? new Date(value) : null);
 const sortNewest = (items, field = "createdAt") => items.sort((a, b) => (toDate(b[field])?.getTime() || 0) - (toDate(a[field])?.getTime() || 0));
 const formatDate = value => toDate(value)?.toLocaleDateString("ar-SY", { year: "numeric", month: "short", day: "numeric" }) || "-";
+
+function appendSummary(row, iconText, titleText, detailText, dateText) {
+  const icon = document.createElement("span");
+  icon.textContent = iconText;
+  const copy = document.createElement("div");
+  const title = document.createElement("strong");
+  title.textContent = titleText;
+  const detail = document.createElement("small");
+  detail.textContent = detailText;
+  copy.append(title, detail);
+  const time = document.createElement("time");
+  time.textContent = dateText;
+  row.append(icon, copy, time);
+}
 
 function showToast(message) {
   $("dashboardToast").textContent = message;
@@ -60,9 +74,24 @@ function renderOrders() {
     const row = document.createElement("article");
     row.className = "list-row";
     const releaseAt = toDate(order.autoReleaseAt);
-    row.innerHTML = `<span>▣</span><div><strong>${order.serviceTitle || "طلب خدمة"}</strong><small>${statusLabels[order.status] || order.status || "قيد المراجعة"} · ${formatMoney(order.total)} · محجوز لهذا الطلب فقط${releaseAt && order.status === "delivered" ? ` · يتحرر تلقائياً في ${formatDate(releaseAt)}` : ""}</small></div><time>${formatDate(order.createdAt)}</time>`;
+    appendSummary(
+      row,
+      "▣",
+      order.serviceTitle || "طلب خدمة",
+      `${statusLabels[order.status] || order.status || "قيد المراجعة"} · ${formatMoney(order.total)} · رصيد تجريبي لهذا الطلب فقط${releaseAt && order.status === "delivered" ? ` · موعد الإغلاق ${formatDate(releaseAt)}` : ""}`,
+      formatDate(order.createdAt)
+    );
     const actions = document.createElement("div");
     actions.className = "order-actions";
+    const messages = document.createElement("a");
+    messages.className = "secondary-button";
+    messages.textContent = "المحادثة";
+    messages.href = `messages.html?${new URLSearchParams({
+      withUid: order.freelancerUid || "", serviceId: order.serviceId || order.id,
+      serviceTitle: order.serviceTitle || "طلب خدمة", serviceImage: order.serviceImage || "",
+      servicePrice: String(order.total || 0), sellerUid: order.freelancerUid || ""
+    })}`;
+    actions.appendChild(messages);
     if (order.status === "delivered") {
       const approve = document.createElement("button");
       approve.type = "button";
@@ -83,10 +112,10 @@ function renderOrders() {
       dispute.addEventListener("click", () => openOrderDispute(order));
       actions.append(dispute);
     }
-    if (actions.children.length) row.appendChild(actions);
+    row.appendChild(actions);
     return row;
   };
-  $("ordersList").replaceChildren(...(state.orders.length ? state.orders.map(createRow) : [emptyState("▣", "لا توجد طلبات حتى الآن", "ستظهر الطلبات الحقيقية هنا بعد إكمال نظام الشراء والدفع.", "services.html", "استكشف الخدمات")]));
+  $("ordersList").replaceChildren(...(state.orders.length ? state.orders.map(createRow) : [emptyState("▣", "لا توجد طلبات حتى الآن", "أنشئ طلباً تجريبياً لاختبار المراسلة والتسليم قبل تفعيل الدفع.", "services.html", "استكشف الخدمات")]));
   $("overviewOrders").replaceChildren(...state.orders.slice(0, 3).map(createRow));
   $("overviewOrdersEmpty").hidden = state.orders.length > 0;
 }
@@ -97,7 +126,16 @@ function renderFavorites() {
   const cards = state.favorites.map(item => {
     const card = document.createElement("article");
     card.className = "favorite-card";
-    card.innerHTML = `<small>${item.category || "خدمة محفوظة"}</small><h3>${item.title || "خدمة"}</h3><p>${Number(item.price || 0).toLocaleString("ar-SY")} ل.س</p><a href="service-details.html?id=${encodeURIComponent(item.serviceId || item.id)}">عرض الخدمة</a>`;
+    const category = document.createElement("small");
+    category.textContent = item.category || "خدمة محفوظة";
+    const title = document.createElement("h3");
+    title.textContent = item.title || "خدمة";
+    const price = document.createElement("p");
+    price.textContent = `${Number(item.price || 0).toLocaleString("ar-SY")} ل.س`;
+    const link = document.createElement("a");
+    link.href = `service-details.html?id=${encodeURIComponent(item.serviceId || item.id)}`;
+    link.textContent = "عرض الخدمة";
+    card.append(category, title, price, link);
     return card;
   });
   $("favoritesList").replaceChildren(...(cards.length ? cards : [emptyState("♡", "لم تحفظ خدمات بعد", "احفظ الخدمات التي تهمك لتجدها بسرعة هنا.", "services.html", "تصفح الخدمات")]));
@@ -108,7 +146,7 @@ function renderTickets() {
   const rows = state.tickets.map(ticket => {
     const row = document.createElement("article");
     row.className = "list-row";
-    row.innerHTML = `<span>?</span><div><strong>${ticket.subject || "تذكرة دعم"}</strong><small>${statusLabels[ticket.status] || ticket.status} · ${ticket.category === "dispute" ? "نزاع" : "دعم"}</small></div><time>${formatDate(ticket.updatedAt)}</time>`;
+    appendSummary(row, "?", ticket.subject || "تذكرة دعم", `${statusLabels[ticket.status] || ticket.status} · ${ticket.category === "dispute" ? "نزاع" : "دعم"}`, formatDate(ticket.updatedAt));
     return row;
   });
   $("ticketsList").replaceChildren(...(rows.length ? rows : [emptyState("?", "لا توجد تذاكر دعم", "يمكنك إنشاء تذكرة تقنية أو فتح نزاع موثّق من مركز الدعم.", "support.html", "فتح مركز الدعم")]));
@@ -122,7 +160,7 @@ function renderNotifications() {
   const rows = state.notifications.map(item => {
     const row = document.createElement("article");
     row.className = `notification-item ${item.read ? "" : "unread"}`;
-    row.innerHTML = `<span>♧</span><div><strong>${item.title || "إشعار جديد"}</strong><small>${item.body || ""}</small></div><time>${formatDate(item.createdAt)}</time>`;
+    appendSummary(row, "♧", item.title || "إشعار جديد", item.body || "", formatDate(item.createdAt));
     if (!item.read) {
       const button = document.createElement("button");
       button.type = "button";

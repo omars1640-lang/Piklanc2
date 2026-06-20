@@ -1,0 +1,102 @@
+import {
+  collection, getDocs, query, where
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { db } from "./firebase.js";
+
+const categoryAliases = {
+  "تصميم": "design", design: "design", "برمجة": "code", web: "code", code: "code",
+  "كتابة": "write", writing: "write", write: "write", "تسويق": "market",
+  marketing: "market", market: "market", "صوتيات": "audio", audio: "audio",
+  "فيديو": "video", video: "video"
+};
+
+function initial(value) {
+  return (value || "م").trim().charAt(0).toUpperCase();
+}
+
+function serviceCard(service, profile) {
+  const link = document.createElement("a");
+  link.href = `service-details.html?id=${encodeURIComponent(service.id)}`;
+  link.className = "service-card";
+  const image = document.createElement("div");
+  image.className = "service-img";
+  image.style.backgroundImage = `url("${service.imageUrl || "assets/service-placeholder.svg"}")`;
+  const body = document.createElement("div");
+  body.className = "service-body";
+  const category = document.createElement("span");
+  category.className = "service-category";
+  category.textContent = service.category || "خدمات رقمية";
+  const title = document.createElement("h3");
+  title.className = "service-title";
+  title.textContent = service.title;
+  const seller = document.createElement("div");
+  seller.className = "service-seller";
+  const avatar = document.createElement("div");
+  avatar.className = "service-avatar";
+  if (profile?.avatar) avatar.style.backgroundImage = `url("${profile.avatar}")`;
+  else avatar.textContent = initial(profile?.name || service.ownerName);
+  const sellerCopy = document.createElement("div");
+  const name = document.createElement("div");
+  name.className = "service-seller-name";
+  name.textContent = profile?.name || service.ownerName || "مستقل PikLance";
+  const level = document.createElement("div");
+  level.className = "service-seller-level";
+  level.textContent = profile?.rank?.label || "مستقل موثّق";
+  sellerCopy.append(name, level);
+  seller.append(avatar, sellerCopy);
+  const footer = document.createElement("div");
+  footer.className = "service-footer";
+  const price = document.createElement("span");
+  price.className = "service-price";
+  price.textContent = `${Number(service.price || 0).toLocaleString("ar-SY")} ل.س`;
+  const delivery = document.createElement("span");
+  delivery.className = "service-rating";
+  delivery.textContent = `${Number(service.deliveryDays || 1)} يوم`;
+  footer.append(price, delivery);
+  body.append(category, title, seller, footer);
+  link.append(image, body);
+  return link;
+}
+
+async function loadHomeData() {
+  const featured = document.getElementById("homeFeaturedServices");
+  try {
+    const [servicesSnapshot, profilesSnapshot] = await Promise.all([
+      getDocs(query(collection(db, "services"), where("status", "==", "published"))),
+      getDocs(query(collection(db, "publicProfiles"), where("accountType", "==", "freelancer")))
+    ]);
+    const services = servicesSnapshot.docs
+      .map(item => ({ id: item.id, ...item.data() }))
+      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    const publishedOwners = new Set(services.map(service => service.ownerUid));
+    const profiles = new Map(profilesSnapshot.docs
+      .map(item => [item.id, item.data()])
+      .filter(([id, profile]) => profile.status === "active" || publishedOwners.has(id)));
+
+    document.getElementById("homeFreelancersCount").textContent = profiles.size.toLocaleString("ar-SY");
+    document.getElementById("homeServicesCount").textContent = services.length.toLocaleString("ar-SY");
+    const categoryCounts = services.reduce((counts, service) => {
+      const key = categoryAliases[service.category] || "other";
+      counts[key] = (counts[key] || 0) + 1;
+      return counts;
+    }, {});
+    const availableCategories = Object.values(categoryCounts).filter(Boolean).length;
+    document.getElementById("homeCategoriesCount").textContent = availableCategories.toLocaleString("ar-SY");
+    document.getElementById("homeHeroFreelancers").textContent = profiles.size
+      ? `${profiles.size.toLocaleString("ar-SY")} مستقل موثّق وجاهز للعمل`
+      : "كن من أوائل المستقلين على PikLance";
+    document.querySelectorAll("[data-category-count]").forEach(element => {
+      const count = categoryCounts[element.dataset.categoryCount] || 0;
+      element.textContent = `${count.toLocaleString("ar-SY")} خدمة`;
+    });
+
+    const cards = services.slice(0, 3).map(service => serviceCard(service, profiles.get(service.ownerUid)));
+    if (cards.length) featured.replaceChildren(...cards);
+    else featured.innerHTML = '<div class="testimonial-card" style="grid-column:1/-1;text-align:center"><p class="testimonial-text">لا توجد خدمات منشورة بعد. ستظهر أول خدمة هنا فور موافقة الإدارة عليها.</p></div>';
+  } catch (error) {
+    console.error("Unable to load homepage marketplace data", error);
+    featured.innerHTML = '<div class="testimonial-card" style="grid-column:1/-1;text-align:center"><p class="testimonial-text">تعذر تحميل الخدمات حالياً. حاول تحديث الصفحة.</p></div>';
+  }
+}
+
+loadHomeData();

@@ -433,7 +433,8 @@
           createdAt: serverTimestamp()
         }, {
           name,
-          accountType: "buyer"
+          accountType: "buyer",
+          status: "active"
         });
         profilesCreated = true;
         auth.languageCode = "ar";
@@ -630,7 +631,9 @@
           createdAt: serverTimestamp()
         }, {
           name,
-          accountType: "freelancer"
+          accountType: "freelancer",
+          status: "pending",
+          specialty
         });
         profilesCreated = true;
 
