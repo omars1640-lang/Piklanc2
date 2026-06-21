@@ -12,6 +12,26 @@ const actions = document.getElementById("siteHeaderActions");
 const mobileButton = document.getElementById("siteHeaderMobile");
 const themeButton = document.getElementById("themeToggle");
 let stopNotifications = null;
+
+function renderSiteBrand() {
+  const brands = [header?.querySelector(".site-header-brand"), ...document.querySelectorAll(".footer-brand")].filter(Boolean);
+  brands.forEach(brand => {
+    const light = document.createElement("img");
+    light.className = "piklance-brand-logo light-logo";
+    light.src = "assets/brand/logo-light.svg";
+    light.alt = "PikLance";
+    light.width = 150;
+    light.height = 41;
+    const dark = document.createElement("img");
+    dark.className = "piklance-brand-logo dark-logo";
+    dark.src = "assets/brand/logo-dark.svg";
+    dark.alt = "";
+    dark.width = 150;
+    dark.height = 41;
+    dark.setAttribute("aria-hidden", "true");
+    brand.replaceChildren(light, dark);
+  });
+}
 function getSavedTheme() {
   try {
     return localStorage.getItem("theme");
@@ -121,6 +141,7 @@ function renderSignedInActions(user, profile) {
 
 if (header) {
   setTheme(getSavedTheme() || "light");
+  renderSiteBrand();
   normalizeHeaderLinks();
   setActiveLink();
   renderSignedOutActions();

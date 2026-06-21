@@ -1,0 +1,61 @@
+.piklance-brand-logo {
+  display: block;
+  width: 150px;
+  max-width: 100%;
+  height: auto;
+}
+
+.piklance-brand-logo.dark-logo {
+  display: none;
+}
+
+[data-theme="dark"] .piklance-brand-logo.light-logo {
+  display: none;
+}
+
+[data-theme="dark"] .piklance-brand-logo.dark-logo {
+  display: block;
+}
+
+.piklance-brand-logo.force-dark,
+.piklance-brand-logo.force-light {
+  display: block;
+}
+
+.piklance-brand-icon {
+  display: block;
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+.logo .piklance-brand-logo {
+  margin-inline: auto;
+}
+
+.brand .piklance-brand-logo,
+.admin-brand .piklance-brand-logo {
+  width: 138px;
+}
+
+.footer-brand .piklance-brand-logo {
+  width: 132px;
+}
+
+.piklance-loading-icon {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  animation: piklance-logo-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes piklance-logo-pulse {
+  50% { transform: scale(.94); opacity: .78; }
+}
+
+@media (max-width: 640px) {
+  .piklance-brand-logo { width: 126px; }
+  .piklance-brand-icon { width: 36px; height: 36px; }
+  .brand .piklance-brand-logo,
+  .admin-brand .piklance-brand-logo { width: 112px; }
+}

@@ -72,6 +72,10 @@ footer small,
   white-space: nowrap;
 }
 
+.site-header-brand .piklance-brand-logo {
+  width: 146px;
+}
+
 .site-header-brand-mark {
   width: 36px;
   height: 36px;
