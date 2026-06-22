@@ -18,7 +18,8 @@ const serviceStatus = {
 };
 const orderStatus = { pending: "بانتظار التأكيد", funded: "طلب تجريبي جاهز", active: "قيد التنفيذ", delivered: "بانتظار مراجعة العميل", completed: "مكتمل", disputed: "نزاع مفتوح", cancelled: "ملغي", ...orderStatusLabels };
 const state = {
-  user: null, profile: null, services: [], orders: [], notifications: [],
+  user: null, profile: null, services: [], orders: [], notifications: [], categories: [], portfolio: [],
+  editingServiceId: null,
   avatarFile: null, avatarRemoved: false, avatarPreviewUrl: ""
 };
 const $ = id => document.getElementById(id);
@@ -57,8 +58,42 @@ function showSection(name) {
   closeSidebar();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
-function openServiceModal() { elements.serviceModal.classList.add("open"); elements.serviceModal.setAttribute("aria-hidden", "false"); document.body.style.overflow = "hidden"; setTimeout(() => $("serviceTitle").focus(), 50); }
-function closeServiceModal() { elements.serviceModal.classList.remove("open"); elements.serviceModal.setAttribute("aria-hidden", "true"); document.body.style.overflow = ""; elements.serviceForm.reset(); }
+function populateServiceCategories(selected = "") {
+  const defaults = ["تصميم", "برمجة وتطوير", "كتابة وترجمة", "تسويق رقمي", "صوتيات", "فيديو وأنيميشن", "أعمال", "هندسة", "بيانات", "تعليم واستشارات"];
+  const names = [...new Set([...defaults, ...state.categories.filter(item => item.active !== false).map(item => item.name).filter(Boolean)])];
+  $("serviceCategory").replaceChildren(new Option("اختر الفئة", ""), ...names.map(name => new Option(name, name)));
+  $("serviceCategory").value = selected;
+}
+
+function openServiceModal(service = null) {
+  state.editingServiceId = service?.id || null;
+  elements.serviceForm.reset();
+  populateServiceCategories(service?.category || "");
+  $("serviceModalTitle").textContent = service ? "تعديل الخدمة وإرسالها للمراجعة" : "أضف تفاصيل خدمتك";
+  $("serviceModalDescription").textContent = service
+    ? "بعد حفظ التعديل ستعود الخدمة إلى الإدارة للمراجعة قبل ظهورها للعملاء."
+    : "احفظ الخدمة كمسودة، ثم أرسلها للإدارة عندما تصبح جاهزة.";
+  $("serviceSubmitButton").textContent = service ? "حفظ وإرسال للمراجعة" : "حفظ كمسودة";
+  if (service) {
+    $("serviceTitle").value = service.title || "";
+    $("servicePrice").value = Number(service.price || 0) || "";
+    $("serviceDescription").value = service.description || "";
+    $("serviceDelivery").value = String(service.deliveryDays || 1);
+    $("serviceRevisions").value = String(service.revisions || 0);
+    $("serviceKeywords").value = Array.isArray(service.keywords) ? service.keywords.join("، ") : (service.keywords || "");
+  }
+  elements.serviceModal.classList.add("open");
+  elements.serviceModal.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+  setTimeout(() => $("serviceTitle").focus(), 50);
+}
+function closeServiceModal() {
+  elements.serviceModal.classList.remove("open");
+  elements.serviceModal.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+  elements.serviceForm.reset();
+  state.editingServiceId = null;
+}
 
 function statusPill(statusValue) {
   const [label, className] = serviceStatus[statusValue] || [statusValue || "مسودة", "neutral"];
@@ -79,18 +114,29 @@ function serviceRow(service) {
   info.append(title, category);
   const actions = document.createElement("div");
   actions.className = "table-actions";
+  if (service.status !== "pending") {
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "table-button";
+    edit.textContent = "تعديل";
+    edit.addEventListener("click", () => openServiceModal(service));
+    actions.appendChild(edit);
+  }
   if (["draft", "rejected"].includes(service.status)) {
     const submit = document.createElement("button");
     submit.type = "button";
     submit.className = "table-button primary";
     submit.textContent = "إرسال للمراجعة";
     submit.addEventListener("click", () => submitService(service.id));
+    actions.appendChild(submit);
+  }
+  if (service.status !== "pending") {
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "table-button danger";
     remove.textContent = "حذف";
     remove.addEventListener("click", () => deleteService(service.id));
-    actions.append(submit, remove);
+    actions.appendChild(remove);
   }
   [info, `${formatMoney(service.price)} ل.س`, `${service.deliveryDays || 2} أيام`, statusPill(service.status), actions].forEach(value => {
     const cell = document.createElement("td");
@@ -141,11 +187,15 @@ function renderServices() {
   elements.overviewServicesEmpty.hidden = recent.length > 0;
   $("servicesCount").textContent = state.services.filter(service => service.status === "published").length;
   $("draftServicesCount").textContent = state.services.filter(service => service.status === "draft").length;
-  $("servicesNavCount").textContent = state.services.length;
+  const pendingServices = state.services.filter(service => ["pending", "rejected"].includes(service.status)).length;
+  $("servicesNavCount").textContent = pendingServices;
+  $("servicesNavCount").hidden = pendingServices === 0;
 }
 
 function renderOrders() {
-  $("ordersNavCount").textContent = state.orders.filter(order => !["completed", "cancelled"].includes(order.status)).length;
+  const activeOrders = state.orders.filter(order => !["completed", "cancelled"].includes(order.status)).length;
+  $("ordersNavCount").textContent = activeOrders;
+  $("ordersNavCount").hidden = activeOrders === 0;
   $("completedProjects").textContent = state.orders.filter(order => order.status === "completed").length;
   const rows = state.orders.map(order => {
     const row = document.createElement("tr");
@@ -192,6 +242,7 @@ function renderOrders() {
 function renderNotifications() {
   const unread = state.notifications.filter(item => !item.read).length;
   $("notificationsNavCount").textContent = unread;
+  $("notificationsNavCount").hidden = unread === 0;
   const rows = state.notifications.map(item => {
     const row = document.createElement("article");
     row.className = `notification-item ${item.read ? "" : "unread"}`;
@@ -275,7 +326,9 @@ async function markAllNotificationsRead() {
 }
 
 async function deleteService(id) {
-  if (!confirm("هل تريد حذف هذه المسودة نهائياً؟")) return;
+  if (!confirm("هل تريد حذف هذه الخدمة نهائياً؟ لا يمكن التراجع عن هذا الإجراء.")) return;
+  const service = state.services.find(item => item.id === id);
+  if (service?.imagePath) await deleteObject(storageRef(storage, service.imagePath)).catch(() => {});
   await deleteDoc(doc(db, "services", id));
   state.services = state.services.filter(service => service.id !== id);
   renderServices();
@@ -294,6 +347,7 @@ async function submitService(id) {
 async function handleServiceSubmit(event) {
   event.preventDefault();
   const submit = elements.serviceForm.querySelector('[type="submit"]');
+  const editingServiceId = state.editingServiceId;
   const imageFile = $("serviceImage").files[0];
   if (imageFile && (!["image/jpeg", "image/png", "image/webp"].includes(imageFile.type) || imageFile.size > 5 * 1024 * 1024)) {
     showToast("اختر صورة خدمة بصيغة JPG أو PNG أو WebP وبحجم لا يتجاوز 5MB.");
@@ -301,29 +355,45 @@ async function handleServiceSubmit(event) {
   }
   submit.disabled = true;
   try {
-    const serviceRef = await addDoc(collection(db, "services"), {
+    const data = {
       ownerUid: state.user.uid, ownerName: state.profile.name || state.user.email || "مستقل",
       title: $("serviceTitle").value.trim(), category: $("serviceCategory").value,
       price: Number($("servicePrice").value), description: $("serviceDescription").value.trim(),
       deliveryDays: Number($("serviceDelivery").value), revisions: Number($("serviceRevisions").value),
-      keywords: $("serviceKeywords").value.split(",").map(value => value.trim()).filter(Boolean),
-      status: "draft", createdAt: serverTimestamp(), updatedAt: serverTimestamp()
-    });
-    if (imageFile) {
-      const extension = imageFile.type.split("/")[1].replace("jpeg", "jpg");
-      const path = `service-images/${state.user.uid}/${serviceRef.id}/cover.${extension}`;
-      const imageRef = storageRef(storage, path);
-      await uploadBytes(imageRef, imageFile, { contentType: imageFile.type });
-      const imageUrl = await getDownloadURL(imageRef);
-      await updateDoc(serviceRef, {
-        imageUrl,
-        imagePath: path,
-        updatedAt: serverTimestamp()
-      });
+      keywords: $("serviceKeywords").value.split(/[،,]/).map(value => value.trim()).filter(Boolean),
+      status: editingServiceId ? "pending" : "draft",
+      updatedAt: serverTimestamp()
+    };
+    let serviceRef;
+    if (editingServiceId) {
+      serviceRef = doc(db, "services", editingServiceId);
+      delete data.ownerUid;
+      delete data.ownerName;
+      if (imageFile) {
+        const extension = imageFile.type.split("/")[1].replace("jpeg", "jpg");
+        const path = `service-images/${state.user.uid}/${editingServiceId}/cover.${extension}`;
+        const imageRef = storageRef(storage, path);
+        await uploadBytes(imageRef, imageFile, { contentType: imageFile.type });
+        data.imageUrl = await getDownloadURL(imageRef);
+        data.imagePath = path;
+      }
+      await updateDoc(serviceRef, data);
+      const oldPath = state.services.find(item => item.id === editingServiceId)?.imagePath;
+      if (oldPath && data.imagePath && oldPath !== data.imagePath) await deleteObject(storageRef(storage, oldPath)).catch(() => {});
+    } else {
+      serviceRef = await addDoc(collection(db, "services"), { ...data, createdAt: serverTimestamp() });
+      if (imageFile) {
+        const extension = imageFile.type.split("/")[1].replace("jpeg", "jpg");
+        const path = `service-images/${state.user.uid}/${serviceRef.id}/cover.${extension}`;
+        const imageRef = storageRef(storage, path);
+        await uploadBytes(imageRef, imageFile, { contentType: imageFile.type });
+        const imageUrl = await getDownloadURL(imageRef);
+        await updateDoc(serviceRef, { imageUrl, imagePath: path, updatedAt: serverTimestamp() });
+      }
     }
     closeServiceModal();
     await loadWorkspace();
-    showToast("تم حفظ الخدمة كمسودة في حسابك.");
+    showToast(editingServiceId ? "تم إرسال التعديلات إلى الإدارة للمراجعة." : "تم حفظ الخدمة كمسودة في حسابك.");
   } catch (error) {
     console.error("Service creation failed", error);
     showToast("تعذر حفظ الخدمة. تحقق من الاتصال والصلاحيات.");
@@ -357,10 +427,14 @@ function fillProfile(user, profile) {
   $("profileEmail").value = user.email || "";
   $("profilePhone").value = profile.phone || "";
   $("profileSpecialty").value = profile.specialty || "";
+  $("profileAboutInput").value = profile.about || "";
+  $("profileSkills").value = Array.isArray(profile.skills) ? profile.skills.join("، ") : "";
   $("profileCardSpecialty").textContent = specialtyLabels[profile.specialty] || "مستقل محترف";
-  const progress = Math.max(35, Math.round(([profile.name, profile.phone, profile.specialty, user.email].filter(Boolean).length / 4) * 100));
+  const completionFields = [profile.name, profile.phone, profile.specialty, user.email, profile.about, profile.skills?.length, state.portfolio.length];
+  const progress = Math.round((completionFields.filter(Boolean).length / completionFields.length) * 100);
   $("profileProgressValue").textContent = `${progress}%`;
   $("profileProgressBar").style.width = `${progress}%`;
+  $("profileCompletionCard").hidden = progress === 100;
 }
 
 function renderAvatars(url, name) {
@@ -372,6 +446,7 @@ function renderAvatars(url, name) {
       const image = document.createElement("img");
       image.src = url;
       image.alt = `صورة ${name}`;
+      image.addEventListener("error", () => { target.replaceChildren(document.createTextNode(initial)); });
       target.appendChild(image);
     } else {
       target.textContent = initial;
@@ -403,6 +478,8 @@ async function saveAvatar() {
 async function saveProfile(event) {
   event.preventDefault();
   const updates = { name: $("profileName").value.trim(), phone: $("profilePhone").value.trim(), specialty: $("profileSpecialty").value };
+  const about = $("profileAboutInput").value.trim();
+  const skills = [...new Set($("profileSkills").value.split(/[،,]/).map(value => value.trim()).filter(Boolean))].slice(0, 20);
   if (!updates.name) return;
   const submit = $("saveProfileButton");
   submit.disabled = true;
@@ -414,11 +491,14 @@ async function saveProfile(event) {
     batch.set(doc(db, "publicProfiles", state.user.uid), {
       name: updates.name,
       accountType: "freelancer",
+      status: state.profile.status || "active",
       avatar,
-      specialty: updates.specialty
+      specialty: updates.specialty,
+      about,
+      skills
     }, { merge: true });
     await batch.commit();
-    state.profile = { ...state.profile, ...updates, avatar };
+    state.profile = { ...state.profile, ...updates, avatar, about, skills };
     state.avatarFile = null;
     state.avatarRemoved = false;
     if (state.avatarPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(state.avatarPreviewUrl);
@@ -443,30 +523,118 @@ async function saveProfile(event) {
   }
 }
 
+function portfolioCard(item) {
+  const card = document.createElement("article");
+  card.className = "portfolio-dashboard-card";
+  const image = document.createElement("img");
+  image.src = item.imageUrl || "assets/service-placeholder.svg";
+  image.alt = item.title || "عمل منجز";
+  const copy = document.createElement("div");
+  const title = document.createElement("strong");
+  title.textContent = item.title || "عمل منجز";
+  const category = document.createElement("small");
+  category.textContent = item.category || "مشروع";
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.className = "table-button danger";
+  remove.textContent = "حذف العمل";
+  remove.addEventListener("click", () => deletePortfolioItem(item));
+  copy.append(title, category, remove);
+  card.append(image, copy);
+  return card;
+}
+
+function renderPortfolio() {
+  $("portfolioDashboardGrid").replaceChildren(...state.portfolio.map(portfolioCard));
+  $("portfolioDashboardEmpty").hidden = state.portfolio.length > 0;
+  $("portfolioNavCount").textContent = state.portfolio.length;
+  $("portfolioNavCount").hidden = state.portfolio.length === 0;
+}
+
+async function deletePortfolioItem(item) {
+  if (!confirm(`حذف العمل «${item.title || "بدون عنوان"}»؟`)) return;
+  if (item.imagePath) await deleteObject(storageRef(storage, item.imagePath)).catch(() => {});
+  await deleteDoc(doc(db, "portfolioItems", item.id));
+  state.portfolio = state.portfolio.filter(entry => entry.id !== item.id);
+  renderPortfolio();
+  fillProfile(state.user, state.profile);
+  showToast("تم حذف العمل من معرضك.");
+}
+
+async function handlePortfolioSubmit(event) {
+  event.preventDefault();
+  const file = $("portfolioImage").files[0];
+  if (!file || !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
+    showToast("اختر صورة JPG أو PNG أو WebP بحجم لا يتجاوز 5MB.");
+    return;
+  }
+  const submit = $("portfolioSubmitButton");
+  submit.disabled = true;
+  let itemRef = null;
+  let imagePath = "";
+  try {
+    itemRef = await addDoc(collection(db, "portfolioItems"), {
+      ownerUid: state.user.uid,
+      title: $("portfolioTitle").value.trim(),
+      category: $("portfolioCategory").value.trim(),
+      description: $("portfolioDescription").value.trim(),
+      imageUrl: "",
+      imagePath: "",
+      published: true,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    const extension = file.type.split("/")[1].replace("jpeg", "jpg");
+    imagePath = `portfolio-images/${state.user.uid}/${itemRef.id}/cover.${extension}`;
+    const imageRef = storageRef(storage, imagePath);
+    await uploadBytes(imageRef, file, { contentType: file.type });
+    const imageUrl = await getDownloadURL(imageRef);
+    await updateDoc(itemRef, { imageUrl, imagePath, updatedAt: serverTimestamp() });
+    event.currentTarget.reset();
+    await loadWorkspace();
+    showToast("تم نشر العمل في ملفك الشخصي.");
+  } catch (error) {
+    console.error("Portfolio creation failed", error);
+    if (imagePath) await deleteObject(storageRef(storage, imagePath)).catch(() => {});
+    if (itemRef) await deleteDoc(itemRef).catch(() => {});
+    showToast("تعذر إضافة العمل. تحقق من الصورة والاتصال.");
+  } finally {
+    submit.disabled = false;
+  }
+}
+
 async function loadWorkspace() {
   const uid = state.user.uid;
-  const [servicesSnapshot, ordersSnapshot, notificationsSnapshot] = await Promise.all([
+  const [servicesSnapshot, ordersSnapshot, notificationsSnapshot, categoriesSnapshot, portfolioSnapshot] = await Promise.all([
     getDocs(query(collection(db, "services"), where("ownerUid", "==", uid))),
     getDocs(query(collection(db, "orders"), where("freelancerUid", "==", uid))),
-    getDocs(collection(db, "notifications", uid, "items"))
+    getDocs(collection(db, "notifications", uid, "items")),
+    getDocs(query(collection(db, "serviceCategories"), where("active", "==", true))),
+    getDocs(query(collection(db, "portfolioItems"), where("ownerUid", "==", uid)))
   ]);
   state.services = sortNewest(servicesSnapshot.docs.map(item => ({ id: item.id, ...item.data() })));
   state.orders = sortNewest(ordersSnapshot.docs.map(item => ({ id: item.id, ...item.data() })), "createdAt");
   state.notifications = sortNewest(notificationsSnapshot.docs.map(item => ({ id: item.id, ...item.data() })), "createdAt");
+  state.categories = categoriesSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+  state.portfolio = sortNewest(portfolioSnapshot.docs.map(item => ({ id: item.id, ...item.data() })), "createdAt");
+  populateServiceCategories();
   renderServices();
   renderOrders();
   renderNotifications();
+  renderPortfolio();
+  fillProfile(state.user, state.profile);
 }
 
 function bindEvents() {
   document.querySelectorAll(".side-link[data-section]").forEach(link => link.addEventListener("click", () => showSection(link.dataset.section)));
   document.querySelectorAll("[data-section-target]").forEach(control => control.addEventListener("click", () => showSection(control.dataset.sectionTarget)));
-  document.querySelectorAll("[data-open-service-modal]").forEach(control => control.addEventListener("click", openServiceModal));
+  document.querySelectorAll("[data-open-service-modal]").forEach(control => control.addEventListener("click", () => openServiceModal()));
   document.querySelectorAll("[data-close-modal]").forEach(control => control.addEventListener("click", closeServiceModal));
   elements.mobileMenuButton.addEventListener("click", () => elements.sidebar.classList.contains("open") ? closeSidebar() : openSidebar());
   elements.sidebarOverlay.addEventListener("click", closeSidebar);
   elements.serviceForm.addEventListener("submit", handleServiceSubmit);
   elements.profileForm.addEventListener("submit", saveProfile);
+  $("portfolioForm").addEventListener("submit", handlePortfolioSubmit);
   $("profileAvatarInput").addEventListener("change", event => {
     const file = event.target.files[0];
     if (!file) return;
@@ -514,7 +682,7 @@ onAuthStateChanged(auth, async user => {
       return location.replace("login.html");
     }
     state.user = user;
-    state.profile = { ...profile, avatar: publicSnapshot.exists() ? (publicSnapshot.data().avatar || "") : "" };
+    state.profile = { ...profile, ...(publicSnapshot.exists() ? publicSnapshot.data() : {}) };
     fillProfile(user, state.profile);
     $("publicProfileLink").href = `freelancer-profile.html?uid=${encodeURIComponent(user.uid)}`;
     await migrateLocalServices();

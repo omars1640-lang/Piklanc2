@@ -15,7 +15,7 @@
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   font-family: "Cairo", sans-serif;
-  font-size: 14px;
+  font-size: 16.8px;
 }
 
 footer {
@@ -25,19 +25,19 @@ footer {
 footer h3,
 footer h4,
 footer strong {
-  font-size: 18px;
+  font-size: 21.6px;
   line-height: 1.5;
 }
 
 footer p,
 footer a {
-  font-size: 13px;
+  font-size: 15.6px;
   line-height: 1.9;
 }
 
 footer small,
 .footer-bottom {
-  font-size: 12px;
+  font-size: 14.4px;
   line-height: 1.9;
 }
 
@@ -84,12 +84,12 @@ footer small,
   place-items: center;
   color: #fff;
   background: linear-gradient(135deg, var(--site-header-primary), #9184ef);
-  font-size: 16px;
+  font-size: 19.2px;
   font-weight: 800;
 }
 
 .site-header-brand strong {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 800;
 }
 
@@ -109,7 +109,7 @@ footer small,
   padding: 24px 0 22px;
   color: var(--site-header-muted);
   text-decoration: none;
-  font-size: 12px;
+  font-size: 14.4px;
   font-weight: 700;
   white-space: nowrap;
   transition: color .2s;
@@ -153,7 +153,7 @@ footer small,
   display: grid;
   place-items: center;
   background: var(--site-header-surface);
-  font-size: 17px;
+  font-size: 20.4px;
 }
 
 .site-header-theme:hover {
@@ -171,7 +171,7 @@ footer small,
   justify-content: center;
   gap: 7px;
   text-decoration: none;
-  font-size: 11px;
+  font-size: 13.2px;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -214,7 +214,7 @@ footer small,
   place-items: center;
   color: #fff;
   background: linear-gradient(135deg, var(--site-header-primary), #9184ef);
-  font-size: 11px;
+  font-size: 13.2px;
   font-weight: 800;
 }
 
@@ -235,20 +235,20 @@ footer small,
 .site-header-account-copy strong {
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 10px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
 .site-header-account-copy small {
   color: var(--site-header-muted);
-  font-size: 8px;
+  font-size: 9.6px;
 }
 
 .site-header-logout {
   width: 34px;
   height: 34px;
   border-radius: 8px;
-  font-size: 15px;
+  font-size: 18px;
 }
 
 .site-header-logout:hover {
@@ -261,7 +261,7 @@ footer small,
   width: 40px;
   height: 40px;
   margin-inline-start: auto;
-  font-size: 21px;
+  font-size: 25.2px;
 }
 
 @media (max-width: 960px) {
@@ -325,7 +325,7 @@ footer small,
   .site-header-button {
     min-height: 36px;
     padding: 0 10px;
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .site-header-account-copy,
@@ -338,13 +338,13 @@ footer small,
     min-width: 36px;
     height: 36px;
     padding: 0;
-    font-size: 16px;
+    font-size: 19.2px;
   }
 
   .site-header-mobile {
     width: 36px;
     height: 36px;
-    font-size: 19px;
+    font-size: 22.8px;
   }
 
   .site-header-brand-mark {
@@ -389,7 +389,7 @@ footer small,
   color: #6c5ce7;
 }
 .site-header-notifications { position: relative; }
-.site-header-notifications b { position: absolute; top: -7px; left: -6px; min-width: 18px; padding: 1px 5px; border-radius: 10px; background: #e34c68; color: #fff; font-size: 9px; text-align: center; }
+.site-header-notifications b { position: absolute; top: -7px; left: -6px; min-width: 18px; padding: 1px 5px; border-radius: 10px; background: #e34c68; color: #fff; font-size: 10.8px; text-align: center; }
 
 .cookie-consent {
   position: fixed;

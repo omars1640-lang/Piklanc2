@@ -53,7 +53,7 @@
 
       <p class="nav-label">تشغيل المنصة</p>
       <button class="nav-link" type="button" data-section="marketplace"><span>▦</span><b>الخدمات والطلبات</b><i>قريباً</i></button>
-      <button class="nav-link" type="button" data-section="finance"><span>◈</span><b>المدفوعات والعمولات</b><i>قريباً</i></button>
+      <button class="nav-link" type="button" data-section="finance"><span>◈</span><b>المدفوعات والعمولات</b></button>
       <button class="nav-link" type="button" data-section="support"><span>?</span><b>الدعم والنزاعات</b><i>قريباً</i></button>
       <button class="nav-link" type="button" data-section="content"><span>▤</span><b>المحتوى والتصنيفات</b><i>قريباً</i></button>
 
@@ -211,7 +211,25 @@
         <div class="empty-state" id="adminServicesEmpty" hidden><span>▦</span><strong>لا توجد خدمات مطابقة</strong></div>
       </div>
     </section>
-    <section class="admin-section future-section" id="finance-section" data-module="finance"></section>
+    <section class="admin-section" id="finance-section">
+      <div class="section-heading">
+        <div><p>الإدارة المالية</p><h2>المدفوعات والعمولات</h2><span>كل مبلغ معزول حسب الطلب وحالته في نظام الحجز.</span></div>
+      </div>
+      <div class="metrics-grid finance-admin-metrics">
+        <article class="metric-card blue"><span class="metric-icon">◈</span><div><small>إجمالي الطلبات</small><strong id="financeOrdersTotal">0</strong></div></article>
+        <article class="metric-card orange"><span class="metric-icon">⌛</span><div><small>الرصيد المحجوز</small><strong id="financeHeldTotal">0</strong></div></article>
+        <article class="metric-card green"><span class="metric-icon">%</span><div><small>عمولة المنصة</small><strong id="financeFeeTotal">0</strong></div></article>
+        <article class="metric-card purple"><span class="metric-icon">✓</span><div><small>المحرر للمستقلين</small><strong id="financeReleasedTotal">0</strong></div></article>
+      </div>
+      <div class="data-panel">
+        <div class="data-toolbar">
+          <label class="search-field"><span>⌕</span><input id="financeSearch" type="search" placeholder="بحث بالطلب أو العميل أو المستقل"></label>
+          <select id="financeFilter"><option value="all">كل الحالات</option><option value="funded">محجوز</option><option value="active">قيد التنفيذ</option><option value="delivered">قيد المراجعة</option><option value="completed">محرر</option><option value="disputed">نزاع</option></select>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>الطلب</th><th>العميل</th><th>المستقل</th><th>الإجمالي</th><th>العمولة</th><th>صافي المستقل</th><th>الحالة</th></tr></thead><tbody id="financeOrdersTable"></tbody></table></div>
+        <div class="empty-state" id="financeEmpty" hidden><span>◈</span><strong>لا توجد عمليات مالية مطابقة</strong></div>
+      </div>
+    </section>
     <section class="admin-section" id="support-section">
       <div class="section-heading">
         <div><p>تجربة العملاء</p><h2>الدعم والنزاعات</h2><span>صندوق موحّد للتذاكر التقنية والبلاغات والنزاعات المرتبطة بالطلبات.</span></div>

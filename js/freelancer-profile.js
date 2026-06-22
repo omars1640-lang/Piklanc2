@@ -1,7 +1,8 @@
 import {
   collection, doc, getDoc, getDocs, query, where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { db } from "./firebase.js";
+import { getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { db, storage } from "./firebase.js";
 
 const uid = new URLSearchParams(location.search).get("uid") || "";
 const $ = id => document.getElementById(id);
@@ -66,7 +67,43 @@ function serviceCard(service) {
   return card;
 }
 
-function renderProfile(profile, services) {
+function closePortfolioModal() {
+  $("portfolioModal").classList.remove("open");
+  $("portfolioModal").setAttribute("aria-hidden", "true");
+}
+
+function openPortfolioModal(item) {
+  $("modalProjectImage").src = item.imageUrl || "assets/service-placeholder.svg";
+  $("modalProjectImage").alt = item.title || "عمل منجز";
+  $("modalProjectCategory").textContent = item.category || "مشروع";
+  $("modalProjectTitle").textContent = item.title || "عمل منجز";
+  $("modalProjectDescription").textContent = item.description || "";
+  $("modalProjectTags").replaceChildren();
+  $("portfolioModal").classList.add("open");
+  $("portfolioModal").setAttribute("aria-hidden", "false");
+}
+
+function portfolioCard(item, featured = false) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = featured ? "featured-item" : "portfolio-item";
+  const image = document.createElement("img");
+  image.src = item.imageUrl || "assets/service-placeholder.svg";
+  image.alt = item.title || "عمل منجز";
+  image.loading = "lazy";
+  const overlay = document.createElement("span");
+  overlay.className = "work-overlay";
+  const title = document.createElement("strong");
+  title.textContent = item.title || "عمل منجز";
+  const category = document.createElement("span");
+  category.textContent = item.category || "مشروع";
+  overlay.append(title, category);
+  button.append(image, overlay);
+  button.addEventListener("click", () => openPortfolioModal(item));
+  return button;
+}
+
+function renderProfile(profile, services, portfolio) {
   const specialty = specialtyLabels[profile.specialty] || profile.headline || "مستقل للخدمات الرقمية";
   const skills = Array.isArray(profile.skills) && profile.skills.length ? profile.skills : [specialty];
   const completed = Number(profile.completedServices || profile.rank?.completedServices || 0);
@@ -95,14 +132,16 @@ function renderProfile(profile, services) {
   const about = document.createElement("p");
   about.textContent = profile.about || "مستقل موثّق على PikLance. ستظهر هنا نبذة الملف عند إضافتها من إعدادات الحساب.";
   $("profileAbout").replaceChildren(about);
-  $("portfolioCount").textContent = 0;
+  $("portfolioCount").textContent = portfolio.length;
   $("servicesCount").textContent = services.length;
   $("reviewsCount").textContent = Number(profile.reviewsCount || 0);
   $("servicesGrid").replaceChildren(...services.map(serviceCard));
   $("servicesEmpty").hidden = services.length > 0;
 
-  $("featuredEmpty").hidden = false;
-  $("portfolioEmpty").hidden = false;
+  $("featuredPortfolio").replaceChildren(...portfolio.slice(0, 3).map(item => portfolioCard(item, true)));
+  $("portfolioGrid").replaceChildren(...portfolio.map(item => portfolioCard(item)));
+  $("featuredEmpty").hidden = portfolio.length > 0;
+  $("portfolioEmpty").hidden = portfolio.length > 0;
   $("reviewsEmpty").hidden = false;
   $("reviewAverage").textContent = rating.toFixed(1);
   $("reviewStars").textContent = `${"★".repeat(Math.round(rating))}${"☆".repeat(5 - Math.round(rating))}`;
@@ -126,23 +165,31 @@ async function loadProfile() {
     return;
   }
   try {
-    const [profileSnapshot, servicesSnapshot] = await Promise.all([
+    const [profileSnapshot, servicesSnapshot, portfolioSnapshot] = await Promise.all([
       getDoc(doc(db, "publicProfiles", uid)),
-      getDocs(query(collection(db, "services"), where("status", "==", "published")))
+      getDocs(query(collection(db, "services"), where("status", "==", "published"))),
+      getDocs(query(collection(db, "portfolioItems"), where("published", "==", true)))
     ]);
     if (!profileSnapshot.exists()) {
       showNotFound();
       return;
     }
     const profile = profileSnapshot.data();
+    if (!profile.avatar) {
+      profile.avatar = await getDownloadURL(ref(storage, `profile-images/${uid}/avatar`)).catch(() => "");
+    }
     const services = servicesSnapshot.docs
       .map(item => ({ id: item.id, ...item.data() }))
       .filter(item => item.ownerUid === uid);
+    const portfolio = portfolioSnapshot.docs
+      .map(item => ({ id: item.id, ...item.data() }))
+      .filter(item => item.ownerUid === uid)
+      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     if (profile.accountType !== "freelancer" || (profile.status !== "active" && !services.length)) {
       showNotFound();
       return;
     }
-    renderProfile(profile, services);
+    renderProfile(profile, services, portfolio);
     $("pageLoader").classList.add("hidden");
   } catch (error) {
     console.error("Unable to load freelancer profile", error);
@@ -157,6 +204,7 @@ function showTab(tabName) {
 
 document.querySelectorAll(".profile-tabs button").forEach(button => button.addEventListener("click", () => showTab(button.dataset.tab)));
 document.querySelectorAll("[data-tab-target]").forEach(button => button.addEventListener("click", () => showTab(button.dataset.tabTarget)));
+document.querySelectorAll("[data-close-portfolio]").forEach(control => control.addEventListener("click", closePortfolioModal));
 $("shareButton").addEventListener("click", async () => {
   try {
     if (navigator.share) await navigator.share({ title: document.title, url: location.href });
