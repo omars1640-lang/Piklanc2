@@ -98,6 +98,10 @@
         <button class="side-link" type="button" data-section="profile">
           <span class="nav-icon">○</span><span>الملف الشخصي</span>
         </button>
+        <button class="side-link" type="button" data-section="portfolio">
+          <span class="nav-icon">▧</span><span>معرض الأعمال</span>
+          <span class="nav-count" id="portfolioNavCount" hidden>0</span>
+        </button>
         <button class="side-link" type="button" data-section="settings">
           <span class="nav-icon">⚙</span><span>الإعدادات</span>
         </button>
@@ -125,7 +129,7 @@
           </div>
         </div>
 
-        <div class="notice-card">
+        <div class="notice-card" id="profileCompletionCard">
           <div class="notice-icon">✓</div>
           <div class="notice-content">
             <strong>أكمل ملفك لزيادة فرص الحصول على عمل</strong>
@@ -346,12 +350,35 @@
                 </select>
               </label>
             </div>
+            <label>نبذة مهنية<textarea id="profileAboutInput" rows="4" maxlength="1200" placeholder="عرّف العملاء بخبرتك وما الذي يميز عملك"></textarea></label>
+            <label>المهارات<input id="profileSkills" type="text" maxlength="400" placeholder="مثال: تصميم شعارات، Figma، واجهات مستخدم"></label>
+            <small class="service-image-hint">افصل بين المهارات بفاصلة عربية أو إنجليزية، ويمكنك إضافة حتى 20 مهارة.</small>
             <div class="form-actions">
               <span class="form-message" id="profileMessage"></span>
               <button class="button button-primary" id="saveProfileButton" type="submit">حفظ التعديلات</button>
             </div>
           </div>
         </form>
+      </section>
+
+      <section class="dashboard-section" id="section-portfolio">
+        <div class="page-heading"><div><p class="eyebrow">أعمالك السابقة</p><h1>معرض الأعمال</h1><p>أضف مشاريع أنجزتها سابقاً لتظهر للعملاء في ملفك العام.</p></div></div>
+        <div class="portfolio-dashboard-layout">
+          <form class="panel form-panel" id="portfolioForm">
+            <div class="panel-header"><div><p class="panel-kicker">عمل جديد</p><h2>تفاصيل المشروع</h2></div></div>
+            <label>اسم المشروع<input id="portfolioTitle" type="text" minlength="3" maxlength="100" required></label>
+            <label>التصنيف<input id="portfolioCategory" type="text" maxlength="60" placeholder="مثال: تصميم هوية بصرية" required></label>
+            <label>وصف مختصر<textarea id="portfolioDescription" rows="4" maxlength="600" required></textarea></label>
+            <label>صورة العمل<input id="portfolioImage" type="file" accept="image/jpeg,image/png,image/webp" required></label>
+            <small class="service-image-hint">JPG أو PNG أو WebP، بحد أقصى 5MB.</small>
+            <button class="button button-primary" id="portfolioSubmitButton" type="submit">إضافة إلى المعرض</button>
+          </form>
+          <div class="panel">
+            <div class="panel-header"><div><p class="panel-kicker">منشور في ملفك</p><h2>أعمالي</h2></div></div>
+            <div class="portfolio-dashboard-grid" id="portfolioDashboardGrid"></div>
+            <div class="empty-state" id="portfolioDashboardEmpty"><span>▧</span><strong>لا توجد أعمال بعد</strong><p>أضف أول مشروع من النموذج.</p></div>
+          </div>
+        </div>
       </section>
 
       <section class="dashboard-section" id="section-settings">
@@ -371,12 +398,12 @@
       <button class="modal-close" type="button" data-close-modal aria-label="إغلاق">×</button>
       <p class="eyebrow">خدمة جديدة</p>
       <h2 id="serviceModalTitle">أضف تفاصيل خدمتك</h2>
-      <p class="modal-description">ستُحفظ هذه الخدمة كمسودة محلية حتى يتم ربط نظام نشر الخدمات بقاعدة البيانات.</p>
+      <p class="modal-description" id="serviceModalDescription">احفظ الخدمة كمسودة، ثم أرسلها للإدارة عندما تصبح جاهزة.</p>
       <form id="serviceForm">
         <label>عنوان الخدمة<input id="serviceTitle" type="text" minlength="5" maxlength="100" placeholder="مثال: تصميم هوية بصرية متكاملة" required></label>
         <div class="form-grid">
-          <label>الفئة<select id="serviceCategory" required><option value="">اختر الفئة</option><option>تصميم</option><option>برمجة</option><option>كتابة</option><option>تسويق</option><option>صوتيات</option><option>فيديو</option></select></label>
-          <label>السعر<input id="servicePrice" type="number" min="1000" step="1000" placeholder="25000" required></label>
+          <label>الفئة<select id="serviceCategory" required><option value="">اختر الفئة</option></select></label>
+          <label>السعر<input id="servicePrice" type="number" min="1" step="1" placeholder="أدخل السعر المناسب" required></label>
         </div>
         <label>وصف الخدمة<textarea id="serviceDescription" rows="4" minlength="20" maxlength="1000" placeholder="ما الذي سيحصل عليه العميل؟" required></textarea></label>
         <label>صورة الخدمة<input id="serviceImage" type="file" accept="image/jpeg,image/png,image/webp"></label>
@@ -388,7 +415,7 @@
         <label>الكلمات المفتاحية<input id="serviceKeywords" type="text" maxlength="150" placeholder="شعار، هوية، تصميم"></label>
         <div class="modal-actions">
           <button class="button button-secondary" type="button" data-close-modal>إلغاء</button>
-          <button class="button button-primary" type="submit">حفظ كمسودة</button>
+          <button class="button button-primary" id="serviceSubmitButton" type="submit">حفظ كمسودة</button>
         </div>
       </form>
     </div>

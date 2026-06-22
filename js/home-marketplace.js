@@ -1,7 +1,8 @@
 import {
-  collection, getDocs, query, where
+  collection, doc, getDoc, getDocs, query, where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { db } from "./firebase.js";
+import { getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { db, storage } from "./firebase.js";
 
 const categoryAliases = {
   "تصميم": "design", design: "design", "برمجة": "code", web: "code", code: "code",
@@ -61,13 +62,20 @@ function serviceCard(service, profile) {
 async function loadHomeData() {
   const featured = document.getElementById("homeFeaturedServices");
   try {
-    const [servicesSnapshot, profilesSnapshot] = await Promise.all([
+    const [servicesSnapshot, profilesSnapshot, settingsSnapshot] = await Promise.all([
       getDocs(query(collection(db, "services"), where("status", "==", "published"))),
-      getDocs(query(collection(db, "publicProfiles"), where("accountType", "==", "freelancer")))
+      getDocs(query(collection(db, "publicProfiles"), where("accountType", "==", "freelancer"))),
+      getDoc(doc(db, "platformSettings", "general"))
     ]);
-    const services = servicesSnapshot.docs
-      .map(item => ({ id: item.id, ...item.data() }))
-      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    const feePercent = Number(settingsSnapshot.exists() ? settingsSnapshot.data().platformFeePercent : 20);
+    document.getElementById("homePlatformFee").textContent = `${feePercent.toLocaleString("ar-SY")}%`;
+    const services = (await Promise.all(servicesSnapshot.docs.map(async item => {
+      const service = { id: item.id, ...item.data() };
+      if (!service.imageUrl && service.imagePath) {
+        service.imageUrl = await getDownloadURL(ref(storage, service.imagePath)).catch(() => "");
+      }
+      return service;
+    }))).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     const publishedOwners = new Set(services.map(service => service.ownerUid));
     const profiles = new Map(profilesSnapshot.docs
       .map(item => [item.id, item.data()])

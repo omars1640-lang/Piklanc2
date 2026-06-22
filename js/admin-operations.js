@@ -4,7 +4,7 @@ import {
   serverTimestamp, updateDoc, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
-  getDownloadURL, ref as storageRef, uploadBytes
+  deleteObject, getDownloadURL, ref as storageRef, uploadBytes
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { auth, db, storage } from "./firebase.js";
 
@@ -15,6 +15,7 @@ const sortNewest = (items, field = "updatedAt") => items.sort((a, b) => (toDate(
 const formatDate = value => toDate(value)?.toLocaleDateString("ar-SY", { year: "numeric", month: "short", day: "numeric" }) || "-";
 const serviceLabels = { draft: "مسودة", pending: "قيد المراجعة", published: "منشورة", paused: "متوقفة", rejected: "مرفوضة" };
 const ticketLabels = { open: "مفتوحة", in_progress: "قيد المعالجة", waiting_user: "بانتظار المستخدم", resolved: "محلولة", closed: "مغلقة" };
+const orderLabels = { funded: "محجوز", active: "قيد التنفيذ", delivered: "قيد المراجعة", completed: "محرر", disputed: "نزاع", cancelled: "ملغي" };
 const categoryLabels = { technical: "تقنية", account: "الحساب", payment: "الدفع", dispute: "نزاع", report: "بلاغ", general: "عام" };
 
 function toast(message) {
@@ -96,7 +97,7 @@ function buildAdminNotifications() {
   const pendingServices = state.services.filter(service => service.status === "pending");
   const activeTickets = state.tickets.filter(ticket => !["resolved", "closed"].includes(ticket.status));
   const disputes = state.tickets.filter(ticket => ticket.category === "dispute" && !["resolved", "closed"].includes(ticket.status));
-  const financeOrders = state.orders.filter(order => ["funded", "delivered", "disputed"].includes(order.status));
+  const financeOrders = state.orders.filter(order => ["funded", "active", "delivered", "disputed"].includes(order.status));
   const draftArticles = state.articles.filter(article => article.status === "draft");
 
   updateNavBadge("verifications", state.verificationCount);
@@ -222,6 +223,7 @@ function openServicePreview(id) {
       })
     );
   }
+  actions.appendChild(actionButton("حذف الخدمة", "danger-button", () => deleteServiceAdmin(service)));
 
   $("servicePreviewModal").classList.add("open");
   $("servicePreviewModal").setAttribute("aria-hidden", "false");
@@ -246,6 +248,7 @@ function renderServices() {
         actionButton("رفض", "table-button reject", () => reviewService(service.id, false))
       );
     }
+    actions.append(actionButton("حذف", "table-button reject", () => deleteServiceAdmin(service)));
     [service.title || "خدمة", service.ownerName || "-", `${Number(service.price || 0).toLocaleString("ar-SY")} ل.س`, serviceLabels[service.status] || service.status, formatDate(service.updatedAt), actions].forEach(value => {
       const cell = document.createElement("td");
       cell.append(value instanceof Node ? value : document.createTextNode(value));
@@ -282,6 +285,18 @@ async function reviewService(id, approved) {
   await loadOperations();
 }
 
+async function deleteServiceAdmin(service) {
+  if (!confirm(`حذف خدمة «${service.title || "بدون عنوان"}» نهائياً؟`)) return;
+  if (service.imagePath) await deleteObject(storageRef(storage, service.imagePath)).catch(() => {});
+  const batch = writeBatch(db);
+  batch.delete(doc(db, "services", service.id));
+  batch.set(doc(collection(db, "adminAuditLogs")), auditData("delete_service", service, "admin_delete"));
+  await batch.commit();
+  closeServicePreview();
+  toast("تم حذف الخدمة.");
+  await loadOperations();
+}
+
 function renderTickets() {
   const term = $("ticketAdminSearch").value.trim().toLowerCase();
   const filter = $("ticketAdminFilter").value;
@@ -306,6 +321,37 @@ function renderTickets() {
   });
   $("adminTicketsTable").replaceChildren(...rows);
   $("adminTicketsEmpty").hidden = rows.length > 0;
+}
+
+function renderFinance() {
+  const term = $("financeSearch").value.trim().toLowerCase();
+  const filter = $("financeFilter").value;
+  const orders = state.orders.filter(order => {
+    const haystack = `${order.id} ${order.serviceTitle || ""} ${order.buyerName || ""} ${order.freelancerName || ""}`.toLowerCase();
+    return (!term || haystack.includes(term)) && (filter === "all" || order.status === filter);
+  });
+  const held = state.orders.filter(order => ["funded", "active", "delivered", "disputed"].includes(order.status));
+  const completed = state.orders.filter(order => order.status === "completed");
+  $("financeOrdersTotal").textContent = state.orders.length;
+  $("financeHeldTotal").textContent = `${held.reduce((sum, order) => sum + Number(order.total || 0), 0).toLocaleString("ar-SY")} ل.س`;
+  $("financeFeeTotal").textContent = `${completed.reduce((sum, order) => sum + Number(order.platformFeeAmount || 0), 0).toLocaleString("ar-SY")} ل.س`;
+  $("financeReleasedTotal").textContent = `${completed.reduce((sum, order) => sum + Number(order.freelancerAmount || 0), 0).toLocaleString("ar-SY")} ل.س`;
+  const rows = orders.map(order => {
+    const row = document.createElement("tr");
+    const values = [
+      order.serviceTitle || `#${order.id.slice(0, 8)}`,
+      order.buyerName || "-",
+      order.freelancerName || "-",
+      `${Number(order.total || 0).toLocaleString("ar-SY")} ل.س`,
+      `${Number(order.platformFeeAmount || 0).toLocaleString("ar-SY")} ل.س`,
+      `${Number(order.freelancerAmount || 0).toLocaleString("ar-SY")} ل.س`,
+      orderLabels[order.status] || order.status || "-"
+    ];
+    values.forEach(value => { const cell = document.createElement("td"); cell.textContent = value; row.appendChild(cell); });
+    return row;
+  });
+  $("financeOrdersTable").replaceChildren(...rows);
+  $("financeEmpty").hidden = rows.length > 0;
 }
 
 function ticketMessage(reply) {
@@ -361,12 +407,14 @@ async function saveTicket(event) {
       text: reply, createdAt: serverTimestamp()
     });
   }
-  batch.set(doc(collection(db, "notifications", ticket.requesterUid, "items")), notificationData(
-    reply ? "رد جديد من فريق الدعم" : "تم تحديث حالة تذكرتك",
-    reply || `أصبحت حالة تذكرتك: ${ticketLabels[status]}`,
-    "support.html",
-    "support_update"
-  ));
+  if (ticket.requesterUid) {
+    batch.set(doc(collection(db, "notifications", ticket.requesterUid, "items")), notificationData(
+      reply ? "رد جديد من فريق الدعم" : "تم تحديث حالة تذكرتك",
+      reply || `أصبحت حالة تذكرتك: ${ticketLabels[status]}`,
+      "support.html",
+      "support_update"
+    ));
+  }
   batch.set(doc(collection(db, "adminAuditLogs")), auditData(reply ? "reply_ticket" : "update_ticket", ticket, `${status}${reply ? `: ${reply.slice(0, 300)}` : ""}`));
   await batch.commit();
   closeTicket();
@@ -616,6 +664,7 @@ async function loadOperations() {
   state.categories = categories.docs.map(item => ({ id: item.id, ...item.data() })).sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
   renderServices();
   renderTickets();
+  renderFinance();
   renderContent();
   renderAdminNotifications();
 }
@@ -625,6 +674,8 @@ $("serviceAdminSearch").addEventListener("input", renderServices);
 $("serviceAdminFilter").addEventListener("change", renderServices);
 $("ticketAdminSearch").addEventListener("input", renderTickets);
 $("ticketAdminFilter").addEventListener("change", renderTickets);
+$("financeSearch").addEventListener("input", renderFinance);
+$("financeFilter").addEventListener("change", renderFinance);
 $("ticketAdminForm").addEventListener("submit", saveTicket);
 document.querySelectorAll("[data-close-ticket-admin]").forEach(control => control.addEventListener("click", closeTicket));
 $("ticketAdminModal").addEventListener("click", event => { if (event.target === $("ticketAdminModal")) closeTicket(); });

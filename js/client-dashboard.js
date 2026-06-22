@@ -286,6 +286,7 @@ async function saveAccount(event) {
     batch.set(doc(db, "publicProfiles", state.user.uid), {
       name: updates.name,
       accountType: "buyer",
+      status: state.profile.status || "active",
       avatar
     }, { merge: true });
     await batch.commit();
@@ -380,7 +381,7 @@ onAuthStateChanged(auth, async user => {
     }
     const publicSnapshot = await getDoc(doc(db, "publicProfiles", user.uid));
     state.user = user;
-    state.profile = { ...profile, avatar: publicSnapshot.exists() ? (publicSnapshot.data().avatar || "") : "" };
+    state.profile = { ...profile, ...(publicSnapshot.exists() ? publicSnapshot.data() : {}) };
     renderProfile();
     await loadWorkspace();
     showSection(sectionTitles[location.hash.slice(1)] ? location.hash.slice(1) : "overview");

@@ -1,9 +1,9 @@
 import {
-  Timestamp, collection, doc, serverTimestamp, writeBatch
+  Timestamp, collection, doc, getDoc, serverTimestamp, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 export const ESCROW_REVIEW_DAYS = 15;
-export const PLATFORM_FEE_PERCENT = 20;
+export const DEFAULT_PLATFORM_FEE_PERCENT = 20;
 
 export const orderStatusLabels = {
   funded: "طلب تجريبي جاهز للتنفيذ",
@@ -18,12 +18,13 @@ export function formatMoney(value) {
   return `${Number(value || 0).toLocaleString("ar-SY")} ل.س`;
 }
 
-export function calculateEscrow(total) {
+export function calculateEscrow(total, feePercent = DEFAULT_PLATFORM_FEE_PERCENT) {
   const amount = Number(total || 0);
-  const platformFeeAmount = Math.round(amount * PLATFORM_FEE_PERCENT / 100);
+  const normalizedFee = Math.min(100, Math.max(0, Number(feePercent ?? DEFAULT_PLATFORM_FEE_PERCENT)));
+  const platformFeeAmount = amount * normalizedFee / 100;
   return {
     amount,
-    platformFeePercent: PLATFORM_FEE_PERCENT,
+    platformFeePercent: normalizedFee,
     platformFeeAmount,
     freelancerAmount: Math.max(0, amount - platformFeeAmount),
     currency: "SYP"
@@ -62,7 +63,11 @@ export async function createEscrowOrder(db, { user, buyerName, service, packageI
   const total = Number(packageInfo.price || service.price || 0);
   if (!total || total < 1) throw new Error("invalid-total");
 
-  const escrow = calculateEscrow(total);
+  const settingsSnapshot = await getDoc(doc(db, "platformSettings", "general"));
+  const feePercent = settingsSnapshot.exists()
+    ? settingsSnapshot.data().platformFeePercent
+    : DEFAULT_PLATFORM_FEE_PERCENT;
+  const escrow = calculateEscrow(total, feePercent);
   const orderRef = doc(collection(db, "orders"));
   const batch = writeBatch(db);
 

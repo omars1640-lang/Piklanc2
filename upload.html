@@ -285,7 +285,7 @@
         <div class="form-group">
           <label>السعر <span class="required">*</span></label>
           <div class="price-input-wrapper">
-            <input type="number" id="servicePrice" placeholder="أدخل السعر" min="1000">
+            <input type="number" id="servicePrice" placeholder="أدخل السعر" min="1" step="1">
             <span class="price-currency">ل.س</span>
           </div>
         </div>
@@ -476,7 +476,7 @@
         alert('يرجى ملء جميع الحقول المطلوبة');
         return;
       }
-      alert('نشر الخدمات غير مربوط بقاعدة البيانات بعد. لم يتم نشر الخدمة.');
+      window.location.href = 'freelancer-dashboard.html#projects';
     }
     function closeModal() {
       document.getElementById('successModal').classList.remove('active');

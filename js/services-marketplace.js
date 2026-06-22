@@ -1,7 +1,8 @@
 import {
   collection, getDocs, query, where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { db } from "./firebase.js";
+import { getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { db, storage } from "./firebase.js";
 
 const categoryAliases = {
   design: "تصميم", code: "برمجة", web: "برمجة", write: "كتابة",
@@ -108,7 +109,13 @@ function applyFilters() {
 async function loadServices() {
   try {
     const snapshot = await getDocs(query(collection(db, "services"), where("status", "==", "published")));
-    const services = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    const services = await Promise.all(snapshot.docs.map(async item => {
+      const service = { id: item.id, ...item.data() };
+      if (!service.imageUrl && service.imagePath) {
+        service.imageUrl = await getDownloadURL(ref(storage, service.imagePath)).catch(() => "");
+      }
+      return service;
+    }));
     const profileIds = [...new Set(services.map(item => item.ownerUid).filter(Boolean))];
     const profiles = new Map();
     if (profileIds.length) {

@@ -119,7 +119,7 @@ service cloud.firestore {
           && data.context.title.size() > 0
           && data.context.title.size() <= 140
           && data.context.image is string
-          && data.context.image.size() <= 600
+           && data.context.image.size() <= 1200
           && data.context.price is number
           && data.context.price >= 0
           && data.context.sellerUid in data.participantUids
@@ -151,6 +151,12 @@ service cloud.firestore {
         && request.auth.uid in [data.buyerUid, data.freelancerUid];
     }
 
+    function currentPlatformFeePercent() {
+      return exists(/databases/$(database)/documents/platformSettings/general)
+        ? get(/databases/$(database)/documents/platformSettings/general).data.platformFeePercent
+        : 20;
+    }
+
     function validOrderCreate() {
       let listedService = get(
         /databases/$(database)/documents/services/$(request.resource.data.serviceId)
@@ -178,8 +184,9 @@ service cloud.firestore {
         && request.resource.data.platformFeeAmount is number
         && request.resource.data.platformFeeAmount >= 0
         && request.resource.data.platformFeePercent is number
-        && request.resource.data.platformFeePercent == 20
-        && request.resource.data.platformFeeAmount == request.resource.data.total * 20 / 100
+        && request.resource.data.platformFeePercent == currentPlatformFeePercent()
+        && request.resource.data.platformFeeAmount
+          == request.resource.data.total * currentPlatformFeePercent() / 100
         && request.resource.data.freelancerAmount
           == request.resource.data.total - request.resource.data.platformFeeAmount
         && request.resource.data.reviewDays == 15
@@ -342,31 +349,42 @@ service cloud.firestore {
 
     match /publicProfiles/{userId} {
       allow read: if true;
-      allow create: if signedIn()
-        && request.auth.uid == userId
-        && request.resource.data.keys().hasOnly([
-          "name", "accountType", "avatar", "status", "specialty"
-        ])
-        && request.resource.data.accountType in ["buyer", "freelancer"]
-        && request.resource.data.name == userAfter(userId).name
-        && request.resource.data.accountType == userAfter(userId).accountType
-        && request.resource.data.status == userAfter(userId).status
-        && (
-          !request.resource.data.keys().hasAny(["specialty"])
-          || request.resource.data.specialty == userAfter(userId).specialty
-        )
-        && (
-          !request.resource.data.keys().hasAny(["avatar"])
-          || (
-            request.resource.data.avatar is string
-            && request.resource.data.avatar.size() <= 1200
+      allow create: if isAdmin()
+        || (
+          signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.keys().hasOnly([
+            "name", "accountType", "avatar", "status", "specialty", "about", "skills"
+          ])
+          && request.resource.data.accountType in ["buyer", "freelancer"]
+          && request.resource.data.name == userAfter(userId).name
+          && request.resource.data.accountType == userAfter(userId).accountType
+          && request.resource.data.status == userAfter(userId).status
+          && (
+            !request.resource.data.keys().hasAny(["specialty"])
+            || request.resource.data.specialty == userAfter(userId).specialty
+          )
+          && (
+            !request.resource.data.keys().hasAny(["avatar"])
+            || (
+              request.resource.data.avatar is string
+              && request.resource.data.avatar.size() <= 1200
+            )
+          )
+          && (
+            !request.resource.data.keys().hasAny(["about"])
+            || (request.resource.data.about is string && request.resource.data.about.size() <= 1200)
+          )
+          && (
+            !request.resource.data.keys().hasAny(["skills"])
+            || (request.resource.data.skills is list && request.resource.data.skills.size() <= 20)
           )
         );
       allow update: if isAdmin()
         || (
           activeUser()
           && request.auth.uid == userId
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "avatar", "specialty"])
+           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "avatar", "specialty", "about", "skills"])
           && request.resource.data.name is string
           && request.resource.data.name.size() > 0
           && request.resource.data.name.size() <= 80
@@ -377,14 +395,22 @@ service cloud.firestore {
               && request.resource.data.specialty.size() <= 60
             )
           )
-          && (
-            !request.resource.data.keys().hasAny(["avatar"])
+           && (
+             !request.resource.data.keys().hasAny(["avatar"])
             || (
               request.resource.data.avatar is string
               && request.resource.data.avatar.size() <= 1200
-            )
-          )
-        );
+             )
+           )
+           && (
+             !request.resource.data.keys().hasAny(["about"])
+             || (request.resource.data.about is string && request.resource.data.about.size() <= 1200)
+           )
+           && (
+             !request.resource.data.keys().hasAny(["skills"])
+             || (request.resource.data.skills is list && request.resource.data.skills.size() <= 20)
+           )
+         );
       allow delete: if false;
     }
 
@@ -499,7 +525,7 @@ service cloud.firestore {
         && request.resource.data.description.size() >= 20
         && request.resource.data.description.size() <= 1000
         && request.resource.data.price is number
-        && request.resource.data.price >= 1000
+        && request.resource.data.price >= 1
         && request.resource.data.deliveryDays is int
         && request.resource.data.deliveryDays >= 1
         && request.resource.data.deliveryDays <= 90
@@ -537,7 +563,7 @@ service cloud.firestore {
             request.resource.data.status == "draft"
             || (
               request.resource.data.status == "pending"
-              && resource.data.status in ["draft", "rejected"]
+              && resource.data.status in ["draft", "rejected", "published", "paused"]
             )
             || (
               request.resource.data.status == "paused"
@@ -550,7 +576,7 @@ service cloud.firestore {
         || (
           isAccountType("freelancer")
           && resource.data.ownerUid == request.auth.uid
-          && resource.data.status in ["draft", "rejected"]
+          && resource.data.status != "pending"
         );
     }
 
@@ -769,6 +795,51 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    match /portfolioItems/{itemId} {
+      allow read: if isAdmin()
+        || resource.data.published == true
+        || (activeUser() && resource.data.ownerUid == request.auth.uid);
+      allow create: if isAccountType("freelancer")
+        && request.resource.data.keys().hasOnly([
+          "ownerUid", "title", "category", "description", "imageUrl", "imagePath",
+          "published", "createdAt", "updatedAt"
+        ])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 3
+        && request.resource.data.title.size() <= 100
+        && request.resource.data.category is string
+        && request.resource.data.category.size() > 0
+        && request.resource.data.category.size() <= 60
+        && request.resource.data.description is string
+        && request.resource.data.description.size() > 0
+        && request.resource.data.description.size() <= 600
+        && request.resource.data.imageUrl == ""
+        && request.resource.data.imagePath == ""
+        && request.resource.data.published == true
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if isAdmin()
+        || (
+          isAccountType("freelancer")
+          && resource.data.ownerUid == request.auth.uid
+          && request.resource.data.ownerUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "title", "category", "description", "imageUrl", "imagePath", "published", "updatedAt"
+          ])
+          && request.resource.data.imageUrl is string
+          && request.resource.data.imageUrl.size() <= 1200
+          && (
+            request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.jpg"
+            || request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.png"
+            || request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.webp"
+          )
+          && request.resource.data.updatedAt == request.time
+        );
+      allow delete: if isAdmin()
+        || (isAccountType("freelancer") && resource.data.ownerUid == request.auth.uid);
+    }
+
     match /serviceCategories/{categoryId} {
       allow read: if isAdmin() || resource.data.active == true;
       allow create, update, delete: if isAdmin();
@@ -791,7 +862,7 @@ service cloud.firestore {
           "activate_user", "update_settings", "update_ticket",
           "reply_ticket", "create_article", "update_article",
           "delete_article", "manage_faq", "manage_category",
-          "approve_service", "reject_service"
+          "approve_service", "reject_service", "delete_service"
         ]
         && request.resource.data.reason is string
         && request.resource.data.reason.size() <= 500

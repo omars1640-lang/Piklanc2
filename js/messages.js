@@ -427,13 +427,17 @@ async function startRequestedConversation() {
   const otherUid = params.get("withUid");
   if (!otherUid || otherUid === auth.currentUser.uid) return null;
 
-  const otherProfileSnapshot = await getDoc(doc(db, "publicProfiles", otherUid));
-  if (!otherProfileSnapshot.exists()) {
+  const [otherProfileSnapshot, currentPublicSnapshot] = await Promise.all([
+    getDoc(doc(db, "publicProfiles", otherUid)),
+    getDoc(doc(db, "publicProfiles", auth.currentUser.uid))
+  ]);
+  if (!otherProfileSnapshot.exists() || !currentPublicSnapshot.exists()) {
     showToast("تعذر العثور على حساب المستقل المطلوب.");
     return null;
   }
 
   const otherProfile = otherProfileSnapshot.data();
+  const currentPublicProfile = currentPublicSnapshot.data();
   const ids = [auth.currentUser.uid, otherUid].sort();
   const serviceId = params.get("serviceId");
   const chatId = `${ids.join("_")}__${safeId(serviceId)}`;
@@ -441,11 +445,11 @@ async function startRequestedConversation() {
   const existing = await getDoc(chatReference);
   if (!existing.exists()) {
     const participantNames = {
-      [auth.currentUser.uid]: currentProfile.name || auth.currentUser.email,
+      [auth.currentUser.uid]: currentPublicProfile.name,
       [otherUid]: otherProfile.name
     };
     const participantTypes = {
-      [auth.currentUser.uid]: currentProfile.accountType,
+      [auth.currentUser.uid]: currentPublicProfile.accountType,
       [otherUid]: otherProfile.accountType
     };
     const unreadCounts = {
@@ -473,7 +477,7 @@ async function startRequestedConversation() {
       data.context = {
         serviceId: safeId(serviceId),
         title: (params.get("serviceTitle") || "خدمة على PikLance").slice(0, 140),
-        image: (params.get("serviceImage") || "").slice(0, 600),
+        image: (params.get("serviceImage") || "").slice(0, 1200),
         price: Number(params.get("servicePrice") || 0),
         sellerUid: contextSellerUid
       };

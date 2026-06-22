@@ -3,7 +3,8 @@ import {
   collection, deleteDoc, doc, getDoc, getDocs, query,
   serverTimestamp, setDoc, where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { auth, db } from "./firebase.js";
+import { getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { auth, db, storage } from "./firebase.js";
 import { createEscrowOrder } from "./escrow.js";
 
 const params = new URLSearchParams(location.search);
@@ -200,6 +201,9 @@ async function loadService() {
       return;
     }
     service = { id: snapshot.id, ...snapshot.data() };
+    if (!service.imageUrl && service.imagePath) {
+      service.imageUrl = await getDownloadURL(ref(storage, service.imagePath)).catch(() => "");
+    }
     sellerUid = service.ownerUid;
     const [profileSnapshot, relatedSnapshot] = await Promise.all([
       getDoc(doc(db, "publicProfiles", sellerUid)),

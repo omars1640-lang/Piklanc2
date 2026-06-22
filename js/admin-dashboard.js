@@ -11,7 +11,7 @@ import {
   serverTimestamp,
   writeBatch
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { deleteObject, getBlob, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { deleteObject, getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { auth, db, storage } from "./firebase.js";
 
 const sectionMeta = {
@@ -434,7 +434,7 @@ async function updateFreelancerRank(user, rankId) {
   try {
     const batch = writeBatch(db);
     batch.update(doc(db, "users", user.id), rankData);
-    batch.update(doc(db, "publicProfiles", user.id), publicRankData);
+    batch.set(doc(db, "publicProfiles", user.id), publicRankData, { merge: true });
     batch.set(doc(collection(db, "adminAuditLogs")), auditData("update_freelancer_rank", user, rank.label));
     await batch.commit();
     showToast("تم تحديث رتبة المستقل.");
@@ -544,17 +544,39 @@ function renderSettings() {
     maintenanceMode: false,
     registrationsEnabled: true,
     freelancerApplicationsEnabled: true,
-    platformFeePercent: 10,
+    platformFeePercent: 20,
     supportEmail: "",
     platformName: "PikLance"
   };
   document.getElementById("maintenanceMode").checked = Boolean(settings.maintenanceMode);
   document.getElementById("registrationsEnabled").checked = settings.registrationsEnabled !== false;
   document.getElementById("freelancerApplicationsEnabled").checked = settings.freelancerApplicationsEnabled !== false;
-  document.getElementById("platformFeePercent").value = Number(settings.platformFeePercent ?? 10);
+  document.getElementById("platformFeePercent").value = Number(settings.platformFeePercent ?? 20);
   document.getElementById("supportEmail").value = settings.supportEmail || "";
   document.getElementById("platformName").value = settings.platformName || "PikLance";
   document.getElementById("settingsStatus").textContent = settings.updatedAt ? `آخر تحديث: ${formatDate(settings.updatedAt, true)}` : "لم يتم إنشاء إعدادات مركزية بعد.";
+}
+
+async function syncAutomaticRanks() {
+  const changes = state.users.filter(user => user.accountType === "freelancer" && user.status === "active" && !user.manualRank).map(user => {
+    const completed = completedOrdersFor(user.id);
+    const rank = automaticRank(completed);
+    const current = user.rank || {};
+    return current.id !== rank.id || Number(current.completedServices || 0) !== completed
+      ? { user, completed, rank }
+      : null;
+  }).filter(Boolean);
+  if (!changes.length) return;
+  for (let offset = 0; offset < changes.length; offset += 200) {
+    const batch = writeBatch(db);
+    changes.slice(offset, offset + 200).forEach(({ user, completed, rank }) => {
+      const rankData = { id: rank.id, label: rank.label, color: rank.color, completedServices: completed, updatedAt: serverTimestamp() };
+      batch.update(doc(db, "users", user.id), { rank: rankData, updatedAt: serverTimestamp() });
+      batch.set(doc(db, "publicProfiles", user.id), { rank: rankData }, { merge: true });
+      user.rank = rankData;
+    });
+    await batch.commit();
+  }
 }
 
 async function loadData() {
@@ -572,6 +594,7 @@ async function loadData() {
     state.chats = chatsSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.audit = auditSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.settings = settingsSnapshot.exists() ? settingsSnapshot.data() : null;
+    await syncAutomaticRanks();
     renderAll();
     document.getElementById("lastRefresh").textContent = `آخر تحديث: ${new Date().toLocaleTimeString("ar-SY", { hour: "2-digit", minute: "2-digit" })}`;
   } catch (error) {
@@ -612,9 +635,9 @@ function identityImage(path, label) {
   wrapper.className = "identity-image";
   wrapper.textContent = path ? "جاري تحميل الصورة..." : "لم تُرفع الصورة";
   if (!path) return wrapper;
-  getBlob(ref(storage, path)).then(blob => {
+  getDownloadURL(ref(storage, path)).then(url => {
     const image = document.createElement("img");
-    image.src = URL.createObjectURL(blob);
+    image.src = url;
     image.alt = label;
     wrapper.replaceChildren(image);
   }).catch(() => {
