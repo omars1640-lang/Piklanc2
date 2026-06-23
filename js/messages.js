@@ -375,10 +375,10 @@ async function markConversationRead(chat) {
 }
 
 function renderAttachment(message) {
-  const attachment = message.attachment;
+  const attachment = message.attachment || {};
   const link = document.createElement("a");
   link.className = "message-attachment";
-  link.href = attachment.url;
+  link.href = attachment.url || "#";
   link.target = "_blank";
   link.rel = "noopener noreferrer";
 
@@ -388,6 +388,7 @@ function renderAttachment(message) {
     image.className = "message-attachment-preview";
     image.src = attachment.url;
     image.alt = attachment.name || "مرفق";
+    image.addEventListener("error", () => image.remove());
     link.appendChild(image);
   }
 
@@ -429,40 +430,44 @@ function renderMessages(snapshot) {
 
   let currentDay = "";
   snapshot.forEach(messageDoc => {
-    const message = messageDoc.data();
-    const date = toDate(message.timestamp) || new Date();
-    const day = date.toDateString();
-    if (day !== currentDay) {
-      currentDay = day;
-      const divider = document.createElement("span");
-      divider.className = "day-divider";
-      divider.textContent = dayLabel(date);
-      elements.stream.appendChild(divider);
+    try {
+      const message = messageDoc.data();
+      const date = toDate(message.timestamp) || new Date();
+      const day = date.toDateString();
+      if (day !== currentDay) {
+        currentDay = day;
+        const divider = document.createElement("span");
+        divider.className = "day-divider";
+        divider.textContent = dayLabel(date);
+        elements.stream.appendChild(divider);
+      }
+
+      const mine = message.senderUid === currentUser.uid;
+      const row = document.createElement("div");
+      row.className = `message-row ${mine ? "mine" : "theirs"}`;
+      const bubble = document.createElement("div");
+      bubble.className = "message-bubble";
+      if (message.attachment) bubble.appendChild(renderAttachment(message));
+      if (message.text) bubble.appendChild(document.createTextNode(message.text));
+
+      const meta = document.createElement("span");
+      meta.className = "message-meta";
+      const time = document.createElement("time");
+      time.textContent = date.toLocaleTimeString("ar-SY", { hour: "2-digit", minute: "2-digit" });
+      meta.appendChild(time);
+      if (mine) {
+        const read = document.createElement("span");
+        const otherUid = otherParticipant(activeChat).uid;
+        read.className = message.readBy?.includes(otherUid) ? "read-state read" : "read-state";
+        read.textContent = message.readBy?.includes(otherUid) ? "تمت القراءة" : "تم الإرسال";
+        meta.appendChild(read);
+      }
+
+      row.append(bubble, meta);
+      elements.stream.appendChild(row);
+    } catch (error) {
+      console.warn("Unable to render one message", messageDoc.id, error);
     }
-
-    const mine = message.senderUid === currentUser.uid;
-    const row = document.createElement("div");
-    row.className = `message-row ${mine ? "mine" : "theirs"}`;
-    const bubble = document.createElement("div");
-    bubble.className = "message-bubble";
-    if (message.attachment?.url) bubble.appendChild(renderAttachment(message));
-    if (message.text) bubble.appendChild(document.createTextNode(message.text));
-
-    const meta = document.createElement("span");
-    meta.className = "message-meta";
-    const time = document.createElement("time");
-    time.textContent = date.toLocaleTimeString("ar-SY", { hour: "2-digit", minute: "2-digit" });
-    meta.appendChild(time);
-    if (mine) {
-      const read = document.createElement("span");
-      const otherUid = otherParticipant(activeChat).uid;
-      read.className = message.readBy?.includes(otherUid) ? "read-state read" : "read-state";
-      read.textContent = message.readBy?.includes(otherUid) ? "تمت القراءة" : "تم الإرسال";
-      meta.appendChild(read);
-    }
-
-    row.append(bubble, meta);
-    elements.stream.appendChild(row);
   });
 
   if (shouldStickToBottom || snapshot.docChanges().some(change => change.type === "added")) {
@@ -568,15 +573,17 @@ async function uploadAttachment(file, chatId, messageId) {
 
 async function updateConversationAfterMessage(message) {
   const otherUid = otherParticipant(activeChat).uid;
-  const currentUnread = Number(activeChat.unreadCounts?.[otherUid] || 0);
+  const freshSnapshot = await getDoc(doc(db, "chats", activeChat.id));
+  const freshChat = freshSnapshot.exists() ? { id: freshSnapshot.id, ...freshSnapshot.data() } : activeChat;
+  const currentUnread = Number(freshChat.unreadCounts?.[otherUid] || 0);
   const unreadCounts = {
-    ...(activeChat.unreadCounts || {}),
+    ...(freshChat.unreadCounts || {}),
     [currentUser.uid]: 0,
     [otherUid]: currentUnread + 1
   };
   await updateDoc(doc(db, "chats", activeChat.id), {
     lastMessage: (message.text || `مرفق: ${message.attachment?.name || "ملف"}`).slice(0, 140),
-    lastMessageType: message.type,
+    lastMessageType: message.type === "mixed" ? "mixed" : "text",
     lastSenderUid: currentUser.uid,
     lastUpdated: serverTimestamp(),
     unreadCounts
