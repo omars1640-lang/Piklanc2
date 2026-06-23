@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { auth, db, storage } from "./firebase.js";
 
-const state = { admin: null, services: [], tickets: [], orders: [], articles: [], faqs: [], categories: [], selectedTicket: null, replies: [], verificationCount: 0, pendingServiceReview: null };
+const state = { admin: null, services: [], tickets: [], orders: [], articles: [], faqs: [], categories: [], selectedTicket: null, replies: [], verificationCount: 0, pendingServiceReview: null, pendingConfirmAction: null };
 const $ = id => document.getElementById(id);
 const toDate = value => value?.toDate?.() || (value ? new Date(value) : null);
 const sortNewest = (items, field = "updatedAt") => items.sort((a, b) => (toDate(b[field])?.getTime() || 0) - (toDate(a[field])?.getTime() || 0));
@@ -42,6 +42,40 @@ function auditData(action, target = {}, reason = "") {
 
 function notificationData(title, body, link, type) {
   return { title, body, link, type, read: false, createdAt: serverTimestamp() };
+}
+
+function openAdminConfirm({ title, message, actionLabel = "تأكيد", onConfirm }) {
+  state.pendingConfirmAction = onConfirm;
+  $("adminConfirmTitle").textContent = title;
+  $("adminConfirmMessage").textContent = message;
+  $("adminConfirmAction").textContent = actionLabel;
+  $("adminConfirmModal").classList.add("open");
+  $("adminConfirmModal").setAttribute("aria-hidden", "false");
+}
+
+function closeAdminConfirm() {
+  state.pendingConfirmAction = null;
+  $("adminConfirmModal").classList.remove("open");
+  $("adminConfirmModal").setAttribute("aria-hidden", "true");
+}
+
+async function runAdminConfirmAction() {
+  const action = state.pendingConfirmAction;
+  if (!action) return;
+  const button = $("adminConfirmAction");
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "جاري التنفيذ...";
+  try {
+    await action();
+    closeAdminConfirm();
+  } catch (error) {
+    console.error("Admin confirmed action failed", error);
+    toast("تعذر تنفيذ الإجراء حالياً. تحقق من الصلاحيات والاتصال.");
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
 }
 
 function actionButton(label, className, handler) {
@@ -328,7 +362,15 @@ async function handleServiceReviewSubmit(event) {
 }
 
 async function deleteServiceAdmin(service) {
-  if (!confirm(`حذف خدمة «${service.title || "بدون عنوان"}» نهائياً؟`)) return;
+  openAdminConfirm({
+    title: "حذف خدمة نهائياً",
+    message: `هل تريد حذف خدمة "${service.title || "بدون عنوان"}"؟ لا يمكن التراجع عن هذا الإجراء.`,
+    actionLabel: "حذف الخدمة",
+    onConfirm: () => deleteServiceAdminConfirmed(service)
+  });
+}
+
+async function deleteServiceAdminConfirmed(service) {
   if (service.imagePath) await deleteObject(storageRef(storage, service.imagePath)).catch(() => {});
   const batch = writeBatch(db);
   batch.delete(doc(db, "services", service.id));
@@ -528,7 +570,15 @@ async function toggleContent(collectionName, item, field, value, action) {
 }
 
 async function removeContent(collectionName, item, action) {
-  if (!confirm(`حذف "${item.title || item.question || item.name}" نهائياً؟`)) return;
+  openAdminConfirm({
+    title: "حذف عنصر محتوى",
+    message: `هل تريد حذف "${item.title || item.question || item.name}" نهائياً؟`,
+    actionLabel: "حذف العنصر",
+    onConfirm: () => removeContentConfirmed(collectionName, item, action)
+  });
+}
+
+async function removeContentConfirmed(collectionName, item, action) {
   const batch = writeBatch(db);
   batch.delete(doc(db, collectionName, item.id));
   batch.set(doc(collection(db, "adminAuditLogs")), auditData(action, item, "delete"));
@@ -538,7 +588,15 @@ async function removeContent(collectionName, item, action) {
 }
 
 async function removeArticle(article) {
-  if (!confirm(`حذف "${article.title}" وتعليقاته وإعجاباته نهائياً؟`)) return;
+  openAdminConfirm({
+    title: "حذف مقال نهائياً",
+    message: `هل تريد حذف "${article.title}" مع تعليقاته وإعجاباته نهائياً؟`,
+    actionLabel: "حذف المقال",
+    onConfirm: () => removeArticleConfirmed(article)
+  });
+}
+
+async function removeArticleConfirmed(article) {
   const [likes, comments] = await Promise.all([
     getDocs(collection(db, "articles", article.id, "likes")),
     getDocs(collection(db, "articles", article.id, "comments"))
@@ -726,6 +784,9 @@ $("servicePreviewModal").addEventListener("click", event => { if (event.target =
 $("serviceReviewForm").addEventListener("submit", handleServiceReviewSubmit);
 document.querySelectorAll("[data-close-service-review]").forEach(control => control.addEventListener("click", closeServiceReviewModal));
 $("serviceReviewModal").addEventListener("click", event => { if (event.target === $("serviceReviewModal")) closeServiceReviewModal(); });
+$("adminConfirmAction").addEventListener("click", runAdminConfirmAction);
+document.querySelectorAll("[data-close-admin-confirm]").forEach(control => control.addEventListener("click", closeAdminConfirm));
+$("adminConfirmModal").addEventListener("click", event => { if (event.target === $("adminConfirmModal")) closeAdminConfirm(); });
 $("articleForm").addEventListener("submit", event => {
   saveArticle(event).catch(error => {
     console.error("Unable to save article", error);

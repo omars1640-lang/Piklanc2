@@ -22,6 +22,7 @@ const state = {
   user: null, profile: null, services: [], orders: [], notifications: [], categories: [], portfolio: [],
   editingServiceId: null,
   pendingDeliveryOrder: null,
+  pendingConfirmAction: null,
   avatarFile: null, avatarRemoved: false, avatarPreviewUrl: ""
 };
 const $ = id => document.getElementById(id);
@@ -323,6 +324,44 @@ function closeDeliveryModal() {
   if (!elements.serviceModal.classList.contains("open")) document.body.style.overflow = "";
 }
 
+function openConfirmModal({ title, message, actionLabel = "تأكيد", danger = false, onConfirm }) {
+  state.pendingConfirmAction = onConfirm;
+  $("confirmModalTitle").textContent = title;
+  $("confirmModalMessage").textContent = message;
+  const button = $("confirmModalAction");
+  button.textContent = actionLabel;
+  button.classList.toggle("danger", danger);
+  $("confirmModal").classList.add("open");
+  $("confirmModal").setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+}
+
+function closeConfirmModal() {
+  state.pendingConfirmAction = null;
+  $("confirmModal").classList.remove("open");
+  $("confirmModal").setAttribute("aria-hidden", "true");
+  if (!elements.serviceModal.classList.contains("open") && !elements.deliveryModal.classList.contains("open")) document.body.style.overflow = "";
+}
+
+async function runConfirmAction() {
+  const action = state.pendingConfirmAction;
+  if (!action) return;
+  const button = $("confirmModalAction");
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "جاري التنفيذ...";
+  try {
+    await action();
+    closeConfirmModal();
+  } catch (error) {
+    console.error("Confirmed action failed", error);
+    showToast("تعذر تنفيذ الإجراء حالياً. تحقق من الاتصال وحاول مجدداً.");
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+}
+
 async function handleDeliverySubmit(event) {
   event.preventDefault();
   const order = state.pendingDeliveryOrder;
@@ -368,7 +407,16 @@ async function markAllNotificationsRead() {
 }
 
 async function deleteService(id) {
-  if (!confirm("هل تريد حذف هذه الخدمة نهائياً؟ لا يمكن التراجع عن هذا الإجراء.")) return;
+  openConfirmModal({
+    title: "حذف الخدمة نهائياً",
+    message: "هل تريد حذف هذه الخدمة؟ لا يمكن التراجع عن هذا الإجراء.",
+    actionLabel: "حذف الخدمة",
+    danger: true,
+    onConfirm: () => deleteServiceConfirmed(id)
+  });
+}
+
+async function deleteServiceConfirmed(id) {
   const service = state.services.find(item => item.id === id);
   if (service?.imagePath) await deleteObject(storageRef(storage, service.imagePath)).catch(() => {});
   await deleteDoc(doc(db, "services", id));
@@ -378,7 +426,15 @@ async function deleteService(id) {
 }
 
 async function submitService(id) {
-  if (!confirm("إرسال الخدمة إلى الإدارة للمراجعة؟")) return;
+  openConfirmModal({
+    title: "إرسال الخدمة للمراجعة",
+    message: "سيتم إرسال الخدمة إلى الإدارة ولن تظهر للعملاء قبل الموافقة عليها.",
+    actionLabel: "إرسال للمراجعة",
+    onConfirm: () => submitServiceConfirmed(id)
+  });
+}
+
+async function submitServiceConfirmed(id) {
   await updateDoc(doc(db, "services", id), { status: "pending", updatedAt: serverTimestamp() });
   const service = state.services.find(item => item.id === id);
   if (service) service.status = "pending";
@@ -615,7 +671,16 @@ function renderPortfolio() {
 }
 
 async function deletePortfolioItem(item) {
-  if (!confirm(`حذف العمل «${item.title || "بدون عنوان"}»؟`)) return;
+  openConfirmModal({
+    title: "حذف عمل من المعرض",
+    message: `هل تريد حذف العمل "${item.title || "بدون عنوان"}" من معرض أعمالك؟`,
+    actionLabel: "حذف العمل",
+    danger: true,
+    onConfirm: () => deletePortfolioItemConfirmed(item)
+  });
+}
+
+async function deletePortfolioItemConfirmed(item) {
   if (item.imagePath) await deleteObject(storageRef(storage, item.imagePath)).catch(() => {});
   await deleteDoc(doc(db, "portfolioItems", item.id));
   state.portfolio = state.portfolio.filter(entry => entry.id !== item.id);
@@ -736,6 +801,8 @@ function bindEvents() {
   document.querySelectorAll("[data-open-service-modal]").forEach(control => control.addEventListener("click", () => openServiceModal()));
   document.querySelectorAll("[data-close-modal]").forEach(control => control.addEventListener("click", closeServiceModal));
   document.querySelectorAll("[data-close-delivery-modal]").forEach(control => control.addEventListener("click", closeDeliveryModal));
+  document.querySelectorAll("[data-close-confirm-modal]").forEach(control => control.addEventListener("click", closeConfirmModal));
+  $("confirmModalAction").addEventListener("click", runConfirmAction);
   elements.mobileMenuButton.addEventListener("click", () => elements.sidebar.classList.contains("open") ? closeSidebar() : openSidebar());
   elements.sidebarOverlay.addEventListener("click", closeSidebar);
   elements.serviceForm.addEventListener("submit", handleServiceSubmit);
@@ -771,7 +838,7 @@ function bindEvents() {
   $("darkModeSwitch").addEventListener("change", event => setTheme(event.target.checked ? "dark" : "light"));
   $("withdrawButton").addEventListener("click", () => showToast("السحب غير مفعّل قبل ربط بوابة الدفع."));
   $("logoutButton").addEventListener("click", async () => { await signOut(auth); location.href = "index.html"; });
-  document.addEventListener("keydown", event => { if (event.key === "Escape") { closeServiceModal(); closeDeliveryModal(); closeSidebar(); } });
+  document.addEventListener("keydown", event => { if (event.key === "Escape") { closeServiceModal(); closeDeliveryModal(); closeConfirmModal(); closeSidebar(); } });
 }
 
 setTheme(localStorage.getItem("theme") || "light");

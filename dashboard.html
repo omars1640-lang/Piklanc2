@@ -380,6 +380,14 @@
     </form>
   </div>
 
+  <div class="modal-overlay" id="adminConfirmModal" aria-hidden="true">
+    <div class="modal-dialog decision-dialog">
+      <header><div><p>تأكيد الإجراء</p><h2 id="adminConfirmTitle">هل أنت متأكد؟</h2></div><button type="button" data-close-admin-confirm>×</button></header>
+      <div class="modal-body"><p id="adminConfirmMessage">يرجى تأكيد الإجراء للمتابعة.</p></div>
+      <footer><button class="secondary-button" type="button" data-close-admin-confirm>إلغاء</button><button class="danger-button" id="adminConfirmAction" type="button">تأكيد</button></footer>
+    </div>
+  </div>
+
   <div class="admin-toast" id="adminToast" role="status"></div>
   <script type="module" src="js/admin-dashboard.js"></script>
   <script type="module" src="js/admin-operations.js"></script>

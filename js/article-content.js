@@ -6,7 +6,7 @@ import {
 import { auth, db } from "./firebase.js";
 
 const articleId = new URLSearchParams(location.search).get("id");
-const state = { article: null, user: null, profile: null, liked: false, likeIds: [], comments: [] };
+const state = { article: null, user: null, profile: null, liked: false, likeIds: [], comments: [], pendingConfirmAction: null };
 const $ = id => document.getElementById(id);
 
 function toast(message) {
@@ -14,6 +14,40 @@ function toast(message) {
   $("articleToast").classList.add("show");
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => $("articleToast").classList.remove("show"), 2600);
+}
+
+function openArticleConfirm({ title, message, actionLabel = "تأكيد", onConfirm }) {
+  state.pendingConfirmAction = onConfirm;
+  $("articleConfirmTitle").textContent = title;
+  $("articleConfirmMessage").textContent = message;
+  $("articleConfirmAction").textContent = actionLabel;
+  $("articleConfirmModal").classList.add("open");
+  $("articleConfirmModal").setAttribute("aria-hidden", "false");
+}
+
+function closeArticleConfirm() {
+  state.pendingConfirmAction = null;
+  $("articleConfirmModal").classList.remove("open");
+  $("articleConfirmModal").setAttribute("aria-hidden", "true");
+}
+
+async function runArticleConfirmAction() {
+  const action = state.pendingConfirmAction;
+  if (!action) return;
+  const button = $("articleConfirmAction");
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "جاري التنفيذ...";
+  try {
+    await action();
+    closeArticleConfirm();
+  } catch (error) {
+    console.error("Article confirmed action failed", error);
+    toast("تعذر تنفيذ الإجراء حالياً.");
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
 }
 
 function toDate(value) {
@@ -155,8 +189,18 @@ function renderComments(snapshot = null) {
       remove.type = "button";
       remove.className = "comment-delete";
       remove.textContent = "حذف";
-      remove.addEventListener("click", async () => {
-        if (confirm("حذف هذا التعليق؟")) await deleteDoc(doc(db, "articles", articleId, "comments", comment.id));
+      remove.addEventListener("click", () => {
+        openArticleConfirm({
+          title: "حذف التعليق؟",
+          message: "سيتم حذف هذا التعليق نهائياً من المقال.",
+          actionLabel: "حذف التعليق",
+          onConfirm: async () => {
+            await deleteDoc(doc(db, "articles", articleId, "comments", comment.id));
+            state.comments = state.comments.filter(item => item.id !== comment.id);
+            renderComments();
+            toast("تم حذف التعليق.");
+          }
+        });
       });
       user.append(remove);
     }
@@ -211,6 +255,10 @@ $("commentForm").addEventListener("submit", async event => {
 
 ["likeArticle", "likeArticleMobile"].forEach(id => $(id).addEventListener("click", toggleLike));
 ["shareArticle", "shareArticleMobile"].forEach(id => $(id).addEventListener("click", shareArticle));
+$("articleConfirmAction").addEventListener("click", runArticleConfirmAction);
+document.querySelectorAll("[data-close-article-confirm]").forEach(control => control.addEventListener("click", closeArticleConfirm));
+$("articleConfirmModal").addEventListener("click", event => { if (event.target === $("articleConfirmModal")) closeArticleConfirm(); });
+document.addEventListener("keydown", event => { if (event.key === "Escape") closeArticleConfirm(); });
 
 if (!articleId) {
   $("articleState").textContent = "المقال غير موجود.";

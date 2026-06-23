@@ -63,6 +63,20 @@
     </article>
   </main>
 
+  <div class="article-confirm" id="articleConfirmModal" aria-hidden="true">
+    <div class="article-confirm-backdrop" data-close-article-confirm></div>
+    <div class="article-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="articleConfirmTitle">
+      <button type="button" data-close-article-confirm aria-label="إغلاق">×</button>
+      <p>تأكيد الإجراء</p>
+      <h2 id="articleConfirmTitle">حذف التعليق؟</h2>
+      <span id="articleConfirmMessage">سيتم حذف هذا التعليق نهائياً.</span>
+      <div>
+        <button class="article-confirm-cancel" type="button" data-close-article-confirm>إلغاء</button>
+        <button class="article-confirm-danger" id="articleConfirmAction" type="button">حذف</button>
+      </div>
+    </div>
+  </div>
+
   <div class="article-toast" id="articleToast" role="status"></div>
   <script type="module" src="js/site-header.js"></script>
   <script type="module" src="js/article-content.js"></script>
