@@ -34,6 +34,7 @@ const toDate = value => value?.toDate?.() || (value ? new Date(value) : null);
 const formatDate = value => toDate(value)?.toLocaleDateString("ar-SY", { year: "numeric", month: "short", day: "numeric" }) || "-";
 const formatMoney = value => Number(value || 0).toLocaleString("ar-SY");
 const sortNewest = (items, field = "updatedAt") => items.sort((a, b) => (toDate(b[field])?.getTime() || 0) - (toDate(a[field])?.getTime() || 0));
+const cacheBustUrl = url => url ? `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}` : "";
 
 function showToast(message) {
   elements.toast.textContent = message;
@@ -474,7 +475,17 @@ async function saveAvatar() {
   if (!state.avatarFile) return state.profile.avatar || "";
   await uploadBytes(avatarRef, state.avatarFile, { contentType: state.avatarFile.type });
   const url = await getDownloadURL(avatarRef);
-  return `${url}&v=${Date.now()}`;
+  return cacheBustUrl(url);
+}
+
+async function refreshStoredAvatar() {
+  if (!state.user) return;
+  try {
+    const url = await getDownloadURL(storageRef(storage, `profile-images/${state.user.uid}/avatar`));
+    state.profile.avatar = cacheBustUrl(url);
+  } catch (error) {
+    if (!state.profile.avatar) return;
+  }
 }
 
 async function saveProfile(event) {
@@ -731,6 +742,7 @@ onAuthStateChanged(auth, async user => {
     }
     state.user = user;
     state.profile = { ...profile, ...(publicSnapshot.exists() ? publicSnapshot.data() : {}) };
+    await refreshStoredAvatar();
     fillProfile(user, state.profile);
     $("publicProfileLink").href = `freelancer-profile.html?uid=${encodeURIComponent(user.uid)}`;
     await migrateLocalServices();

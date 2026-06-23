@@ -368,7 +368,7 @@ service cloud.firestore {
             !request.resource.data.keys().hasAny(["avatar"])
             || (
               request.resource.data.avatar is string
-              && request.resource.data.avatar.size() <= 3000
+              && request.resource.data.avatar.size() <= 10000
             )
           )
           && (
@@ -399,7 +399,7 @@ service cloud.firestore {
              !request.resource.data.keys().hasAny(["avatar"])
             || (
               request.resource.data.avatar is string
-              && request.resource.data.avatar.size() <= 3000
+              && request.resource.data.avatar.size() <= 10000
              )
            )
            && (

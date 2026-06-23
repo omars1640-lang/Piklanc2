@@ -35,6 +35,11 @@ function renderAvatar(profile) {
   image.src = profile.avatar;
   image.alt = profile.name;
   image.addEventListener("load", () => { $("profileInitial").hidden = true; });
+  image.addEventListener("error", async () => {
+    const fallback = await getDownloadURL(ref(storage, `profile-images/${uid}/avatar`)).catch(() => "");
+    if (fallback && image.src !== fallback) image.src = fallback;
+    else $("profileInitial").hidden = false;
+  });
   $("profileAvatar").appendChild(image);
 }
 

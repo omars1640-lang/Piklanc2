@@ -22,6 +22,7 @@ const $ = id => document.getElementById(id);
 const toDate = value => value?.toDate?.() || (value ? new Date(value) : null);
 const sortNewest = (items, field = "createdAt") => items.sort((a, b) => (toDate(b[field])?.getTime() || 0) - (toDate(a[field])?.getTime() || 0));
 const formatDate = value => toDate(value)?.toLocaleDateString("ar-SY", { year: "numeric", month: "short", day: "numeric" }) || "-";
+const cacheBustUrl = url => url ? `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}` : "";
 
 function appendSummary(row, iconText, titleText, detailText, dateText) {
   const icon = document.createElement("span");
@@ -192,6 +193,7 @@ function renderAvatars(url, name) {
       const image = document.createElement("img");
       image.src = url;
       image.alt = `صورة ${name}`;
+      image.addEventListener("error", () => { target.replaceChildren(document.createTextNode(initial)); });
       target.appendChild(image);
     } else {
       target.textContent = initial;
@@ -217,7 +219,17 @@ async function saveAvatar() {
   if (!state.avatarFile) return state.profile.avatar || "";
   await uploadBytes(avatarRef, state.avatarFile, { contentType: state.avatarFile.type });
   const url = await getDownloadURL(avatarRef);
-  return `${url}&v=${Date.now()}`;
+  return cacheBustUrl(url);
+}
+
+async function refreshStoredAvatar() {
+  if (!state.user) return;
+  try {
+    const url = await getDownloadURL(storageRef(storage, `profile-images/${state.user.uid}/avatar`));
+    state.profile.avatar = cacheBustUrl(url);
+  } catch (error) {
+    if (!state.profile.avatar) return;
+  }
 }
 
 async function markNotificationRead(id) {
@@ -386,6 +398,7 @@ onAuthStateChanged(auth, async user => {
     const publicSnapshot = await getDoc(doc(db, "publicProfiles", user.uid));
     state.user = user;
     state.profile = { ...profile, ...(publicSnapshot.exists() ? publicSnapshot.data() : {}) };
+    await refreshStoredAvatar();
     renderProfile();
     await loadWorkspace();
     showSection(sectionTitles[location.hash.slice(1)] ? location.hash.slice(1) : "overview");
