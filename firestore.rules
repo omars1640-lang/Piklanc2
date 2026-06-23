@@ -343,6 +343,23 @@ service cloud.firestore {
           signedIn()
           && request.auth.uid == userId
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "phone", "specialty"])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 80
+          && (
+            !request.resource.data.keys().hasAny(["phone"])
+            || (
+              request.resource.data.phone is string
+              && request.resource.data.phone.size() <= 30
+            )
+          )
+          && (
+            !request.resource.data.keys().hasAny(["specialty"])
+            || (
+              request.resource.data.specialty is string
+              && request.resource.data.specialty.size() <= 60
+            )
+          )
         );
       allow delete: if false;
     }
@@ -531,6 +548,9 @@ service cloud.firestore {
         && request.resource.data.title is string
         && request.resource.data.title.size() >= 5
         && request.resource.data.title.size() <= 100
+        && request.resource.data.category is string
+        && request.resource.data.category.size() > 0
+        && request.resource.data.category.size() <= 80
         && request.resource.data.description is string
         && request.resource.data.description.size() >= 20
         && request.resource.data.description.size() <= 1000
@@ -556,6 +576,25 @@ service cloud.firestore {
             "title", "category", "description", "price", "deliveryDays",
             "revisions", "keywords", "status", "imageUrl", "imagePath", "updatedAt"
           ])
+          && request.resource.data.title is string
+          && request.resource.data.title.size() >= 5
+          && request.resource.data.title.size() <= 100
+          && request.resource.data.category is string
+          && request.resource.data.category.size() > 0
+          && request.resource.data.category.size() <= 80
+          && request.resource.data.description is string
+          && request.resource.data.description.size() >= 20
+          && request.resource.data.description.size() <= 1000
+          && request.resource.data.price is number
+          && request.resource.data.price >= 1
+          && request.resource.data.deliveryDays is int
+          && request.resource.data.deliveryDays >= 1
+          && request.resource.data.deliveryDays <= 90
+          && request.resource.data.revisions is int
+          && request.resource.data.revisions >= 0
+          && request.resource.data.revisions <= 20
+          && request.resource.data.keywords is list
+          && request.resource.data.keywords.size() <= 12
           && (
             !request.resource.data.keys().hasAny(["imageUrl"])
             || (
@@ -701,6 +740,12 @@ service cloud.firestore {
             isAdmin()
             || (activeUser() && ticket().requesterUid == request.auth.uid)
           )
+          && request.resource.data.keys().hasOnly([
+            "authorUid", "authorRole", "authorName", "text", "createdAt"
+          ])
+          && request.resource.data.keys().hasAll([
+            "authorUid", "authorRole", "authorName", "text", "createdAt"
+          ])
           && request.resource.data.authorUid == request.auth.uid
           && (
             (isAdmin() && request.resource.data.authorRole == "admin")
@@ -710,6 +755,12 @@ service cloud.firestore {
               && request.resource.data.authorRole == "user"
             )
           )
+          && request.resource.data.authorName is string
+          && request.resource.data.authorName.size() > 0
+          && request.resource.data.authorName.size() <= 160
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000
           && request.resource.data.createdAt == request.time;
         allow update, delete: if false;
       }
@@ -750,7 +801,8 @@ service cloud.firestore {
         );
       allow update: if activeUser()
         && request.auth.uid == userId
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["read"]);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["read"])
+        && request.resource.data.read is bool;
       allow delete: if activeUser() && request.auth.uid == userId;
     }
 
