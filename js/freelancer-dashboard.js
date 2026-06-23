@@ -1,7 +1,7 @@
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, query,
-  serverTimestamp, updateDoc, where, writeBatch
+  serverTimestamp, setDoc, updateDoc, where, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
   deleteObject, getDownloadURL, ref as storageRef, uploadBytes
@@ -561,6 +561,28 @@ function previewAvatar(file) {
   renderAvatars(state.avatarPreviewUrl || state.profile.avatar || "", $("profileName").value || state.profile.name);
 }
 
+async function optimizeAvatarFile(file) {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const size = Math.min(768, Math.max(bitmap.width, bitmap.height));
+    const scale = size / Math.max(bitmap.width, bitmap.height);
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d", { alpha: false });
+    context.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close?.();
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/webp", 0.86));
+    if (!blob) return file;
+    return new File([blob], "avatar.webp", { type: "image/webp", lastModified: Date.now() });
+  } catch (error) {
+    console.warn("Unable to optimize avatar image", error);
+    return file;
+  }
+}
+
 async function saveAvatar() {
   const avatarRef = storageRef(storage, `profile-images/${state.user.uid}/avatar`);
   if (state.avatarRemoved) {
@@ -698,33 +720,31 @@ async function handlePortfolioSubmit(event) {
   }
   const submit = $("portfolioSubmitButton");
   submit.disabled = true;
-  let itemRef = null;
+  const itemRef = doc(collection(db, "portfolioItems"));
   let imagePath = "";
   try {
-    itemRef = await addDoc(collection(db, "portfolioItems"), {
-      ownerUid: state.user.uid,
-      title: $("portfolioTitle").value.trim(),
-      category: $("portfolioCategory").value.trim(),
-      description: $("portfolioDescription").value.trim(),
-      imageUrl: "",
-      imagePath: "",
-      published: true,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
     const extension = file.type.split("/")[1].replace("jpeg", "jpg");
     imagePath = `portfolio-images/${state.user.uid}/${itemRef.id}/cover.${extension}`;
     const imageRef = storageRef(storage, imagePath);
     await uploadBytes(imageRef, file, { contentType: file.type });
     const imageUrl = await getDownloadURL(imageRef);
-    await updateDoc(itemRef, { imageUrl, imagePath, updatedAt: serverTimestamp() });
+    await setDoc(itemRef, {
+      ownerUid: state.user.uid,
+      title: $("portfolioTitle").value.trim(),
+      category: $("portfolioCategory").value.trim(),
+      description: $("portfolioDescription").value.trim(),
+      imageUrl,
+      imagePath,
+      published: true,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
     event.currentTarget.reset();
     await loadWorkspace();
     showToast("تم نشر العمل في ملفك الشخصي.");
   } catch (error) {
     console.error("Portfolio creation failed", error);
     if (imagePath) await deleteObject(storageRef(storage, imagePath)).catch(() => {});
-    if (itemRef) await deleteDoc(itemRef).catch(() => {});
     const detail = error.code ? ` (${error.code})` : "";
     showToast(`تعذر إضافة العمل. تحقق من الصورة والصلاحيات${detail}.`);
   } finally {
@@ -810,7 +830,7 @@ function bindEvents() {
   elements.deliveryForm.addEventListener("submit", handleDeliverySubmit);
   elements.profileForm.addEventListener("submit", saveProfile);
   $("portfolioForm").addEventListener("submit", handlePortfolioSubmit);
-  $("profileAvatarInput").addEventListener("change", event => {
+  $("profileAvatarInput").addEventListener("change", async event => {
     const file = event.target.files[0];
     if (!file) return;
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
@@ -818,9 +838,11 @@ function bindEvents() {
       showToast("اختر صورة JPG أو PNG أو WebP بحجم لا يتجاوز 5MB.");
       return;
     }
-    state.avatarFile = file;
+    elements.profileMessage.textContent = "جاري تجهيز الصورة...";
+    const optimizedFile = await optimizeAvatarFile(file);
+    state.avatarFile = optimizedFile;
     state.avatarRemoved = false;
-    previewAvatar(file);
+    previewAvatar(optimizedFile);
     elements.profileMessage.textContent = "اضغط حفظ التعديلات لاعتماد الصورة.";
   });
   $("removeProfileAvatar").addEventListener("click", () => {

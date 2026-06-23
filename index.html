@@ -504,6 +504,16 @@
       color: #fff;
       font-size: 2.3rem;
       font-weight: 900;
+      overflow: hidden;
+    }
+
+    .market-cover.has-image {
+      background-size: cover;
+      background-position: center;
+    }
+
+    .market-cover.has-image img {
+      display: none;
     }
 
     .market-service h3 {
@@ -566,6 +576,18 @@
       color: var(--text-secondary);
       font-size: .74rem;
       line-height: 1.7;
+    }
+
+    .market-seller-card {
+      display: grid;
+      justify-items: start;
+    }
+
+    .market-seller-card .market-seller-avatar {
+      background-size: cover;
+      background-position: center;
+      color: #fff;
+      background-color: var(--primary);
     }
 
     .market-flow {
@@ -1095,24 +1117,24 @@
               <span class="live-pill">مباشر الآن</span>
             </div>
             <div class="marketplace-grid">
-              <article class="market-service">
-                <div class="market-cover"><img src="assets/brand/logo-icon.svg" alt="" width="52" height="52"></div>
-                <h3>تصميم هوية بصرية كاملة لمشروع ناشئ</h3>
+              <article class="market-service" id="heroMarketService">
+                <div class="market-cover" id="heroMarketCover"><img src="assets/brand/logo-icon.svg" alt="" width="52" height="52"></div>
+                <h3 id="heroMarketTitle">تصميم هوية بصرية كاملة لمشروع ناشئ</h3>
                 <div class="market-meta">
-                  <span>تسليم خلال 3 أيام</span>
-                  <strong class="market-price">25,000 ل.س</strong>
+                  <span id="heroMarketDelivery">تسليم خلال 3 أيام</span>
+                  <strong class="market-price" id="heroMarketPrice">25,000 ل.س</strong>
                 </div>
               </article>
               <div class="market-side">
-                <article class="mini-card">
-                  <span>✓</span>
-                  <strong>رصيد تجريبي لكل طلب</strong>
-                  <small>نختبر دورة الحجز والتسليم قبل ربط بوابة الدفع الحقيقية.</small>
+                <article class="mini-card market-seller-card">
+                  <span class="market-seller-avatar" id="heroMarketSellerAvatar">م</span>
+                  <strong id="heroMarketSellerName">مستقل جاهز</strong>
+                  <small id="heroMarketSellerRank">صاحب الخدمة</small>
                 </article>
                 <article class="mini-card">
                   <span>↗</span>
-                  <strong>مستقلون جاهزون</strong>
-                  <small>تصميم، برمجة، كتابة، تسويق، فيديو وصوتيات.</small>
+                  <strong id="heroMarketCategory">خدمة منشورة</strong>
+                  <small id="heroMarketSummary">تتبدل هذه البطاقة تلقائياً من خدمات المنصة المنشورة.</small>
                 </article>
               </div>
             </div>

@@ -70,34 +70,62 @@ function serviceCard(service, profile) {
   return link;
 }
 
-function createFeaturedRotator(container, services, profiles) {
-  const visibleCount = Math.min(3, services.length);
-  let queue = shuffle(services);
+function renderHeroMarketService(service, profile) {
+  const cover = document.getElementById("heroMarketCover");
+  const title = document.getElementById("heroMarketTitle");
+  const delivery = document.getElementById("heroMarketDelivery");
+  const price = document.getElementById("heroMarketPrice");
+  const avatar = document.getElementById("heroMarketSellerAvatar");
+  const seller = document.getElementById("heroMarketSellerName");
+  const rank = document.getElementById("heroMarketSellerRank");
+  const category = document.getElementById("heroMarketCategory");
+  const summary = document.getElementById("heroMarketSummary");
+  if (!cover || !title || !service) return;
+
+  cover.classList.toggle("has-image", Boolean(service.imageUrl));
+  cover.style.backgroundImage = service.imageUrl ? `url("${service.imageUrl.replaceAll('"', "%22")}")` : "";
+  title.textContent = service.title || "خدمة منشورة على PikLance";
+  delivery.textContent = `تسليم خلال ${Number(service.deliveryDays || 1).toLocaleString("ar-SY")} يوم`;
+  price.textContent = `${Number(service.price || 0).toLocaleString("ar-SY")} ل.س`;
+  seller.textContent = profile?.name || service.ownerName || "مستقل PikLance";
+  rank.textContent = profile?.rank?.label || "صاحب الخدمة";
+  category.textContent = service.category || "خدمة منشورة";
+  summary.textContent = (service.description || "خدمة حقيقية منشورة داخل المنصة.").slice(0, 120);
+  avatar.style.backgroundImage = profile?.avatar ? `url("${profile.avatar.replaceAll('"', "%22")}")` : "";
+  avatar.textContent = profile?.avatar ? "" : initial(profile?.name || service.ownerName);
+}
+
+function createUniqueRotator(items, onRender, visibleCount = 1) {
+  let queue = shuffle(items);
   let cursor = 0;
-  const nextServices = () => {
+  const nextItems = () => {
     if (cursor >= queue.length) {
-      queue = shuffle(services);
+      queue = shuffle(items);
       cursor = 0;
     }
     const selected = [];
     while (selected.length < visibleCount && queue.length) {
       if (cursor >= queue.length) {
-        queue = shuffle(services);
+        queue = shuffle(items);
         cursor = 0;
       }
       const next = queue[cursor];
       cursor += 1;
-      if (!selected.some(service => service.id === next.id)) selected.push(next);
-      if (services.length < visibleCount) break;
+      if (!selected.some(item => item.id === next.id)) selected.push(next);
     }
     return selected;
   };
-  const render = () => {
-    const cards = nextServices().map(service => serviceCard(service, profiles.get(service.ownerUid)));
-    container.replaceChildren(...cards);
-  };
+  const render = () => onRender(nextItems());
   render();
-  if (services.length > visibleCount) setInterval(render, FEATURED_ROTATION_MS);
+  if (items.length > visibleCount) setInterval(render, FEATURED_ROTATION_MS);
+}
+
+function createFeaturedRotator(container, services, profiles) {
+  const visibleCount = Math.min(3, services.length);
+  createUniqueRotator(services, selectedServices => {
+    const cards = selectedServices.map(service => serviceCard(service, profiles.get(service.ownerUid)));
+    container.replaceChildren(...cards);
+  }, visibleCount);
 }
 
 async function loadHomeData() {
@@ -143,7 +171,10 @@ async function loadHomeData() {
       element.textContent = `${count.toLocaleString("ar-SY")} خدمة`;
     });
 
-    if (services.length) createFeaturedRotator(featured, services, profiles);
+    if (services.length) {
+      createUniqueRotator(services, ([service]) => renderHeroMarketService(service, profiles.get(service.ownerUid)));
+      createFeaturedRotator(featured, services, profiles);
+    }
     else featured.innerHTML = '<div class="testimonial-card" style="grid-column:1/-1;text-align:center"><p class="testimonial-text">لا توجد خدمات منشورة بعد. ستظهر أول خدمة هنا فور موافقة الإدارة عليها.</p></div>';
   } catch (error) {
     console.error("Unable to load homepage marketplace data", error);

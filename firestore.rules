@@ -62,10 +62,10 @@ service cloud.firestore {
         && data.participantTypes[data.participantUids[0]] in ["buyer", "freelancer"]
         && data.participantTypes[data.participantUids[1]] in ["buyer", "freelancer"]
         && data.participantTypes[data.participantUids[0]] == get(
-          /databases/$(database)/documents/publicProfiles/$(data.participantUids[0])
+          /databases/$(database)/documents/users/$(data.participantUids[0])
         ).data.accountType
         && data.participantTypes[data.participantUids[1]] == get(
-          /databases/$(database)/documents/publicProfiles/$(data.participantUids[1])
+          /databases/$(database)/documents/users/$(data.participantUids[1])
         ).data.accountType;
     }
 
@@ -463,14 +463,14 @@ service cloud.firestore {
         && request.resource.data.participantNames[
           request.resource.data.participantUids[0]
         ] == get(
-          /databases/$(database)/documents/publicProfiles/$(
+          /databases/$(database)/documents/users/$(
             request.resource.data.participantUids[0]
           )
         ).data.name
         && request.resource.data.participantNames[
           request.resource.data.participantUids[1]
         ] == get(
-          /databases/$(database)/documents/publicProfiles/$(
+          /databases/$(database)/documents/users/$(
             request.resource.data.participantUids[1]
           )
         ).data.name
@@ -878,8 +878,22 @@ service cloud.firestore {
         && request.resource.data.category.size() <= 60
         && request.resource.data.description is string
         && request.resource.data.description.size() <= 600
-        && request.resource.data.imageUrl == ""
-        && request.resource.data.imagePath == ""
+        && request.resource.data.imageUrl is string
+        && request.resource.data.imageUrl.size() <= 3000
+        && (
+          (
+            request.resource.data.imageUrl == ""
+            && request.resource.data.imagePath == ""
+          )
+          || (
+            request.resource.data.imageUrl.size() > 0
+            && (
+              request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.jpg"
+              || request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.png"
+              || request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.webp"
+            )
+          )
+        )
         && request.resource.data.published == true
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
