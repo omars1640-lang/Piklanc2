@@ -77,6 +77,13 @@ function showToast(message) {
   showToast.timer = setTimeout(() => elements.toast.classList.remove("show"), 3000);
 }
 
+function showConversationOpenError(message) {
+  elements.shell.classList.remove("chat-booting");
+  elements.chatEmpty.hidden = true;
+  elements.workspace.hidden = false;
+  elements.stream.innerHTML = `<div class="stream-state">${message}</div>`;
+}
+
 function initials(name) {
   return (name || "م").trim().charAt(0).toUpperCase();
 }
@@ -487,11 +494,18 @@ async function startRequestedConversation() {
         serviceId: safeId(serviceId),
         title: (params.get("serviceTitle") || "خدمة على PikLance").slice(0, 140),
         image: (params.get("serviceImage") || "").slice(0, 1200),
-        price: Number(params.get("servicePrice") || 0),
+        price: Number.isFinite(Number(params.get("servicePrice"))) ? Number(params.get("servicePrice")) : 0,
         sellerUid: contextSellerUid
       };
     }
-    await setDoc(chatReference, data);
+    try {
+      await setDoc(chatReference, data);
+    } catch (error) {
+      console.error("Unable to create requested conversation", error);
+      showConversationOpenError("تعذر إنشاء المحادثة. تحقق من أن الحسابين مفعلان وأن قواعد Firebase منشورة، ثم حاول مرة أخرى.");
+      showToast("تعذر إنشاء المحادثة حالياً.");
+      return null;
+    }
   }
   return chatId;
 }
@@ -652,11 +666,18 @@ onAuthStateChanged(auth, async user => {
         const requestedChat = { id: snapshot.id, ...snapshot.data() };
         if (!conversations.some(chat => chat.id === requestedChat.id)) conversations.unshift(requestedChat);
         await openConversation(requestedChat.id);
+      } else {
+        showConversationOpenError("لم يتم العثور على المحادثة بعد إنشائها. حاول تحديث الصفحة.");
       }
+    } else if (new URLSearchParams(location.search).has("withUid")) {
+      showConversationOpenError("تعذر فتح المحادثة المطلوبة. تأكد من أن الحساب الآخر مفعل ومتاح للمراسلة.");
     }
   } catch (error) {
     console.error("Unable to initialize messages", error);
     elements.shell.classList.remove("chat-booting");
+    if (initialParams.has("withUid") || initialParams.has("chat")) {
+      elements.stream.innerHTML = '<div class="stream-state">تعذر فتح المحادثة. تحقق من الاتصال أو الصلاحيات ثم حاول مجدداً.</div>';
+    }
     showToast("تعذر فتح نظام الرسائل. تأكد من حالة الحساب والاتصال.");
   } finally {
     elements.loading.classList.add("hidden");

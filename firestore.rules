@@ -877,7 +877,6 @@ service cloud.firestore {
         && request.resource.data.category.size() > 0
         && request.resource.data.category.size() <= 60
         && request.resource.data.description is string
-        && request.resource.data.description.size() > 0
         && request.resource.data.description.size() <= 600
         && request.resource.data.imageUrl == ""
         && request.resource.data.imagePath == ""

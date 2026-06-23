@@ -725,7 +725,8 @@ async function handlePortfolioSubmit(event) {
     console.error("Portfolio creation failed", error);
     if (imagePath) await deleteObject(storageRef(storage, imagePath)).catch(() => {});
     if (itemRef) await deleteDoc(itemRef).catch(() => {});
-    showToast("تعذر إضافة العمل. تحقق من الصورة والاتصال.");
+    const detail = error.code ? ` (${error.code})` : "";
+    showToast(`تعذر إضافة العمل. تحقق من الصورة والصلاحيات${detail}.`);
   } finally {
     submit.disabled = false;
   }

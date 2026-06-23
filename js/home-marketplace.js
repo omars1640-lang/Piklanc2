@@ -11,6 +11,16 @@ const categoryAliases = {
   marketing: "market", market: "market", "صوتيات": "audio", audio: "audio",
   "فيديو": "video", video: "video"
 };
+const FEATURED_ROTATION_MS = 10 * 60 * 1000;
+
+function shuffle(items) {
+  const copy = [...items];
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
+  }
+  return copy;
+}
 
 function initial(value) {
   return (value || "م").trim().charAt(0).toUpperCase();
@@ -60,6 +70,36 @@ function serviceCard(service, profile) {
   return link;
 }
 
+function createFeaturedRotator(container, services, profiles) {
+  const visibleCount = Math.min(3, services.length);
+  let queue = shuffle(services);
+  let cursor = 0;
+  const nextServices = () => {
+    if (cursor >= queue.length) {
+      queue = shuffle(services);
+      cursor = 0;
+    }
+    const selected = [];
+    while (selected.length < visibleCount && queue.length) {
+      if (cursor >= queue.length) {
+        queue = shuffle(services);
+        cursor = 0;
+      }
+      const next = queue[cursor];
+      cursor += 1;
+      if (!selected.some(service => service.id === next.id)) selected.push(next);
+      if (services.length < visibleCount) break;
+    }
+    return selected;
+  };
+  const render = () => {
+    const cards = nextServices().map(service => serviceCard(service, profiles.get(service.ownerUid)));
+    container.replaceChildren(...cards);
+  };
+  render();
+  if (services.length > visibleCount) setInterval(render, FEATURED_ROTATION_MS);
+}
+
 async function loadHomeData() {
   const featured = document.getElementById("homeFeaturedServices");
   try {
@@ -103,8 +143,7 @@ async function loadHomeData() {
       element.textContent = `${count.toLocaleString("ar-SY")} خدمة`;
     });
 
-    const cards = services.slice(0, 3).map(service => serviceCard(service, profiles.get(service.ownerUid)));
-    if (cards.length) featured.replaceChildren(...cards);
+    if (services.length) createFeaturedRotator(featured, services, profiles);
     else featured.innerHTML = '<div class="testimonial-card" style="grid-column:1/-1;text-align:center"><p class="testimonial-text">لا توجد خدمات منشورة بعد. ستظهر أول خدمة هنا فور موافقة الإدارة عليها.</p></div>';
   } catch (error) {
     console.error("Unable to load homepage marketplace data", error);
