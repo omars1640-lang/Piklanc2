@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { auth, db, storage } from "./firebase.js";
 
-const state = { admin: null, services: [], tickets: [], orders: [], articles: [], faqs: [], categories: [], selectedTicket: null, replies: [], verificationCount: 0 };
+const state = { admin: null, services: [], tickets: [], orders: [], articles: [], faqs: [], categories: [], selectedTicket: null, replies: [], verificationCount: 0, pendingServiceReview: null };
 const $ = id => document.getElementById(id);
 const toDate = value => value?.toDate?.() || (value ? new Date(value) : null);
 const sortNewest = (items, field = "updatedAt") => items.sort((a, b) => (toDate(b[field])?.getTime() || 0) - (toDate(a[field])?.getTime() || 0));
@@ -213,9 +213,9 @@ function openServicePreview(id) {
   actions.replaceChildren(actionButton("إغلاق", "secondary-button", closeServicePreview));
   if (service.status === "pending") {
     actions.append(
-      actionButton("رفض الخدمة", "danger-button", async () => {
+      actionButton("رفض الخدمة", "danger-button", () => {
         closeServicePreview();
-        await reviewService(service.id, false);
+        openServiceReviewModal(service);
       }),
       actionButton("نشر الخدمة", "primary-button", async () => {
         closeServicePreview();
@@ -245,7 +245,7 @@ function renderServices() {
     if (service.status === "pending") {
       actions.append(
         actionButton("نشر", "table-button approve", () => reviewService(service.id, true)),
-        actionButton("رفض", "table-button reject", () => reviewService(service.id, false))
+        actionButton("رفض", "table-button reject", () => openServiceReviewModal(service))
       );
     }
     actions.append(actionButton("حذف", "table-button reject", () => deleteServiceAdmin(service)));
@@ -260,29 +260,71 @@ function renderServices() {
   $("adminServicesEmpty").hidden = rows.length > 0;
 }
 
-async function reviewService(id, approved) {
+function openServiceReviewModal(service) {
+  state.pendingServiceReview = service;
+  $("serviceReviewTitle").textContent = `رفض خدمة: ${service.title || "بدون عنوان"}`;
+  $("serviceReviewDescription").textContent = "اكتب ملاحظة واضحة تساعد المستقل على تعديل الخدمة وإعادة إرسالها للمراجعة.";
+  $("serviceReviewReason").value = service.moderationReason || "";
+  $("serviceReviewModal").classList.add("open");
+  $("serviceReviewModal").setAttribute("aria-hidden", "false");
+  setTimeout(() => $("serviceReviewReason").focus(), 50);
+}
+
+function closeServiceReviewModal() {
+  state.pendingServiceReview = null;
+  $("serviceReviewForm").reset();
+  $("serviceReviewModal").classList.remove("open");
+  $("serviceReviewModal").setAttribute("aria-hidden", "true");
+}
+
+async function reviewService(id, approved, reason = "") {
   const service = state.services.find(item => item.id === id);
   if (!service) return;
-  const reason = approved ? "" : prompt("اكتب سبب رفض الخدمة ليصل إلى المستقل:")?.trim();
-  if (!approved && !reason) return;
+  const moderationReason = approved ? "" : reason.trim();
+  if (!approved && !moderationReason) return;
   const batch = writeBatch(db);
   batch.update(doc(db, "services", id), {
     status: approved ? "published" : "rejected",
-    moderationReason: reason || "",
+    moderationReason,
     reviewedAt: serverTimestamp(),
     reviewedBy: state.admin.id,
     updatedAt: serverTimestamp()
   });
   batch.set(doc(collection(db, "notifications", service.ownerUid, "items")), notificationData(
     approved ? "تم نشر خدمتك" : "تحتاج خدمتك إلى تعديل",
-    approved ? `تمت الموافقة على خدمة: ${service.title}` : `تم رفض خدمة ${service.title}: ${reason}`,
+    approved ? `تمت الموافقة على خدمة: ${service.title}` : `تم رفض خدمة ${service.title}: ${moderationReason}`,
     "freelancer-dashboard.html#projects",
     approved ? "service_approved" : "service_rejected"
   ));
-  batch.set(doc(collection(db, "adminAuditLogs")), auditData(approved ? "approve_service" : "reject_service", service, reason || ""));
+  batch.set(doc(collection(db, "adminAuditLogs")), auditData(approved ? "approve_service" : "reject_service", service, moderationReason));
   await batch.commit();
   toast(approved ? "تم نشر الخدمة وإشعار المستقل." : "تم رفض الخدمة وإرسال السبب.");
   await loadOperations();
+}
+
+async function handleServiceReviewSubmit(event) {
+  event.preventDefault();
+  const service = state.pendingServiceReview;
+  if (!service) return;
+  const reason = $("serviceReviewReason").value.trim();
+  if (!reason) {
+    toast("اكتب سبب الرفض قبل الإرسال.");
+    $("serviceReviewReason").focus();
+    return;
+  }
+  const button = $("serviceReviewConfirm");
+  button.disabled = true;
+  button.textContent = "جاري الرفض...";
+  try {
+    await reviewService(service.id, false, reason);
+    closeServiceReviewModal();
+  } catch (error) {
+    console.error("Service rejection failed", error);
+    toast("تعذر رفض الخدمة حالياً. تحقق من الصلاحيات والاتصال.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "رفض الخدمة";
+  }
 }
 
 async function deleteServiceAdmin(service) {
@@ -681,6 +723,9 @@ document.querySelectorAll("[data-close-ticket-admin]").forEach(control => contro
 $("ticketAdminModal").addEventListener("click", event => { if (event.target === $("ticketAdminModal")) closeTicket(); });
 document.querySelectorAll("[data-close-service-preview]").forEach(control => control.addEventListener("click", closeServicePreview));
 $("servicePreviewModal").addEventListener("click", event => { if (event.target === $("servicePreviewModal")) closeServicePreview(); });
+$("serviceReviewForm").addEventListener("submit", handleServiceReviewSubmit);
+document.querySelectorAll("[data-close-service-review]").forEach(control => control.addEventListener("click", closeServiceReviewModal));
+$("serviceReviewModal").addEventListener("click", event => { if (event.target === $("serviceReviewModal")) closeServiceReviewModal(); });
 $("articleForm").addEventListener("submit", event => {
   saveArticle(event).catch(error => {
     console.error("Unable to save article", error);

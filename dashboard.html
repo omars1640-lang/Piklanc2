@@ -369,6 +369,17 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="serviceReviewModal" aria-hidden="true">
+    <form class="modal-dialog decision-dialog" id="serviceReviewForm">
+      <header><div><p>مراجعة خدمة</p><h2 id="serviceReviewTitle">رفض الخدمة</h2></div><button type="button" data-close-service-review>×</button></header>
+      <div class="modal-body">
+        <p id="serviceReviewDescription">اكتب سبب الرفض ليصل إلى المستقل ويعرف ما الذي يجب تعديله.</p>
+        <label><span>سبب الرفض</span><textarea id="serviceReviewReason" maxlength="500" rows="4" required></textarea></label>
+      </div>
+      <footer><button class="secondary-button" type="button" data-close-service-review>إلغاء</button><button class="danger-button" id="serviceReviewConfirm" type="submit">رفض الخدمة</button></footer>
+    </form>
+  </div>
+
   <div class="admin-toast" id="adminToast" role="status"></div>
   <script type="module" src="js/admin-dashboard.js"></script>
   <script type="module" src="js/admin-operations.js"></script>

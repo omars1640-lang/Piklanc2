@@ -115,6 +115,38 @@
       </section>
     </main>
   </div>
+
+  <div class="dashboard-modal" id="orderApproveModal" aria-hidden="true">
+    <div class="dashboard-modal-backdrop" data-close-order-approve></div>
+    <form class="dashboard-modal-dialog" id="orderApproveForm">
+      <button class="dashboard-modal-close" type="button" data-close-order-approve aria-label="إغلاق">×</button>
+      <p>مراجعة التسليم</p>
+      <h2>قبول التسليم وتحرير المبلغ</h2>
+      <span id="orderApproveSummary">سيتم إنهاء الطلب وتحرير مبلغ هذا العمل للمستقل.</span>
+      <div class="dashboard-modal-actions">
+        <button class="secondary-button" type="button" data-close-order-approve>إلغاء</button>
+        <button class="primary-button" id="orderApproveSubmit" type="submit">قبول التسليم</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="dashboard-modal" id="orderDisputeModal" aria-hidden="true">
+    <div class="dashboard-modal-backdrop" data-close-order-dispute></div>
+    <form class="dashboard-modal-dialog" id="orderDisputeForm">
+      <button class="dashboard-modal-close" type="button" data-close-order-dispute aria-label="إغلاق">×</button>
+      <p>فتح نزاع</p>
+      <h2>اشرح سبب النزاع</h2>
+      <span id="orderDisputeSummary">سيتم إيقاف مبلغ هذا الطلب فقط حتى يراجعه فريق الدعم.</span>
+      <label>سبب النزاع
+        <textarea id="orderDisputeReason" rows="5" maxlength="1000" required placeholder="اكتب المشكلة بوضوح، مثل: التسليم ناقص أو لا يطابق الاتفاق..."></textarea>
+      </label>
+      <div class="dashboard-modal-actions">
+        <button class="secondary-button" type="button" data-close-order-dispute>إلغاء</button>
+        <button class="primary-button danger-action" id="orderDisputeSubmit" type="submit">فتح النزاع</button>
+      </div>
+    </form>
+  </div>
+
   <div class="dashboard-toast" id="dashboardToast" role="status"></div>
   <script type="module" src="js/client-dashboard.js"></script>
   <script type="module" src="js/footer-copy.js"></script>

@@ -14,6 +14,7 @@ import {
 
 const state = {
   user: null, profile: null, orders: [], favorites: [], tickets: [], notifications: [],
+  pendingOrderAction: null,
   avatarFile: null, avatarRemoved: false, avatarPreviewUrl: ""
 };
 const sectionTitles = { overview: "نظرة عامة", orders: "طلباتي", favorites: "الخدمات المحفوظة", support: "الدعم والنزاعات", notifications: "الإشعارات", account: "إعدادات الحساب" };
@@ -98,19 +99,19 @@ function renderOrders() {
       approve.type = "button";
       approve.className = "secondary-button";
       approve.textContent = "قبول وتحرير المبلغ";
-      approve.addEventListener("click", () => approveOrder(order));
+      approve.addEventListener("click", () => openApproveModal(order));
       const dispute = document.createElement("button");
       dispute.type = "button";
       dispute.className = "secondary-button danger-button";
       dispute.textContent = "فتح نزاع";
-      dispute.addEventListener("click", () => openOrderDispute(order));
+      dispute.addEventListener("click", () => openDisputeModal(order));
       actions.append(approve, dispute);
     } else if (["funded", "active"].includes(order.status)) {
       const dispute = document.createElement("button");
       dispute.type = "button";
       dispute.className = "secondary-button danger-button";
       dispute.textContent = "فتح نزاع";
-      dispute.addEventListener("click", () => openOrderDispute(order));
+      dispute.addEventListener("click", () => openDisputeModal(order));
       actions.append(dispute);
     }
     row.appendChild(actions);
@@ -243,17 +244,47 @@ async function markNotificationRead(id) {
   renderNotifications();
 }
 
+function openApproveModal(order) {
+  state.pendingOrderAction = order;
+  $("orderApproveSummary").textContent = `سيتم إنهاء طلب "${order.serviceTitle || order.id}" وتحرير مبلغ ${formatMoney(order.total)} للمستقل.`;
+  $("orderApproveModal").classList.add("open");
+  $("orderApproveModal").setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+}
+
+function closeApproveModal() {
+  state.pendingOrderAction = null;
+  $("orderApproveModal").classList.remove("open");
+  $("orderApproveModal").setAttribute("aria-hidden", "true");
+  if (!$("orderDisputeModal").classList.contains("open")) document.body.style.overflow = "";
+}
+
+function openDisputeModal(order) {
+  state.pendingOrderAction = order;
+  $("orderDisputeSummary").textContent = `سيتم إيقاف مبلغ طلب "${order.serviceTitle || order.id}" فقط حتى يراجعه فريق الدعم.`;
+  $("orderDisputeReason").value = "";
+  $("orderDisputeModal").classList.add("open");
+  $("orderDisputeModal").setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+  setTimeout(() => $("orderDisputeReason").focus(), 50);
+}
+
+function closeDisputeModal() {
+  state.pendingOrderAction = null;
+  $("orderDisputeForm").reset();
+  $("orderDisputeModal").classList.remove("open");
+  $("orderDisputeModal").setAttribute("aria-hidden", "true");
+  if (!$("orderApproveModal").classList.contains("open")) document.body.style.overflow = "";
+}
+
 async function approveOrder(order) {
-  if (!confirm("هل تريد قبول التسليم وتحرير مبلغ هذا الطلب للمستقل؟")) return;
   await approveEscrowOrder(db, order);
   state.orders = state.orders.map(item => item.id === order.id ? { ...item, status: "completed", escrow: { ...(item.escrow || {}), status: "released" } } : item);
   renderOrders();
   showToast("تم قبول التسليم وتحرير مبلغ هذا الطلب.");
 }
 
-async function openOrderDispute(order) {
-  const reason = prompt("اكتب سبب النزاع ليصل إلى فريق الدعم:");
-  if (reason === null) return;
+async function openOrderDispute(order, reason) {
   if (!reason.trim()) {
     showToast("يجب كتابة سبب واضح لفتح النزاع.");
     return;
@@ -277,6 +308,50 @@ async function openOrderDispute(order) {
   state.orders = state.orders.map(item => item.id === order.id ? { ...item, status: "disputed", escrow: { ...(item.escrow || {}), status: "disputed" } } : item);
   renderOrders();
   showToast("تم فتح نزاع وإيقاف مبلغ هذا الطلب فقط حتى قرار الدعم.");
+}
+
+async function handleApproveSubmit(event) {
+  event.preventDefault();
+  const order = state.pendingOrderAction;
+  if (!order) return;
+  const button = $("orderApproveSubmit");
+  button.disabled = true;
+  button.textContent = "جاري القبول...";
+  try {
+    await approveOrder(order);
+    closeApproveModal();
+  } catch (error) {
+    console.error("Order approval failed", error);
+    showToast("تعذر قبول التسليم حالياً. تحقق من الاتصال وحاول مجدداً.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "قبول التسليم";
+  }
+}
+
+async function handleDisputeSubmit(event) {
+  event.preventDefault();
+  const order = state.pendingOrderAction;
+  if (!order) return;
+  const reason = $("orderDisputeReason").value.trim();
+  if (!reason) {
+    showToast("اكتب سبب النزاع قبل الإرسال.");
+    $("orderDisputeReason").focus();
+    return;
+  }
+  const button = $("orderDisputeSubmit");
+  button.disabled = true;
+  button.textContent = "جاري فتح النزاع...";
+  try {
+    await openOrderDispute(order, reason);
+    closeDisputeModal();
+  } catch (error) {
+    console.error("Order dispute failed", error);
+    showToast("تعذر فتح النزاع حالياً. تحقق من الاتصال وحاول مجدداً.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "فتح النزاع";
+  }
 }
 
 async function markAllRead() {
@@ -383,6 +458,18 @@ $("removeAccountAvatar").addEventListener("click", () => {
   $("accountAvatarInput").value = "";
   renderAvatars("", $("accountName").value || state.profile.name);
   $("accountMessage").textContent = "اضغط حفظ التعديلات لإزالة الصورة.";
+});
+$("orderApproveForm").addEventListener("submit", handleApproveSubmit);
+$("orderDisputeForm").addEventListener("submit", handleDisputeSubmit);
+document.querySelectorAll("[data-close-order-approve]").forEach(control => control.addEventListener("click", closeApproveModal));
+document.querySelectorAll("[data-close-order-dispute]").forEach(control => control.addEventListener("click", closeDisputeModal));
+$("orderApproveModal").addEventListener("click", event => { if (event.target === $("orderApproveModal")) closeApproveModal(); });
+$("orderDisputeModal").addEventListener("click", event => { if (event.target === $("orderDisputeModal")) closeDisputeModal(); });
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") {
+    closeApproveModal();
+    closeDisputeModal();
+  }
 });
 $("logoutButton").addEventListener("click", async () => { await signOut(auth); location.replace("index.html"); });
 setTheme(localStorage.getItem("theme") || "light");

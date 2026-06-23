@@ -7,6 +7,7 @@
     "rules": "storage.rules"
   },
   "hosting": {
+    "site": "piklance-c2651",
     "public": ".",
     "ignore": [
       "firebase.json",
