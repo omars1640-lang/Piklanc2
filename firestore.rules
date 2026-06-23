@@ -462,18 +462,22 @@ service cloud.firestore {
         && validUnreadCounts(request.resource.data)
         && request.resource.data.participantNames[
           request.resource.data.participantUids[0]
-        ] == get(
-          /databases/$(database)/documents/users/$(
-            request.resource.data.participantUids[0]
-          )
-        ).data.name
+        ] is string
+        && request.resource.data.participantNames[
+          request.resource.data.participantUids[0]
+        ].size() > 0
+        && request.resource.data.participantNames[
+          request.resource.data.participantUids[0]
+        ].size() <= 80
         && request.resource.data.participantNames[
           request.resource.data.participantUids[1]
-        ] == get(
-          /databases/$(database)/documents/users/$(
-            request.resource.data.participantUids[1]
-          )
-        ).data.name
+        ] is string
+        && request.resource.data.participantNames[
+          request.resource.data.participantUids[1]
+        ].size() > 0
+        && request.resource.data.participantNames[
+          request.resource.data.participantUids[1]
+        ].size() <= 80
         && request.resource.data.lastMessage is string
         && request.resource.data.lastMessage.size() <= 140
         && request.resource.data.lastMessageType in ["text", "attachment", "mixed"]

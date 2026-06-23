@@ -219,9 +219,6 @@ async function ensureRequestedConversation() {
   const serviceId = params.get("serviceId");
   const chatId = requestedChatId(otherUid, serviceId);
   const chatReference = doc(db, "chats", chatId);
-  const existing = await getDoc(chatReference);
-  if (existing.exists()) return chatId;
-
   const participantUids = [currentUser.uid, otherUid].sort();
   const participantNames = {
     [currentUser.uid]: mine.name,
@@ -237,18 +234,23 @@ async function ensureRequestedConversation() {
   };
   const context = normalizeContext(params, participantUids, participantTypes);
 
-  await setDoc(chatReference, {
-    participantUids,
-    participantNames,
-    participantTypes,
-    unreadCounts,
-    lastMessage: "",
-    lastMessageType: "text",
-    lastSenderUid: "",
-    createdAt: serverTimestamp(),
-    lastUpdated: serverTimestamp(),
-    ...(context ? { context } : {})
-  });
+  try {
+    await setDoc(chatReference, {
+      participantUids,
+      participantNames,
+      participantTypes,
+      unreadCounts,
+      lastMessage: "",
+      lastMessageType: "text",
+      lastSenderUid: "",
+      createdAt: serverTimestamp(),
+      lastUpdated: serverTimestamp(),
+      ...(context ? { context } : {})
+    });
+  } catch (error) {
+    if (error.code !== "permission-denied") throw error;
+    console.warn("Conversation create was denied; trying to open an existing chat", error);
+  }
   return chatId;
 }
 
