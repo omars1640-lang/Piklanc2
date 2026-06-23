@@ -3,6 +3,7 @@ import {
   collection, doc, getDoc, onSnapshot, query, where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth, db } from "./firebase.js";
+import { refreshImageFromStorage, resolveProfileAvatar } from "./avatar-utils.js";
 import "./cookie-consent.js";
 import "./footer-copy.js";
 
@@ -104,6 +105,10 @@ function renderSignedInActions(user, profile) {
     const image = document.createElement("img");
     image.src = profile.avatar;
     image.alt = `صورة ${profile.name || user.email || "الحساب"}`;
+    image.addEventListener("error", async () => {
+      const recovered = await refreshImageFromStorage(image, user.uid, profile);
+      if (!recovered) avatar.textContent = (profile.name || user.email || "م").charAt(0);
+    });
     avatar.appendChild(image);
   } else {
     avatar.textContent = (profile.name || user.email || "م").charAt(0);
@@ -177,9 +182,12 @@ if (header) {
         return;
       }
       const publicSnapshot = await getDoc(doc(db, "publicProfiles", user.uid));
+      const publicProfile = publicSnapshot.exists() ? publicSnapshot.data() : {};
+      const avatar = await resolveProfileAvatar(user.uid, publicProfile);
       renderSignedInActions(user, {
         ...profile,
-        avatar: publicSnapshot.exists() ? (publicSnapshot.data().avatar || "") : ""
+        ...publicProfile,
+        avatar
       });
     } catch {
       renderSignedOutActions();

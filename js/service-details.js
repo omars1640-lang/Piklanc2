@@ -6,6 +6,7 @@ import {
 import { getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { auth, db, storage } from "./firebase.js";
 import { createEscrowOrder } from "./escrow.js";
+import { refreshImageFromStorage, resolveProfileAvatar } from "./avatar-utils.js";
 
 const params = new URLSearchParams(location.search);
 const serviceId = params.get("id") || "";
@@ -171,6 +172,10 @@ function renderService() {
 
   $("sellerImage").src = sellerProfile?.avatar || "assets/avatar-placeholder.svg";
   $("sellerImage").alt = profileName;
+  $("sellerImage").addEventListener("error", async event => {
+    const recovered = await refreshImageFromStorage(event.currentTarget, sellerUid, sellerProfile || {});
+    if (!recovered) event.currentTarget.src = "assets/avatar-placeholder.svg";
+  });
   $("sellerName").textContent = profileName;
   $("sellerSpecialty").textContent = specialty;
   $("sellerRating").textContent = Number(sellerProfile?.rating || service.rating || 0).toFixed(1);
@@ -210,6 +215,7 @@ async function loadService() {
       getDocs(query(collection(db, "services"), where("status", "==", "published")))
     ]);
     sellerProfile = profileSnapshot.exists() ? profileSnapshot.data() : null;
+    if (sellerProfile) sellerProfile.avatar = await resolveProfileAvatar(sellerUid, sellerProfile);
     relatedServices = relatedSnapshot.docs
       .map(item => ({ id: item.id, ...item.data() }))
       .filter(item => item.id !== service.id && item.category === service.category)

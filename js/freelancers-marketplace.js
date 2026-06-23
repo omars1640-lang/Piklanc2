@@ -2,6 +2,7 @@ import {
   collection, getDocs, query, where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from "./firebase.js";
+import { resolveProfileAvatar } from "./avatar-utils.js";
 
 const specialtyLabels = {
   design: "تصميم", web: "برمجة وتطوير", writing: "كتابة وترجمة",
@@ -78,9 +79,13 @@ async function loadFreelancers() {
       getDocs(query(collection(db, "services"), where("status", "==", "published")))
     ]);
     const publishedOwners = new Set(servicesSnapshot.docs.map(item => item.data().ownerUid));
-    state.freelancers = snapshot.docs
+    const freelancers = snapshot.docs
       .map(item => ({ id: item.id, ...item.data() }))
       .filter(profile => profile.status === "active" || publishedOwners.has(profile.id));
+    state.freelancers = await Promise.all(freelancers.map(async profile => ({
+      ...profile,
+      avatar: await resolveProfileAvatar(profile.id, profile)
+    })));
     applyFilters();
   } catch (error) {
     console.error("Unable to load freelancers", error);

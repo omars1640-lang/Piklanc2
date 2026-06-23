@@ -6,6 +6,7 @@ import {
   deleteObject, getDownloadURL, ref as storageRef, uploadBytes
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { auth, db, storage } from "./firebase.js";
+import { cacheBustUrl } from "./avatar-utils.js";
 import {
   approveEscrowOrder, autoReleaseEscrowOrder, disputeEscrowOrder,
   formatMoney, orderStatusLabels
@@ -22,7 +23,6 @@ const $ = id => document.getElementById(id);
 const toDate = value => value?.toDate?.() || (value ? new Date(value) : null);
 const sortNewest = (items, field = "createdAt") => items.sort((a, b) => (toDate(b[field])?.getTime() || 0) - (toDate(a[field])?.getTime() || 0));
 const formatDate = value => toDate(value)?.toLocaleDateString("ar-SY", { year: "numeric", month: "short", day: "numeric" }) || "-";
-const cacheBustUrl = url => url ? `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}` : "";
 
 function appendSummary(row, iconText, titleText, detailText, dateText) {
   const icon = document.createElement("span");
@@ -214,12 +214,15 @@ async function saveAvatar() {
     await deleteObject(avatarRef).catch(error => {
       if (error.code !== "storage/object-not-found") throw error;
     });
-    return "";
+    return { url: "", path: "" };
   }
-  if (!state.avatarFile) return state.profile.avatar || "";
+  if (!state.avatarFile) {
+    const url = state.profile.avatar || "";
+    return { url, path: url || state.profile.avatarPath ? `profile-images/${state.user.uid}/avatar` : "" };
+  }
   await uploadBytes(avatarRef, state.avatarFile, { contentType: state.avatarFile.type });
   const url = await getDownloadURL(avatarRef);
-  return cacheBustUrl(url);
+  return { url: cacheBustUrl(url), path: `profile-images/${state.user.uid}/avatar` };
 }
 
 async function refreshStoredAvatar() {
@@ -227,6 +230,7 @@ async function refreshStoredAvatar() {
   try {
     const url = await getDownloadURL(storageRef(storage, `profile-images/${state.user.uid}/avatar`));
     state.profile.avatar = cacheBustUrl(url);
+    state.profile.avatarPath = `profile-images/${state.user.uid}/avatar`;
   } catch (error) {
     if (!state.profile.avatar) return;
   }
@@ -299,10 +303,11 @@ async function saveAccount(event) {
       name: updates.name,
       accountType: "buyer",
       status: state.profile.status || "active",
-      avatar
+      avatar: avatar.url,
+      avatarPath: avatar.path
     }, { merge: true });
     await batch.commit();
-    state.profile = { ...state.profile, ...updates, avatar };
+    state.profile = { ...state.profile, ...updates, avatar: avatar.url, avatarPath: avatar.path };
     state.avatarFile = null;
     state.avatarRemoved = false;
     if (state.avatarPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(state.avatarPreviewUrl);

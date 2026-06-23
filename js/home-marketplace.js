@@ -3,6 +3,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { db, storage } from "./firebase.js";
+import { resolveProfileAvatar } from "./avatar-utils.js";
 
 const categoryAliases = {
   "تصميم": "design", design: "design", "برمجة": "code", web: "code", code: "code",
@@ -77,9 +78,13 @@ async function loadHomeData() {
       return service;
     }))).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     const publishedOwners = new Set(services.map(service => service.ownerUid));
-    const profiles = new Map(profilesSnapshot.docs
+    const profileEntries = profilesSnapshot.docs
       .map(item => [item.id, item.data()])
-      .filter(([id, profile]) => profile.status === "active" || publishedOwners.has(id)));
+      .filter(([id, profile]) => profile.status === "active" || publishedOwners.has(id));
+    const profiles = new Map(await Promise.all(profileEntries.map(async ([id, profile]) => [
+      id,
+      { ...profile, avatar: await resolveProfileAvatar(id, profile) }
+    ])));
 
     document.getElementById("homeFreelancersCount").textContent = profiles.size.toLocaleString("ar-SY");
     document.getElementById("homeServicesCount").textContent = services.length.toLocaleString("ar-SY");

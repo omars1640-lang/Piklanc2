@@ -3,6 +3,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { db, storage } from "./firebase.js";
+import { refreshImageFromStorage, resolveProfileAvatar } from "./avatar-utils.js";
 
 const uid = new URLSearchParams(location.search).get("uid") || "";
 const $ = id => document.getElementById(id);
@@ -36,9 +37,8 @@ function renderAvatar(profile) {
   image.alt = profile.name;
   image.addEventListener("load", () => { $("profileInitial").hidden = true; });
   image.addEventListener("error", async () => {
-    const fallback = await getDownloadURL(ref(storage, `profile-images/${uid}/avatar`)).catch(() => "");
-    if (fallback && image.src !== fallback) image.src = fallback;
-    else $("profileInitial").hidden = false;
+    const recovered = await refreshImageFromStorage(image, uid, profile);
+    if (!recovered) $("profileInitial").hidden = false;
   });
   $("profileAvatar").appendChild(image);
 }
@@ -182,9 +182,7 @@ async function loadProfile() {
       return;
     }
     const profile = profileSnapshot.data();
-    if (!profile.avatar) {
-      profile.avatar = await getDownloadURL(ref(storage, `profile-images/${uid}/avatar`)).catch(() => "");
-    }
+    profile.avatar = await resolveProfileAvatar(uid, profile);
     const services = servicesSnapshot.docs
       .map(item => ({ id: item.id, ...item.data() }))
       .filter(item => item.ownerUid === uid);

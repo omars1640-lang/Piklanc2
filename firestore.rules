@@ -354,7 +354,7 @@ service cloud.firestore {
           signedIn()
           && request.auth.uid == userId
           && request.resource.data.keys().hasOnly([
-            "name", "accountType", "avatar", "status", "specialty", "about", "skills"
+            "name", "accountType", "avatar", "avatarPath", "status", "specialty", "about", "skills"
           ])
           && request.resource.data.accountType in ["buyer", "freelancer"]
           && request.resource.data.name == userAfter(userId).name
@@ -372,6 +372,11 @@ service cloud.firestore {
             )
           )
           && (
+            !request.resource.data.keys().hasAny(["avatarPath"])
+            || request.resource.data.avatarPath == ""
+            || request.resource.data.avatarPath == "profile-images/" + userId + "/avatar"
+          )
+          && (
             !request.resource.data.keys().hasAny(["about"])
             || (request.resource.data.about is string && request.resource.data.about.size() <= 1200)
           )
@@ -384,7 +389,7 @@ service cloud.firestore {
         || (
           activeUser()
           && request.auth.uid == userId
-           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "avatar", "specialty", "about", "skills"])
+           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "avatar", "avatarPath", "specialty", "about", "skills"])
           && request.resource.data.name is string
           && request.resource.data.name.size() > 0
           && request.resource.data.name.size() <= 80
@@ -401,6 +406,11 @@ service cloud.firestore {
               request.resource.data.avatar is string
               && request.resource.data.avatar.size() <= 10000
              )
+           )
+           && (
+             !request.resource.data.keys().hasAny(["avatarPath"])
+             || request.resource.data.avatarPath == ""
+             || request.resource.data.avatarPath == "profile-images/" + userId + "/avatar"
            )
            && (
              !request.resource.data.keys().hasAny(["about"])

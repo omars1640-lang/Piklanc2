@@ -3,6 +3,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { db, storage } from "./firebase.js";
+import { resolveProfileAvatar } from "./avatar-utils.js";
 
 const categoryAliases = {
   design: "تصميم", code: "برمجة", web: "برمجة", write: "كتابة",
@@ -120,7 +121,10 @@ async function loadServices() {
     const profiles = new Map();
     if (profileIds.length) {
       const publicSnapshot = await getDocs(collection(db, "publicProfiles"));
-      publicSnapshot.docs.forEach(item => profiles.set(item.id, item.data()));
+      await Promise.all(publicSnapshot.docs.map(async item => {
+        const profile = item.data();
+        profiles.set(item.id, { ...profile, avatar: await resolveProfileAvatar(item.id, profile) });
+      }));
     }
     state.services = services.map(service => ({
       ...service,
