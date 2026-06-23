@@ -71,6 +71,8 @@ button { color: inherit; }
 .conversation-service { margin-top: 5px; display: inline-block; max-width: 100%; overflow: hidden; color: var(--primary); text-overflow: ellipsis; white-space: nowrap; font-size: 9.6px; }
 
 .chat-panel { min-width: 0; position: relative; display: flex; background: var(--surface-alt); }
+.messenger-shell.chat-open .chat-empty,
+.messenger-shell.chat-booting .chat-empty { display: none; }
 .chat-empty { margin: auto; max-width: 360px; padding: 30px; display: grid; justify-items: center; text-align: center; }
 .empty-illustration { width: 70px; height: 70px; display: grid; place-items: center; border-radius: 22px; color: var(--primary); background: var(--primary-soft); font-size: 33.6px; transform: rotate(-8deg); }
 .chat-empty h2 { margin: 18px 0 6px; font-size: 20.4px; }
@@ -155,7 +157,7 @@ button { color: inherit; }
 .list-skeleton span { height: 62px; border-radius: 10px; background: linear-gradient(90deg, var(--surface-alt), var(--border), var(--surface-alt)); background-size: 220% 100%; animation: shimmer 1.3s infinite; }
 @keyframes shimmer { to { background-position: -220% 0; } }
 
-.auth-loading { position: fixed; inset: 0; z-index: 5000; display: grid; place-content: center; justify-items: center; gap: 12px; background: var(--page); transition: .2s; }
+.auth-loading { position: fixed; inset: 0; z-index: 5000; display: grid; place-items: center; align-content: center; justify-items: center; gap: 12px; background: var(--page); transition: .2s; }
 .auth-loading.hidden { opacity: 0; visibility: hidden; }
 .auth-loading span { width: 55px; height: 55px; display: grid; place-items: center; border-radius: 16px; color: #fff; background: var(--primary); font-size: 26.4px; font-weight: 800; }
 .auth-loading p { color: var(--muted); font-size: 12px; }

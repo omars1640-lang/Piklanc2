@@ -370,6 +370,10 @@ $("removeAccountAvatar").addEventListener("click", () => {
 $("logoutButton").addEventListener("click", async () => { await signOut(auth); location.replace("index.html"); });
 setTheme(localStorage.getItem("theme") || "light");
 
+window.addEventListener("focus", () => {
+  if (state.user) loadWorkspace().catch(error => console.warn("Unable to refresh client dashboard", error));
+});
+
 onAuthStateChanged(auth, async user => {
   if (!user) return location.replace("login.html");
   try {

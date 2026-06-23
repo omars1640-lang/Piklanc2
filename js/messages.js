@@ -62,6 +62,14 @@ let activeFilter = "all";
 let unsubscribeChats = null;
 let unsubscribeMessages = null;
 
+const initialParams = new URLSearchParams(location.search);
+if (initialParams.has("withUid") || initialParams.has("chat")) {
+  elements.shell.classList.add("chat-open", "chat-booting");
+  elements.chatEmpty.hidden = true;
+  elements.workspace.hidden = false;
+  elements.stream.innerHTML = '<div class="stream-state">جاري فتح المحادثة...</div>';
+}
+
 function showToast(message) {
   elements.toast.textContent = message;
   elements.toast.classList.add("show");
@@ -385,6 +393,7 @@ async function openConversation(chatId) {
   elements.details.hidden = window.innerWidth <= 1180;
   document.getElementById("detailsToggle").setAttribute("aria-expanded", String(!elements.details.hidden));
   elements.shell.classList.add("chat-open");
+  elements.shell.classList.remove("chat-booting");
   setPersonDetails(activeChat);
   renderConversationList();
   subscribeToMessages(activeChat.id);
@@ -647,6 +656,7 @@ onAuthStateChanged(auth, async user => {
     }
   } catch (error) {
     console.error("Unable to initialize messages", error);
+    elements.shell.classList.remove("chat-booting");
     showToast("تعذر فتح نظام الرسائل. تأكد من حالة الحساب والاتصال.");
   } finally {
     elements.loading.classList.add("hidden");

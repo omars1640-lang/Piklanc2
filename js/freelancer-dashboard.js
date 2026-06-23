@@ -72,8 +72,8 @@ function openServiceModal(service = null) {
   $("serviceModalTitle").textContent = service ? "تعديل الخدمة وإرسالها للمراجعة" : "أضف تفاصيل خدمتك";
   $("serviceModalDescription").textContent = service
     ? "بعد حفظ التعديل ستعود الخدمة إلى الإدارة للمراجعة قبل ظهورها للعملاء."
-    : "احفظ الخدمة كمسودة، ثم أرسلها للإدارة عندما تصبح جاهزة.";
-  $("serviceSubmitButton").textContent = service ? "حفظ وإرسال للمراجعة" : "حفظ كمسودة";
+    : "أضف بيانات الخدمة، وسيتم إرسالها مباشرة إلى الإدارة للمراجعة قبل ظهورها للعملاء.";
+  $("serviceSubmitButton").textContent = service ? "حفظ وإرسال للمراجعة" : "إرسال الخدمة للمراجعة";
   if (service) {
     $("serviceTitle").value = service.title || "";
     $("servicePrice").value = Number(service.price || 0) || "";
@@ -382,18 +382,20 @@ async function handleServiceSubmit(event) {
       if (oldPath && data.imagePath && oldPath !== data.imagePath) await deleteObject(storageRef(storage, oldPath)).catch(() => {});
     } else {
       serviceRef = await addDoc(collection(db, "services"), { ...data, createdAt: serverTimestamp() });
+      const reviewUpdate = { status: "pending", updatedAt: serverTimestamp() };
       if (imageFile) {
         const extension = imageFile.type.split("/")[1].replace("jpeg", "jpg");
         const path = `service-images/${state.user.uid}/${serviceRef.id}/cover.${extension}`;
         const imageRef = storageRef(storage, path);
         await uploadBytes(imageRef, imageFile, { contentType: imageFile.type });
-        const imageUrl = await getDownloadURL(imageRef);
-        await updateDoc(serviceRef, { imageUrl, imagePath: path, updatedAt: serverTimestamp() });
+        reviewUpdate.imageUrl = await getDownloadURL(imageRef);
+        reviewUpdate.imagePath = path;
       }
+      await updateDoc(serviceRef, reviewUpdate);
     }
     closeServiceModal();
     await loadWorkspace();
-    showToast(editingServiceId ? "تم إرسال التعديلات إلى الإدارة للمراجعة." : "تم حفظ الخدمة كمسودة في حسابك.");
+    showToast(editingServiceId ? "تم إرسال التعديلات إلى الإدارة للمراجعة." : "تم إرسال الخدمة إلى الإدارة للمراجعة.");
   } catch (error) {
     console.error("Service creation failed", error);
     showToast("تعذر حفظ الخدمة. تحقق من الاتصال والصلاحيات.");
@@ -430,7 +432,7 @@ function fillProfile(user, profile) {
   $("profileAboutInput").value = profile.about || "";
   $("profileSkills").value = Array.isArray(profile.skills) ? profile.skills.join("، ") : "";
   $("profileCardSpecialty").textContent = specialtyLabels[profile.specialty] || "مستقل محترف";
-  const completionFields = [profile.name, profile.phone, profile.specialty, user.email, profile.about, profile.skills?.length, state.portfolio.length];
+  const completionFields = [profile.name, profile.phone, profile.specialty, user.email, profile.about, profile.skills?.length];
   const progress = Math.round((completionFields.filter(Boolean).length / completionFields.length) * 100);
   $("profileProgressValue").textContent = `${progress}%`;
   $("profileProgressBar").style.width = `${progress}%`;
@@ -534,12 +536,16 @@ function portfolioCard(item) {
   title.textContent = item.title || "عمل منجز";
   const category = document.createElement("small");
   category.textContent = item.category || "مشروع";
+  const description = document.createElement("p");
+  description.className = "portfolio-dashboard-description";
+  description.textContent = item.description || "";
   const remove = document.createElement("button");
   remove.type = "button";
   remove.className = "table-button danger";
   remove.textContent = "حذف العمل";
   remove.addEventListener("click", () => deletePortfolioItem(item));
-  copy.append(title, category, remove);
+  image.addEventListener("error", () => { image.src = "assets/service-placeholder.svg"; });
+  copy.append(title, category, description, remove);
   card.append(image, copy);
   return card;
 }
@@ -603,6 +609,46 @@ async function handlePortfolioSubmit(event) {
   }
 }
 
+async function hydratePortfolioImages() {
+  await Promise.all(state.portfolio.map(async item => {
+    if (item.imageUrl || !item.imagePath) return;
+    try {
+      item.imageUrl = await getDownloadURL(storageRef(storage, item.imagePath));
+    } catch (error) {
+      console.warn("Unable to resolve portfolio image", item.id, error);
+    }
+  }));
+}
+
+function renderAccountPerformance() {
+  const panel = document.querySelector(".performance-panel");
+  if (!panel) return;
+  const bars = [...panel.querySelectorAll(".chart-bars span")];
+  const now = Date.now();
+  const bucketSize = 2.5 * 24 * 60 * 60 * 1000;
+  const buckets = Array.from({ length: bars.length }, (_, index) => ({
+    start: now - (bars.length - index) * bucketSize,
+    end: now - (bars.length - index - 1) * bucketSize,
+    value: 0
+  }));
+  state.orders.forEach(order => {
+    const created = toDate(order.createdAt)?.getTime();
+    if (!created || created < now - 30 * 24 * 60 * 60 * 1000) return;
+    const bucket = buckets.find(item => created >= item.start && created < item.end);
+    if (bucket) bucket.value += 1;
+  });
+  const max = Math.max(...buckets.map(item => item.value), 1);
+  bars.forEach((bar, index) => {
+    const value = buckets[index]?.value || 0;
+    bar.style.setProperty("--bar", `${value ? Math.max(18, Math.round(value / max * 100)) : 6}%`);
+    bar.title = `${value} طلب`;
+  });
+  const completed = state.orders.filter(order => order.status === "completed").length;
+  const active = state.orders.filter(order => ["funded", "active", "delivered"].includes(order.status)).length;
+  const note = panel.querySelector(".chart-note");
+  if (note) note.textContent = `يعتمد المخطط على الطلبات الحقيقية خلال آخر 30 يوماً. لديك ${active} طلب قيد التنفيذ و${completed} طلب مكتمل.`;
+}
+
 async function loadWorkspace() {
   const uid = state.user.uid;
   const [servicesSnapshot, ordersSnapshot, notificationsSnapshot, categoriesSnapshot, portfolioSnapshot] = await Promise.all([
@@ -617,11 +663,13 @@ async function loadWorkspace() {
   state.notifications = sortNewest(notificationsSnapshot.docs.map(item => ({ id: item.id, ...item.data() })), "createdAt");
   state.categories = categoriesSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
   state.portfolio = sortNewest(portfolioSnapshot.docs.map(item => ({ id: item.id, ...item.data() })), "createdAt");
+  await hydratePortfolioImages();
   populateServiceCategories();
   renderServices();
   renderOrders();
   renderNotifications();
   renderPortfolio();
+  renderAccountPerformance();
   fillProfile(state.user, state.profile);
 }
 

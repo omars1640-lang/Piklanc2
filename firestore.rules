@@ -119,7 +119,7 @@ service cloud.firestore {
           && data.context.title.size() > 0
           && data.context.title.size() <= 140
           && data.context.image is string
-           && data.context.image.size() <= 1200
+           && data.context.image.size() <= 3000
           && data.context.price is number
           && data.context.price >= 0
           && data.context.sellerUid in data.participantUids
@@ -368,7 +368,7 @@ service cloud.firestore {
             !request.resource.data.keys().hasAny(["avatar"])
             || (
               request.resource.data.avatar is string
-              && request.resource.data.avatar.size() <= 1200
+              && request.resource.data.avatar.size() <= 3000
             )
           )
           && (
@@ -399,7 +399,7 @@ service cloud.firestore {
              !request.resource.data.keys().hasAny(["avatar"])
             || (
               request.resource.data.avatar is string
-              && request.resource.data.avatar.size() <= 1200
+              && request.resource.data.avatar.size() <= 3000
              )
            )
            && (
@@ -550,7 +550,7 @@ service cloud.firestore {
             !request.resource.data.keys().hasAny(["imageUrl"])
             || (
               request.resource.data.imageUrl is string
-              && request.resource.data.imageUrl.size() <= 1200
+              && request.resource.data.imageUrl.size() <= 3000
             )
           )
           && (
@@ -828,7 +828,7 @@ service cloud.firestore {
             "title", "category", "description", "imageUrl", "imagePath", "published", "updatedAt"
           ])
           && request.resource.data.imageUrl is string
-          && request.resource.data.imageUrl.size() <= 1200
+          && request.resource.data.imageUrl.size() <= 3000
           && (
             request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.jpg"
             || request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.png"
@@ -862,7 +862,8 @@ service cloud.firestore {
           "activate_user", "update_settings", "update_ticket",
           "reply_ticket", "create_article", "update_article",
           "delete_article", "manage_faq", "manage_category",
-          "approve_service", "reject_service", "delete_service"
+          "approve_service", "reject_service", "delete_service",
+          "update_freelancer_rank"
         ]
         && request.resource.data.reason is string
         && request.resource.data.reason.size() <= 500

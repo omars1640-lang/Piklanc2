@@ -43,6 +43,8 @@
 }
 
 .piklance-loading-icon {
+  display: block;
+  margin-inline: auto;
   width: 58px;
   height: 58px;
   object-fit: contain;

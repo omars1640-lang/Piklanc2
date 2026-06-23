@@ -48,6 +48,7 @@ function serviceCard(service) {
   image.src = service.imageUrl || "assets/service-placeholder.svg";
   image.alt = service.title;
   image.loading = "lazy";
+  image.addEventListener("error", () => { image.src = "assets/service-placeholder.svg"; });
   cover.appendChild(image);
   const copy = document.createElement("div");
   copy.className = "service-copy";
@@ -91,6 +92,7 @@ function portfolioCard(item, featured = false) {
   image.src = item.imageUrl || "assets/service-placeholder.svg";
   image.alt = item.title || "عمل منجز";
   image.loading = "lazy";
+  image.addEventListener("error", () => { image.src = "assets/service-placeholder.svg"; });
   const overlay = document.createElement("span");
   overlay.className = "work-overlay";
   const title = document.createElement("strong");
@@ -185,6 +187,10 @@ async function loadProfile() {
       .map(item => ({ id: item.id, ...item.data() }))
       .filter(item => item.ownerUid === uid)
       .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    await Promise.all(portfolio.map(async item => {
+      if (item.imageUrl || !item.imagePath) return;
+      item.imageUrl = await getDownloadURL(ref(storage, item.imagePath)).catch(() => "");
+    }));
     if (profile.accountType !== "freelancer" || (profile.status !== "active" && !services.length)) {
       showNotFound();
       return;
