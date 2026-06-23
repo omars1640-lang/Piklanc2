@@ -4,15 +4,13 @@ import {
   collection,
   doc,
   getDoc,
-  increment,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
   setDoc,
   updateDoc,
-  where,
-  writeBatch
+  where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
   deleteObject,
@@ -54,6 +52,7 @@ const elements = {
   loading: document.getElementById("authLoading")
 };
 
+let currentUser = null;
 let currentProfile = null;
 let conversations = [];
 let activeChat = null;
@@ -63,48 +62,69 @@ let unsubscribeChats = null;
 let unsubscribeMessages = null;
 
 const initialParams = new URLSearchParams(location.search);
-if (initialParams.has("withUid") || initialParams.has("chat")) {
-  elements.shell.classList.add("chat-open", "chat-booting");
-  elements.chatEmpty.hidden = true;
-  elements.workspace.hidden = false;
-  elements.stream.innerHTML = '<div class="stream-state">جاري فتح المحادثة...</div>';
+const hasRequestedConversation = initialParams.has("withUid") || initialParams.has("chat");
+
+function text(id, value) {
+  const node = document.getElementById(id);
+  if (node) node.textContent = value;
 }
 
 function showToast(message) {
   elements.toast.textContent = message;
   elements.toast.classList.add("show");
   clearTimeout(showToast.timer);
-  showToast.timer = setTimeout(() => elements.toast.classList.remove("show"), 3000);
+  showToast.timer = setTimeout(() => elements.toast.classList.remove("show"), 3500);
+}
+
+function setStreamState(message) {
+  elements.stream.replaceChildren();
+  const state = document.createElement("div");
+  state.className = "stream-state";
+  state.textContent = message;
+  elements.stream.appendChild(state);
+}
+
+function showChatWorkspace() {
+  elements.chatEmpty.hidden = true;
+  elements.workspace.hidden = false;
+  elements.shell.classList.add("chat-open");
 }
 
 function showConversationOpenError(message) {
+  showChatWorkspace();
   elements.shell.classList.remove("chat-booting");
-  elements.chatEmpty.hidden = true;
-  elements.workspace.hidden = false;
-  elements.stream.innerHTML = `<div class="stream-state">${message}</div>`;
+  setStreamState(message);
 }
 
-function initials(name) {
-  return (name || "م").trim().charAt(0).toUpperCase();
+function initial(value) {
+  return (value || "م").trim().charAt(0).toUpperCase();
 }
 
 function formatPrice(value) {
   const number = Number(value);
-  return Number.isFinite(number) ? `${number.toLocaleString("ar-SY")} ل.س` : "";
+  return Number.isFinite(number) && number > 0 ? `${number.toLocaleString("ar-SY")} ل.س` : "";
 }
 
-function formatFileSize(bytes) {
+function formatFileSize(bytes = 0) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function timestampDate(timestamp) {
+function toDate(timestamp) {
   return timestamp?.toDate?.() || null;
 }
 
-function formatConversationTime(timestamp) {
-  const date = timestampDate(timestamp);
+function sortByUpdatedAt(items) {
+  return [...items].sort((a, b) => {
+    const left = toDate(a.lastUpdated)?.getTime() || 0;
+    const right = toDate(b.lastUpdated)?.getTime() || 0;
+    return right - left;
+  });
+}
+
+function conversationTime(timestamp) {
+  const date = toDate(timestamp);
   if (!date) return "";
   const today = new Date();
   if (date.toDateString() === today.toDateString()) {
@@ -113,7 +133,7 @@ function formatConversationTime(timestamp) {
   return date.toLocaleDateString("ar-SY", { month: "short", day: "numeric" });
 }
 
-function formatDay(date) {
+function dayLabel(date) {
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
@@ -123,38 +143,134 @@ function formatDay(date) {
 }
 
 function otherParticipant(chat) {
-  const uid = chat.participantUids.find(participant => participant !== auth.currentUser.uid);
+  const uid = chat.participantUids?.find(participant => participant !== currentUser.uid);
   return {
     uid,
     name: chat.participantNames?.[uid] || "مستخدم PikLance",
-    type: chat.participantTypes?.[uid] || "member"
+    type: chat.participantTypes?.[uid] || "buyer"
   };
 }
 
 function unreadFor(chat) {
-  return Number(chat.unreadCounts?.[auth.currentUser.uid] || 0);
+  return Number(chat.unreadCounts?.[currentUser.uid] || 0);
+}
+
+function profileLink(person) {
+  return person.type === "freelancer"
+    ? `freelancer-profile.html?uid=${encodeURIComponent(person.uid)}`
+    : "profile.html";
+}
+
+function safeChatPart(value) {
+  return String(value || "direct")
+    .replace(/[^a-zA-Z0-9_-]/g, "-")
+    .slice(0, 80) || "direct";
+}
+
+function requestedChatId(otherUid, serviceId) {
+  return `${[currentUser.uid, otherUid].sort().join("_")}__${safeChatPart(serviceId)}`;
+}
+
+async function getUserProfile(uid) {
+  const snapshot = await getDoc(doc(db, "users", uid));
+  if (!snapshot.exists()) throw new Error(`missing-user:${uid}`);
+  return { id: uid, ...snapshot.data() };
+}
+
+function normalizeContext(params, participantUids, participantTypes) {
+  const serviceId = params.get("serviceId");
+  if (!serviceId) return null;
+  const requestedSellerUid = params.get("sellerUid");
+  const sellerUid = participantUids.includes(requestedSellerUid)
+    ? requestedSellerUid
+    : participantTypes[currentUser.uid] === "freelancer"
+      ? currentUser.uid
+      : participantUids.find(uid => uid !== currentUser.uid);
+
+  const price = Number(params.get("servicePrice"));
+  return {
+    serviceId: safeChatPart(serviceId),
+    title: (params.get("serviceTitle") || "خدمة على PikLance").slice(0, 140),
+    image: (params.get("serviceImage") || "").slice(0, 1200),
+    price: Number.isFinite(price) ? price : 0,
+    sellerUid
+  };
+}
+
+async function ensureRequestedConversation() {
+  const params = new URLSearchParams(location.search);
+  const otherUid = params.get("withUid");
+  if (!otherUid || otherUid === currentUser.uid) return null;
+
+  const [mine, other] = await Promise.all([
+    getUserProfile(currentUser.uid),
+    getUserProfile(otherUid)
+  ]);
+  if (mine.status !== "active" || other.status !== "active") {
+    throw new Error("inactive-participant");
+  }
+
+  const serviceId = params.get("serviceId");
+  const chatId = requestedChatId(otherUid, serviceId);
+  const chatReference = doc(db, "chats", chatId);
+  const existing = await getDoc(chatReference);
+  if (existing.exists()) return chatId;
+
+  const participantUids = [currentUser.uid, otherUid].sort();
+  const participantNames = {
+    [currentUser.uid]: mine.name,
+    [otherUid]: other.name
+  };
+  const participantTypes = {
+    [currentUser.uid]: mine.accountType,
+    [otherUid]: other.accountType
+  };
+  const unreadCounts = {
+    [currentUser.uid]: 0,
+    [otherUid]: 0
+  };
+  const context = normalizeContext(params, participantUids, participantTypes);
+
+  await setDoc(chatReference, {
+    participantUids,
+    participantNames,
+    participantTypes,
+    unreadCounts,
+    lastMessage: "",
+    lastMessageType: "text",
+    lastSenderUid: "",
+    createdAt: serverTimestamp(),
+    lastUpdated: serverTimestamp(),
+    ...(context ? { context } : {})
+  });
+  return chatId;
 }
 
 function renderConversationList() {
   const term = elements.search.value.trim().toLowerCase();
   const visible = conversations.filter(chat => {
     const person = otherParticipant(chat);
-    const matchesFilter = activeFilter === "all" || unreadFor(chat) > 0;
     const haystack = `${person.name} ${chat.lastMessage || ""} ${chat.context?.title || ""}`.toLowerCase();
-    return matchesFilter && (!term || haystack.includes(term));
+    return (activeFilter === "all" || unreadFor(chat) > 0) && (!term || haystack.includes(term));
   });
 
   elements.conversationCount.textContent = conversations.length;
-  elements.unreadCount.textContent = conversations.reduce((total, chat) => total + unreadFor(chat), 0);
+  elements.unreadCount.textContent = conversations.reduce((sum, chat) => sum + unreadFor(chat), 0);
   elements.conversationList.replaceChildren();
 
   if (!visible.length) {
-    const state = document.createElement("div");
-    state.className = "empty-list";
-    state.innerHTML = term || activeFilter === "unread"
-      ? "<span>⌕</span><strong>لا توجد نتائج</strong><p>جرّب كلمة بحث أخرى أو اعرض كل المحادثات.</p>"
-      : "<span>✉</span><strong>لا توجد محادثات بعد</strong><p>ابدأ محادثة من صفحة مستقل أو من تفاصيل إحدى الخدمات.</p>";
-    elements.conversationList.appendChild(state);
+    const empty = document.createElement("div");
+    empty.className = "empty-list";
+    const icon = document.createElement("span");
+    icon.textContent = term ? "⌕" : "✉";
+    const title = document.createElement("strong");
+    title.textContent = term || activeFilter === "unread" ? "لا توجد نتائج" : "لا توجد محادثات بعد";
+    const copy = document.createElement("p");
+    copy.textContent = term || activeFilter === "unread"
+      ? "جرّب كلمة بحث أخرى أو اعرض كل المحادثات."
+      : "ابدأ محادثة من صفحة مستقل أو من تفاصيل إحدى الخدمات.";
+    empty.append(icon, title, copy);
+    elements.conversationList.appendChild(empty);
     return;
   }
 
@@ -168,7 +284,7 @@ function renderConversationList() {
 
     const avatar = document.createElement("span");
     avatar.className = "conversation-avatar";
-    avatar.textContent = initials(person.name);
+    avatar.textContent = initial(person.name);
 
     const copy = document.createElement("span");
     copy.className = "conversation-copy";
@@ -176,12 +292,13 @@ function renderConversationList() {
     const name = document.createElement("strong");
     name.textContent = person.name;
     const time = document.createElement("time");
-    time.textContent = formatConversationTime(chat.lastUpdated);
+    time.textContent = conversationTime(chat.lastUpdated);
     top.append(name, time);
+
     const preview = document.createElement("p");
-    const senderPrefix = chat.lastSenderUid === auth.currentUser.uid ? "أنت: " : "";
-    preview.textContent = `${senderPrefix}${chat.lastMessage || "ابدأ المحادثة الآن"}`;
+    preview.textContent = `${chat.lastSenderUid === currentUser.uid ? "أنت: " : ""}${chat.lastMessage || "ابدأ المحادثة الآن"}`;
     copy.append(top, preview);
+
     if (chat.context?.title) {
       const service = document.createElement("span");
       service.className = "conversation-service";
@@ -201,68 +318,51 @@ function renderConversationList() {
   });
 }
 
-function setPersonDetails(chat) {
+function renderConversationDetails(chat) {
   const person = otherParticipant(chat);
   const role = person.type === "freelancer" ? "مستقل على PikLance" : "عميل على PikLance";
-  const profileHref = person.type === "freelancer"
-    ? `freelancer-profile.html?uid=${encodeURIComponent(person.uid)}`
-    : "profile.html";
+  const href = profileLink(person);
 
-  document.getElementById("chatPersonName").textContent = person.name;
-  document.getElementById("chatPersonRole").textContent = role;
-  document.getElementById("chatAvatar").textContent = initials(person.name);
-  document.getElementById("chatProfileLink").href = profileHref;
-  document.getElementById("detailsName").textContent = person.name;
-  document.getElementById("detailsRole").textContent = role;
-  document.getElementById("detailsAvatar").textContent = initials(person.name);
-  document.getElementById("detailsProfileLink").href = profileHref;
+  text("chatPersonName", person.name);
+  text("chatPersonRole", role);
+  text("chatAvatar", initial(person.name));
+  text("detailsName", person.name);
+  text("detailsRole", role);
+  text("detailsAvatar", initial(person.name));
+  document.getElementById("chatProfileLink").href = href;
+  document.getElementById("detailsProfileLink").href = href;
 
-  const context = chat.context;
   const contextCard = document.getElementById("serviceContext");
   const detailsService = document.getElementById("detailsService");
-  if (context?.serviceId) {
-    const serviceHref = `service-details.html?id=${encodeURIComponent(context.serviceId)}${context.sellerUid ? `&sellerUid=${encodeURIComponent(context.sellerUid)}` : ""}`;
-    contextCard.hidden = false;
-    contextCard.href = serviceHref;
-    document.getElementById("contextTitle").textContent = context.title || "تفاصيل الخدمة";
-    document.getElementById("contextPrice").textContent = formatPrice(context.price);
-    const image = document.getElementById("contextImage");
-    image.src = context.image || "";
-    image.alt = context.title || "صورة الخدمة";
-    detailsService.hidden = false;
-    document.getElementById("detailsServiceTitle").textContent = context.title || "الخدمة المرتبطة";
-    document.getElementById("detailsServiceLink").href = serviceHref;
-  } else {
+  const context = chat.context;
+  if (!context?.serviceId) {
     contextCard.hidden = true;
     detailsService.hidden = true;
+    return;
   }
+
+  const serviceHref = `service-details.html?id=${encodeURIComponent(context.serviceId)}${context.sellerUid ? `&sellerUid=${encodeURIComponent(context.sellerUid)}` : ""}`;
+  contextCard.hidden = false;
+  contextCard.href = serviceHref;
+  text("contextTitle", context.title || "تفاصيل الخدمة");
+  text("contextPrice", formatPrice(context.price));
+  const image = document.getElementById("contextImage");
+  image.src = context.image || "assets/service-placeholder.svg";
+  image.alt = context.title || "صورة الخدمة";
+
+  detailsService.hidden = false;
+  text("detailsServiceTitle", context.title || "الخدمة المرتبطة");
+  document.getElementById("detailsServiceLink").href = serviceHref;
 }
 
 async function markConversationRead(chat) {
   if (!unreadFor(chat)) return;
   try {
     await updateDoc(doc(db, "chats", chat.id), {
-      [`unreadCounts.${auth.currentUser.uid}`]: 0
+      [`unreadCounts.${currentUser.uid}`]: 0
     });
   } catch (error) {
-    console.error("Unable to mark conversation read", error);
-  }
-}
-
-async function markMessagesRead(snapshot) {
-  const unreadDocs = snapshot.docs.filter(messageDoc => {
-    const message = messageDoc.data();
-    return message.senderUid !== auth.currentUser.uid && !message.readBy?.includes(auth.currentUser.uid);
-  });
-  if (!unreadDocs.length) return;
-  const batch = writeBatch(db);
-  unreadDocs.slice(0, 100).forEach(messageDoc => {
-    batch.update(messageDoc.ref, { readBy: arrayUnion(auth.currentUser.uid) });
-  });
-  try {
-    await batch.commit();
-  } catch (error) {
-    console.error("Unable to update read receipts", error);
+    console.warn("Unable to mark conversation read", error);
   }
 }
 
@@ -273,52 +373,66 @@ function renderAttachment(message) {
   link.href = attachment.url;
   link.target = "_blank";
   link.rel = "noopener noreferrer";
+
   if (attachment.contentType?.startsWith("image/")) {
     link.classList.add("has-image");
     const image = document.createElement("img");
     image.className = "message-attachment-preview";
     image.src = attachment.url;
-    image.alt = attachment.name;
+    image.alt = attachment.name || "مرفق";
     link.appendChild(image);
   }
+
   const icon = document.createElement("span");
   icon.className = "file-icon";
   icon.textContent = attachment.contentType?.startsWith("image/") ? "صورة" : "ملف";
   const copy = document.createElement("span");
   const name = document.createElement("strong");
-  name.textContent = attachment.name;
+  name.textContent = attachment.name || "مرفق";
   const size = document.createElement("small");
-  size.textContent = formatFileSize(attachment.size || 0);
+  size.textContent = formatFileSize(attachment.size);
   copy.append(name, size);
   link.append(icon, copy);
   return link;
 }
 
+function markMessagesRead(snapshot) {
+  snapshot.docs
+    .filter(messageDoc => {
+      const message = messageDoc.data();
+      return message.senderUid !== currentUser.uid && !message.readBy?.includes(currentUser.uid);
+    })
+    .slice(0, 50)
+    .forEach(messageDoc => {
+      updateDoc(messageDoc.ref, { readBy: arrayUnion(currentUser.uid) }).catch(error => {
+        console.warn("Unable to mark message read", error);
+      });
+    });
+}
+
 function renderMessages(snapshot) {
-  const previousBottomDistance = elements.stream.scrollHeight - elements.stream.scrollTop - elements.stream.clientHeight;
+  const shouldStickToBottom = elements.stream.scrollHeight - elements.stream.scrollTop - elements.stream.clientHeight < 120;
   elements.stream.replaceChildren();
+
   if (snapshot.empty) {
-    const state = document.createElement("div");
-    state.className = "stream-state";
-    state.textContent = "ابدأ المحادثة برسالة واضحة عن المطلوب والمدة والميزانية.";
-    elements.stream.appendChild(state);
+    setStreamState("ابدأ المحادثة برسالة واضحة عن المطلوب والمدة والميزانية.");
     return;
   }
 
   let currentDay = "";
   snapshot.forEach(messageDoc => {
     const message = messageDoc.data();
-    const date = timestampDate(message.timestamp) || new Date();
+    const date = toDate(message.timestamp) || new Date();
     const day = date.toDateString();
     if (day !== currentDay) {
       currentDay = day;
       const divider = document.createElement("span");
       divider.className = "day-divider";
-      divider.textContent = formatDay(date);
+      divider.textContent = dayLabel(date);
       elements.stream.appendChild(divider);
     }
 
-    const mine = message.senderUid === auth.currentUser.uid;
+    const mine = message.senderUid === currentUser.uid;
     const row = document.createElement("div");
     row.className = `message-row ${mine ? "mine" : "theirs"}`;
     const bubble = document.createElement("div");
@@ -334,16 +448,16 @@ function renderMessages(snapshot) {
     if (mine) {
       const read = document.createElement("span");
       const otherUid = otherParticipant(activeChat).uid;
-      const wasRead = message.readBy?.includes(otherUid);
-      read.className = `read-state ${wasRead ? "read" : ""}`;
-      read.textContent = wasRead ? "تمت القراءة" : "تم الإرسال";
+      read.className = message.readBy?.includes(otherUid) ? "read-state read" : "read-state";
+      read.textContent = message.readBy?.includes(otherUid) ? "تمت القراءة" : "تم الإرسال";
       meta.appendChild(read);
     }
+
     row.append(bubble, meta);
     elements.stream.appendChild(row);
   });
 
-  if (previousBottomDistance < 100 || snapshot.docChanges().some(change => change.type === "added")) {
+  if (shouldStickToBottom || snapshot.docChanges().some(change => change.type === "added")) {
     requestAnimationFrame(() => {
       elements.stream.scrollTop = elements.stream.scrollHeight;
     });
@@ -353,169 +467,56 @@ function renderMessages(snapshot) {
 
 function subscribeToMessages(chatId) {
   unsubscribeMessages?.();
-  elements.stream.innerHTML = '<div class="stream-state">جاري تحميل الرسائل...</div>';
+  setStreamState("جاري تحميل الرسائل...");
   const messagesQuery = query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "asc"));
   unsubscribeMessages = onSnapshot(messagesQuery, renderMessages, error => {
     console.error("Message subscription failed", error);
-    elements.stream.innerHTML = '<div class="stream-state">تعذر تحميل الرسائل. تحقق من الاتصال وحاول مجدداً.</div>';
+    setStreamState(`تعذر تحميل الرسائل (${error.code || "unknown"}). تحقق من الصلاحيات أو الاتصال.`);
   });
-}
-
-async function upgradeLegacyChat(chat) {
-  if (chat.participantTypes && chat.unreadCounts && chat.lastMessageType && chat.lastSenderUid !== undefined) {
-    return chat;
-  }
-  const person = otherParticipant(chat);
-  const otherProfileSnapshot = await getDoc(doc(db, "publicProfiles", person.uid));
-  const otherType = otherProfileSnapshot.exists() ? otherProfileSnapshot.data().accountType : "buyer";
-  const participantTypes = {
-    [auth.currentUser.uid]: currentProfile.accountType,
-    [person.uid]: otherType
-  };
-  const unreadCounts = {
-    [auth.currentUser.uid]: 0,
-    [person.uid]: 0
-  };
-  await setDoc(doc(db, "chats", chat.id), {
-    participantTypes,
-    unreadCounts,
-    lastMessageType: "text",
-    lastSenderUid: ""
-  }, { merge: true });
-  return { ...chat, participantTypes, unreadCounts, lastMessageType: "text", lastSenderUid: "" };
 }
 
 async function openConversation(chatId) {
   const chat = conversations.find(item => item.id === chatId);
   if (!chat) return;
-  try {
-    activeChat = await upgradeLegacyChat(chat);
-  } catch (error) {
-    console.error("Unable to upgrade legacy conversation", error);
-    showToast("تعذر تجهيز المحادثة القديمة للإرسال.");
-    return;
-  }
-  elements.chatEmpty.hidden = true;
-  elements.workspace.hidden = false;
+  activeChat = chat;
+  showChatWorkspace();
+  elements.shell.classList.remove("chat-booting");
   elements.details.hidden = window.innerWidth <= 1180;
   document.getElementById("detailsToggle").setAttribute("aria-expanded", String(!elements.details.hidden));
-  elements.shell.classList.add("chat-open");
-  elements.shell.classList.remove("chat-booting");
-  setPersonDetails(activeChat);
+  renderConversationDetails(activeChat);
   renderConversationList();
   subscribeToMessages(activeChat.id);
   markConversationRead(activeChat);
+
   const url = new URL(location.href);
   url.searchParams.set("chat", activeChat.id);
+  ["withUid", "serviceId", "serviceTitle", "serviceImage", "servicePrice", "sellerUid"].forEach(key => url.searchParams.delete(key));
   history.replaceState({}, "", url);
 }
 
 function subscribeToConversations() {
-  const chatsQuery = query(
-    collection(db, "chats"),
-    where("participantUids", "array-contains", auth.currentUser.uid),
-    orderBy("lastUpdated", "desc")
-  );
+  unsubscribeChats?.();
+  const chatsQuery = query(collection(db, "chats"), where("participantUids", "array-contains", currentUser.uid));
   unsubscribeChats = onSnapshot(chatsQuery, snapshot => {
-    conversations = snapshot.docs.map(chatDoc => ({ id: chatDoc.id, ...chatDoc.data() }));
+    conversations = sortByUpdatedAt(snapshot.docs.map(chatDoc => ({ id: chatDoc.id, ...chatDoc.data() })));
     if (activeChat) {
-      activeChat = conversations.find(chat => chat.id === activeChat.id) || null;
-      if (activeChat) setPersonDetails(activeChat);
+      activeChat = conversations.find(chat => chat.id === activeChat.id) || activeChat;
+      renderConversationDetails(activeChat);
     }
     renderConversationList();
 
-    const requestedChat = new URLSearchParams(location.search).get("chat");
-    if (!activeChat && requestedChat && conversations.some(chat => chat.id === requestedChat)) {
-      openConversation(requestedChat);
+    const chatId = new URLSearchParams(location.search).get("chat");
+    if (!activeChat && chatId && conversations.some(chat => chat.id === chatId)) {
+      openConversation(chatId);
     }
   }, error => {
     console.error("Conversation subscription failed", error);
-    elements.conversationList.innerHTML = '<div class="empty-list"><span>!</span><strong>تعذر تحميل المحادثات</strong><p>قد تحتاج إلى إنشاء فهرس Firestore للاستعلام أو التحقق من الاتصال.</p></div>';
+    elements.conversationList.innerHTML = "";
+    const empty = document.createElement("div");
+    empty.className = "empty-list";
+    empty.innerHTML = `<span>!</span><strong>تعذر تحميل المحادثات</strong><p>الخطأ: ${error.code || "unknown"}. تحقق من قواعد Firebase أو الاتصال.</p>`;
+    elements.conversationList.appendChild(empty);
   });
-}
-
-function safeId(value) {
-  return String(value || "direct").replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 80);
-}
-
-async function startRequestedConversation() {
-  const params = new URLSearchParams(location.search);
-  const otherUid = params.get("withUid");
-  if (!otherUid || otherUid === auth.currentUser.uid) return null;
-
-  const [otherProfileSnapshot, currentPublicSnapshot, otherUserSnapshot, currentUserSnapshot] = await Promise.all([
-    getDoc(doc(db, "publicProfiles", otherUid)),
-    getDoc(doc(db, "publicProfiles", auth.currentUser.uid)),
-    getDoc(doc(db, "users", otherUid)),
-    getDoc(doc(db, "users", auth.currentUser.uid))
-  ]);
-  if (!otherUserSnapshot.exists() || !currentUserSnapshot.exists()) {
-    showToast("تعذر العثور على حساب المستقل المطلوب.");
-    return null;
-  }
-
-  const otherUser = otherUserSnapshot.data();
-  const currentUser = currentUserSnapshot.data();
-  const otherProfile = otherProfileSnapshot.exists() ? otherProfileSnapshot.data() : otherUser;
-  const currentPublicProfile = currentPublicSnapshot.exists() ? currentPublicSnapshot.data() : currentUser;
-  const currentName = currentUser.name || currentPublicProfile.name || auth.currentUser.email || "PikLance";
-  const otherName = otherUser.name || otherProfile.name || "PikLance";
-  const currentType = currentUser.accountType || currentPublicProfile.accountType || "buyer";
-  const otherType = otherUser.accountType || otherProfile.accountType || "freelancer";
-  const ids = [auth.currentUser.uid, otherUid].sort();
-  const serviceId = params.get("serviceId");
-  const chatId = `${ids.join("_")}__${safeId(serviceId)}`;
-  const chatReference = doc(db, "chats", chatId);
-  const existing = await getDoc(chatReference);
-  if (!existing.exists()) {
-    const participantNames = {
-      [auth.currentUser.uid]: currentName,
-      [otherUid]: otherName
-    };
-    const participantTypes = {
-      [auth.currentUser.uid]: currentType,
-      [otherUid]: otherType
-    };
-    const unreadCounts = {
-      [auth.currentUser.uid]: 0,
-      [otherUid]: 0
-    };
-    const data = {
-      participantUids: ids,
-      participantNames,
-      participantTypes,
-      unreadCounts,
-      lastMessage: "",
-      lastMessageType: "text",
-      lastSenderUid: "",
-      createdAt: serverTimestamp(),
-      lastUpdated: serverTimestamp()
-    };
-    if (serviceId) {
-      const requestedSellerUid = params.get("sellerUid");
-      const contextSellerUid = ids.includes(requestedSellerUid)
-        ? requestedSellerUid
-        : participantTypes[auth.currentUser.uid] === "freelancer"
-          ? auth.currentUser.uid
-          : otherUid;
-      data.context = {
-        serviceId: safeId(serviceId),
-        title: (params.get("serviceTitle") || "خدمة على PikLance").slice(0, 140),
-        image: (params.get("serviceImage") || "").slice(0, 1200),
-        price: Number.isFinite(Number(params.get("servicePrice"))) ? Number(params.get("servicePrice")) : 0,
-        sellerUid: contextSellerUid
-      };
-    }
-    try {
-      await setDoc(chatReference, data);
-    } catch (error) {
-      console.error("Unable to create requested conversation", error);
-      showConversationOpenError("تعذر إنشاء المحادثة. تحقق من أن الحسابين مفعلان وأن قواعد Firebase منشورة، ثم حاول مرة أخرى.");
-      showToast("تعذر إنشاء المحادثة حالياً.");
-      return null;
-    }
-  }
-  return chatId;
 }
 
 function validateFile(file) {
@@ -538,13 +539,13 @@ function setSelectedFile(file) {
     elements.fileInput.value = "";
     return;
   }
-  document.getElementById("attachmentKind").textContent = file.type.startsWith("image/") ? "صورة" : "ملف";
-  document.getElementById("attachmentName").textContent = file.name;
-  document.getElementById("attachmentSize").textContent = formatFileSize(file.size);
+  text("attachmentKind", file.type.startsWith("image/") ? "صورة" : "ملف");
+  text("attachmentName", file.name);
+  text("attachmentSize", formatFileSize(file.size));
 }
 
 async function uploadAttachment(file, chatId, messageId) {
-  const cleanName = file.name.replace(/[^\w.\-]+/g, "-").slice(-100);
+  const cleanName = file.name.replace(/[^\w.\-]+/g, "-").slice(-100) || "attachment";
   const path = `chat-attachments/${chatId}/${messageId}/${cleanName}`;
   const attachmentRef = ref(storage, path);
   await uploadBytes(attachmentRef, file, { contentType: file.type });
@@ -557,50 +558,63 @@ async function uploadAttachment(file, chatId, messageId) {
   };
 }
 
+async function updateConversationAfterMessage(message) {
+  const otherUid = otherParticipant(activeChat).uid;
+  const currentUnread = Number(activeChat.unreadCounts?.[otherUid] || 0);
+  const unreadCounts = {
+    ...(activeChat.unreadCounts || {}),
+    [currentUser.uid]: 0,
+    [otherUid]: currentUnread + 1
+  };
+  await updateDoc(doc(db, "chats", activeChat.id), {
+    lastMessage: (message.text || `مرفق: ${message.attachment?.name || "ملف"}`).slice(0, 140),
+    lastMessageType: message.type,
+    lastSenderUid: currentUser.uid,
+    lastUpdated: serverTimestamp(),
+    unreadCounts
+  });
+}
+
 async function sendMessage(event) {
   event.preventDefault();
-  const text = elements.input.value.trim();
-  if ((!text && !selectedFile) || !activeChat) return;
+  const textValue = elements.input.value.trim();
+  if ((!textValue && !selectedFile) || !activeChat) return;
+
+  const originalLabel = elements.send.querySelector("span").textContent;
   elements.send.disabled = true;
-  elements.send.querySelector("span").textContent = selectedFile ? "جارٍ الرفع" : "جارٍ الإرسال";
+  elements.send.querySelector("span").textContent = selectedFile ? "جاري الرفع" : "جاري الإرسال";
 
   const messageReference = doc(collection(db, "chats", activeChat.id, "messages"));
   let attachment = null;
   try {
     if (selectedFile) attachment = await uploadAttachment(selectedFile, activeChat.id, messageReference.id);
-    const otherUid = otherParticipant(activeChat).uid;
-    const batch = writeBatch(db);
     const message = {
-      text,
-      senderUid: auth.currentUser.uid,
+      text: textValue,
+      senderUid: currentUser.uid,
       timestamp: serverTimestamp(),
-      type: attachment ? (text ? "mixed" : "attachment") : "text",
-      readBy: [auth.currentUser.uid]
+      type: attachment ? (textValue ? "mixed" : "attachment") : "text",
+      readBy: [currentUser.uid],
+      ...(attachment ? { attachment } : {})
     };
-    if (attachment) message.attachment = attachment;
-    batch.set(messageReference, message);
-    batch.update(doc(db, "chats", activeChat.id), {
-      lastMessage: (text || `مرفق: ${attachment.name}`).slice(0, 140),
-      lastMessageType: message.type,
-      lastSenderUid: auth.currentUser.uid,
-      lastUpdated: serverTimestamp(),
-      [`unreadCounts.${auth.currentUser.uid}`]: 0,
-      [`unreadCounts.${otherUid}`]: increment(1)
-    });
-    await batch.commit();
+    await setDoc(messageReference, message);
     elements.input.value = "";
     elements.input.style.height = "";
     elements.limit.textContent = "0/2000";
     setSelectedFile(null);
+
+    try {
+      await updateConversationAfterMessage(message);
+    } catch (summaryError) {
+      console.warn("Message saved but conversation summary failed", summaryError);
+      showToast("تم إرسال الرسالة، لكن تعذر تحديث ملخص المحادثة مؤقتاً.");
+    }
   } catch (error) {
     console.error("Unable to send message", error);
-    if (attachment?.path) {
-      deleteObject(ref(storage, attachment.path)).catch(() => {});
-    }
-    showToast("تعذر إرسال الرسالة. تحقق من الاتصال وحاول مجدداً.");
+    if (attachment?.path) deleteObject(ref(storage, attachment.path)).catch(() => {});
+    showToast(`تعذر إرسال الرسالة (${error.code || "unknown"}).`);
   } finally {
     elements.send.disabled = false;
-    elements.send.querySelector("span").textContent = "إرسال";
+    elements.send.querySelector("span").textContent = originalLabel;
   }
 }
 
@@ -643,7 +657,40 @@ function bindEvents() {
   });
 }
 
+async function initializeMessages(user) {
+  currentUser = user;
+  const profileSnapshot = await getDoc(doc(db, "users", user.uid));
+  if (!user.emailVerified || !profileSnapshot.exists() || profileSnapshot.data().status !== "active") {
+    await signOut(auth);
+    location.replace("login.html");
+    return;
+  }
+  currentProfile = profileSnapshot.data();
+  subscribeToConversations();
+
+  const params = new URLSearchParams(location.search);
+  if (params.has("withUid")) {
+    showChatWorkspace();
+    setStreamState("جاري فتح المحادثة...");
+    const chatId = await ensureRequestedConversation();
+    if (chatId) {
+      const snapshot = await getDoc(doc(db, "chats", chatId));
+      if (snapshot.exists()) {
+        const chat = { id: snapshot.id, ...snapshot.data() };
+        if (!conversations.some(item => item.id === chat.id)) conversations.unshift(chat);
+        await openConversation(chat.id);
+      }
+    }
+  }
+}
+
 bindEvents();
+
+if (hasRequestedConversation) {
+  showChatWorkspace();
+  elements.shell.classList.add("chat-booting");
+  setStreamState("جاري فتح المحادثة...");
+}
 
 onAuthStateChanged(auth, async user => {
   if (!user) {
@@ -651,42 +698,12 @@ onAuthStateChanged(auth, async user => {
     location.replace(`login.html?returnUrl=${returnUrl}`);
     return;
   }
+
   try {
-    const profileSnapshot = await getDoc(doc(db, "users", user.uid));
-    if (!user.emailVerified || !profileSnapshot.exists() || profileSnapshot.data().status !== "active") {
-      await signOut(auth);
-      location.replace("login.html");
-      return;
-    }
-    currentProfile = profileSnapshot.data();
-    subscribeToConversations();
-    const requestedChatId = await startRequestedConversation();
-    if (requestedChatId) {
-      const url = new URL(location.href);
-      url.searchParams.delete("withUid");
-      url.searchParams.delete("serviceTitle");
-      url.searchParams.delete("serviceImage");
-      url.searchParams.delete("servicePrice");
-      url.searchParams.set("chat", requestedChatId);
-      history.replaceState({}, "", url);
-      const snapshot = await getDoc(doc(db, "chats", requestedChatId));
-      if (snapshot.exists()) {
-        const requestedChat = { id: snapshot.id, ...snapshot.data() };
-        if (!conversations.some(chat => chat.id === requestedChat.id)) conversations.unshift(requestedChat);
-        await openConversation(requestedChat.id);
-      } else {
-        showConversationOpenError("لم يتم العثور على المحادثة بعد إنشائها. حاول تحديث الصفحة.");
-      }
-    } else if (new URLSearchParams(location.search).has("withUid")) {
-      showConversationOpenError("تعذر فتح المحادثة المطلوبة. تأكد من أن الحساب الآخر مفعل ومتاح للمراسلة.");
-    }
+    await initializeMessages(user);
   } catch (error) {
     console.error("Unable to initialize messages", error);
-    elements.shell.classList.remove("chat-booting");
-    if (initialParams.has("withUid") || initialParams.has("chat")) {
-      elements.stream.innerHTML = '<div class="stream-state">تعذر فتح المحادثة. تحقق من الاتصال أو الصلاحيات ثم حاول مجدداً.</div>';
-    }
-    showToast("تعذر فتح نظام الرسائل. تأكد من حالة الحساب والاتصال.");
+    showConversationOpenError(`تعذر فتح نظام الرسائل (${error.code || error.message || "unknown"}).`);
   } finally {
     elements.loading.classList.add("hidden");
   }
