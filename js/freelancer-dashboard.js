@@ -21,12 +21,14 @@ const orderStatus = { pending: "بانتظار التأكيد", funded: "طلب 
 const state = {
   user: null, profile: null, services: [], orders: [], notifications: [], categories: [], portfolio: [],
   editingServiceId: null,
+  pendingDeliveryOrder: null,
   avatarFile: null, avatarRemoved: false, avatarPreviewUrl: ""
 };
 const $ = id => document.getElementById(id);
 const elements = {
   loadingScreen: $("loadingScreen"), sidebar: $("sidebar"), sidebarOverlay: $("sidebarOverlay"),
   mobileMenuButton: $("mobileMenuButton"), serviceModal: $("serviceModal"), serviceForm: $("serviceForm"),
+  deliveryModal: $("deliveryModal"), deliveryForm: $("deliveryForm"),
   servicesTable: $("servicesTable"), servicesEmpty: $("servicesEmpty"), overviewServices: $("overviewServices"),
   overviewServicesEmpty: $("overviewServicesEmpty"), serviceSearch: $("serviceSearch"),
   profileForm: $("profileForm"), profileMessage: $("profileMessage"), toast: $("toast")
@@ -216,7 +218,7 @@ function renderOrders() {
       deliver.type = "button";
       deliver.className = "table-button primary";
       deliver.textContent = "تسليم العمل";
-      deliver.addEventListener("click", () => deliverOrder(order));
+      deliver.addEventListener("click", () => openDeliveryModal(order));
       actions.appendChild(deliver);
     }
     [
@@ -301,18 +303,57 @@ function updateFinanceSummary() {
   if (breakdown[2]) breakdown[2].textContent = `${formatMoney(disputed)} ل.س`;
 }
 
-async function deliverOrder(order) {
-  const note = prompt("أضف ملاحظة التسليم أو رابط الملفات للعميل:");
-  if (note === null) return;
-  await deliverEscrowOrder(db, order, note);
-  state.orders = state.orders.map(item => item.id === order.id ? {
-    ...item,
-    status: "delivered",
-    deliveryNote: note.trim(),
-    escrow: { ...(item.escrow || {}), status: "review_hold" }
-  } : item);
-  renderOrders();
-  showToast("تم تسليم العمل وبدأت مهلة مراجعة العميل لمدة 15 يوم.");
+function openDeliveryModal(order) {
+  state.pendingDeliveryOrder = order;
+  $("deliveryServiceTitle").textContent = order.serviceTitle || "طلب خدمة";
+  $("deliveryClientName").textContent = order.buyerName ? `العميل: ${order.buyerName}` : "العميل";
+  $("deliveryOrderAmount").textContent = `${formatMoney(order.total)} ل.س`;
+  $("deliveryNote").value = order.deliveryNote || "";
+  elements.deliveryModal.classList.add("open");
+  elements.deliveryModal.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+  setTimeout(() => $("deliveryNote").focus(), 50);
+}
+
+function closeDeliveryModal() {
+  state.pendingDeliveryOrder = null;
+  elements.deliveryForm.reset();
+  elements.deliveryModal.classList.remove("open");
+  elements.deliveryModal.setAttribute("aria-hidden", "true");
+  if (!elements.serviceModal.classList.contains("open")) document.body.style.overflow = "";
+}
+
+async function handleDeliverySubmit(event) {
+  event.preventDefault();
+  const order = state.pendingDeliveryOrder;
+  if (!order) return;
+  const note = $("deliveryNote").value.trim();
+  if (!note) {
+    showToast("أضف ملاحظة التسليم أو رابط الملفات قبل الإرسال.");
+    $("deliveryNote").focus();
+    return;
+  }
+  const button = $("deliverySubmitButton");
+  button.disabled = true;
+  button.textContent = "جاري التسليم...";
+  try {
+    await deliverEscrowOrder(db, order, note);
+    state.orders = state.orders.map(item => item.id === order.id ? {
+      ...item,
+      status: "delivered",
+      deliveryNote: note,
+      escrow: { ...(item.escrow || {}), status: "review_hold" }
+    } : item);
+    renderOrders();
+    closeDeliveryModal();
+    showToast("تم تسليم العمل وبدأت مهلة مراجعة العميل لمدة 15 يوم.");
+  } catch (error) {
+    console.error("Order delivery failed", error);
+    showToast("تعذر تسليم العمل حالياً. تحقق من الاتصال وحاول مجدداً.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "تأكيد التسليم";
+  }
 }
 
 async function markAllNotificationsRead() {
@@ -694,9 +735,11 @@ function bindEvents() {
   document.querySelectorAll("[data-section-target]").forEach(control => control.addEventListener("click", () => showSection(control.dataset.sectionTarget)));
   document.querySelectorAll("[data-open-service-modal]").forEach(control => control.addEventListener("click", () => openServiceModal()));
   document.querySelectorAll("[data-close-modal]").forEach(control => control.addEventListener("click", closeServiceModal));
+  document.querySelectorAll("[data-close-delivery-modal]").forEach(control => control.addEventListener("click", closeDeliveryModal));
   elements.mobileMenuButton.addEventListener("click", () => elements.sidebar.classList.contains("open") ? closeSidebar() : openSidebar());
   elements.sidebarOverlay.addEventListener("click", closeSidebar);
   elements.serviceForm.addEventListener("submit", handleServiceSubmit);
+  elements.deliveryForm.addEventListener("submit", handleDeliverySubmit);
   elements.profileForm.addEventListener("submit", saveProfile);
   $("portfolioForm").addEventListener("submit", handlePortfolioSubmit);
   $("profileAvatarInput").addEventListener("change", event => {
@@ -728,7 +771,7 @@ function bindEvents() {
   $("darkModeSwitch").addEventListener("change", event => setTheme(event.target.checked ? "dark" : "light"));
   $("withdrawButton").addEventListener("click", () => showToast("السحب غير مفعّل قبل ربط بوابة الدفع."));
   $("logoutButton").addEventListener("click", async () => { await signOut(auth); location.href = "index.html"; });
-  document.addEventListener("keydown", event => { if (event.key === "Escape") { closeServiceModal(); closeSidebar(); } });
+  document.addEventListener("keydown", event => { if (event.key === "Escape") { closeServiceModal(); closeDeliveryModal(); closeSidebar(); } });
 }
 
 setTheme(localStorage.getItem("theme") || "light");

@@ -421,6 +421,31 @@
     </div>
   </div>
 
+  <div class="modal" id="deliveryModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-delivery-modal></div>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="deliveryModalTitle">
+      <button class="modal-close" type="button" data-close-delivery-modal aria-label="إغلاق">×</button>
+      <p class="eyebrow">تسليم العمل</p>
+      <h2 id="deliveryModalTitle">أرسل تسليمك للعميل</h2>
+      <p class="modal-description">أضف ملاحظة واضحة أو رابط ملفات التسليم. بعد الإرسال يبدأ العميل مدة 15 يوم للمراجعة قبل تحرير المبلغ تلقائياً إذا لم يفتح نزاعاً.</p>
+      <form id="deliveryForm">
+        <div class="delivery-summary">
+          <strong id="deliveryServiceTitle">طلب خدمة</strong>
+          <span id="deliveryClientName">العميل</span>
+          <span id="deliveryOrderAmount">0 ل.س</span>
+        </div>
+        <label>ملاحظة التسليم أو رابط الملفات
+          <textarea id="deliveryNote" rows="5" maxlength="1000" placeholder="مثال: تم إنجاز العمل، رابط الملفات: https://..." required></textarea>
+        </label>
+        <small class="service-image-hint">حافظ على التواصل والتسليم داخل المنصة قدر الإمكان، ولا تشارك كلمات مرور أو بيانات حساسة.</small>
+        <div class="modal-actions">
+          <button class="button button-secondary" type="button" data-close-delivery-modal>إلغاء</button>
+          <button class="button button-primary" id="deliverySubmitButton" type="submit">تأكيد التسليم</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status"></div>
   <script type="module" src="js/freelancer-dashboard.js"></script>
   <script type="module" src="js/footer-copy.js"></script>
