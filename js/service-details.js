@@ -259,7 +259,7 @@ async function handleOrderService() {
       sellerUid
     });
     showToast("تم إنشاء طلب تجريبي وحجز قيمته داخل بيئة الاختبار.");
-    setTimeout(() => { location.href = `profile.html?section=orders&orderId=${encodeURIComponent(orderId)}`; }, 900);
+    setTimeout(() => { location.href = `profile.html#orders`; }, 900);
   } catch (error) {
     console.error("Unable to create order", error);
     showToast("تعذر إنشاء الطلب. تحقق من حالة الحساب وقواعد Firebase.");

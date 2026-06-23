@@ -594,7 +594,10 @@ service cloud.firestore {
       allow read: if isAdmin()
         || (
           activeUser()
-          && request.auth.uid in [resource.data.buyerUid, resource.data.freelancerUid]
+          && (
+            resource.data.buyerUid == request.auth.uid
+            || resource.data.freelancerUid == request.auth.uid
+          )
         );
       allow create: if validOrderCreate();
       allow update: if isAdmin()

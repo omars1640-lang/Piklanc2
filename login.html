@@ -266,7 +266,8 @@
     function loginDestination(profile) {
       const returnUrl = safeReturnUrl();
       if (returnUrl !== "index.html") return returnUrl;
-      return profile.role === "admin" ? "dashboard.html" : "index.html";
+      if (profile.role === "admin") return "dashboard.html";
+      return profile.accountType === "freelancer" ? "freelancer-dashboard.html" : "profile.html";
     }
 
     function showMessage(element, message, type) {
