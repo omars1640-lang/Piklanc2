@@ -177,6 +177,12 @@ async function getUserProfile(uid) {
   return { id: uid, ...snapshot.data() };
 }
 
+async function getPublicProfile(uid) {
+  const snapshot = await getDoc(doc(db, "publicProfiles", uid));
+  if (!snapshot.exists()) throw new Error(`missing-public-profile:${uid}`);
+  return { id: uid, ...snapshot.data() };
+}
+
 function normalizeContext(params, participantUids, participantTypes) {
   const serviceId = params.get("serviceId");
   if (!serviceId) return null;
@@ -204,7 +210,7 @@ async function ensureRequestedConversation() {
 
   const [mine, other] = await Promise.all([
     getUserProfile(currentUser.uid),
-    getUserProfile(otherUid)
+    getPublicProfile(otherUid)
   ]);
   if (mine.status !== "active" || other.status !== "active") {
     throw new Error("inactive-participant");
