@@ -1,15 +1,28 @@
 const categoryAliases = {
   "تصميم": "design", design: "design",
-  "برمجة": "code", web: "code", code: "code",
-  "كتابة": "write", writing: "write", write: "write",
-  "تسويق": "market", marketing: "market", market: "market",
+  "برمجة": "code", "برمجة وتطوير": "code", web: "code", code: "code",
+  "كتابة": "write", "كتابة وترجمة": "write", writing: "write", write: "write",
+  "تسويق": "market", "تسويق رقمي": "market", marketing: "market", market: "market",
   "صوتيات": "audio", audio: "audio",
-  "فيديو": "video", video: "video"
+  "فيديو": "video", "فيديو وأنيميشن": "video", video: "video"
 };
 
 function setText(id, value) {
   const element = document.getElementById(id);
   if (element) element.textContent = value;
+}
+
+function normalizeCategory(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "other";
+  if (categoryAliases[raw]) return categoryAliases[raw];
+  if (raw.includes("تصميم")) return "design";
+  if (raw.includes("برمج") || raw.includes("تطوير")) return "code";
+  if (raw.includes("كتابة") || raw.includes("ترجمة")) return "write";
+  if (raw.includes("تسويق")) return "market";
+  if (raw.includes("صوت")) return "audio";
+  if (raw.includes("فيديو") || raw.includes("أنيميشن") || raw.includes("مونتاج")) return "video";
+  return "other";
 }
 
 async function loadAboutStats() {
@@ -29,7 +42,7 @@ async function loadAboutStats() {
     ]);
     const feePercent = Number(settingsSnapshot.exists() ? settingsSnapshot.data().platformFeePercent : 20);
     const services = servicesSnapshot.docs.map(item => item.data());
-    const categories = new Set(services.map(service => categoryAliases[service.category] || service.category || "other"));
+    const categories = new Set(services.map(service => normalizeCategory(service.category)));
     const categoryCount = categories.size || 0;
     const formattedFee = `${feePercent.toLocaleString("ar-SY")}%`;
     setText("aboutPlatformFee", formattedFee);

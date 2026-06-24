@@ -1,8 +1,10 @@
 const categoryAliases = {
-  "تصميم": "design", design: "design", "برمجة": "code", web: "code", code: "code",
-  "كتابة": "write", writing: "write", write: "write", "تسويق": "market",
-  marketing: "market", market: "market", "صوتيات": "audio", audio: "audio",
-  "فيديو": "video", video: "video"
+  "تصميم": "design", design: "design",
+  "برمجة": "code", "برمجة وتطوير": "code", web: "code", code: "code",
+  "كتابة": "write", "كتابة وترجمة": "write", writing: "write", write: "write",
+  "تسويق": "market", "تسويق رقمي": "market", marketing: "market", market: "market",
+  "صوتيات": "audio", audio: "audio",
+  "فيديو": "video", "فيديو وأنيميشن": "video", video: "video"
 };
 const FEATURED_ROTATION_MS = 10 * 60 * 1000;
 let marketplaceDeps = null;
@@ -47,6 +49,19 @@ function shuffle(items) {
 
 function initial(value) {
   return (value || "م").trim().charAt(0).toUpperCase();
+}
+
+function normalizeCategory(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "other";
+  if (categoryAliases[raw]) return categoryAliases[raw];
+  if (raw.includes("تصميم")) return "design";
+  if (raw.includes("برمج") || raw.includes("تطوير")) return "code";
+  if (raw.includes("كتابة") || raw.includes("ترجمة")) return "write";
+  if (raw.includes("تسويق")) return "market";
+  if (raw.includes("صوت")) return "audio";
+  if (raw.includes("فيديو") || raw.includes("أنيميشن") || raw.includes("مونتاج")) return "video";
+  return "other";
 }
 
 function serviceCard(service, profile) {
@@ -194,7 +209,7 @@ async function loadHomeData() {
     document.getElementById("homeFreelancersCount").textContent = profiles.size.toLocaleString("ar-SY");
     document.getElementById("homeServicesCount").textContent = services.length.toLocaleString("ar-SY");
     const categoryCounts = services.reduce((counts, service) => {
-      const key = categoryAliases[service.category] || "other";
+      const key = normalizeCategory(service.category);
       counts[key] = (counts[key] || 0) + 1;
       return counts;
     }, {});
