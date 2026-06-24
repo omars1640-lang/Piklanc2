@@ -723,6 +723,7 @@ async function handlePortfolioSubmit(event) {
   submit.disabled = true;
   const itemRef = doc(collection(db, "portfolioItems"));
   let imagePath = "";
+  let phase = "upload";
   try {
     if (message) message.textContent = "جاري رفع الصورة...";
     const extension = file.type.split("/")[1].replace("jpeg", "jpg");
@@ -730,6 +731,7 @@ async function handlePortfolioSubmit(event) {
     const imageRef = storageRef(storage, imagePath);
     await uploadBytes(imageRef, file, { contentType: file.type });
 
+    phase = "database";
     if (message) message.textContent = "جاري نشر العمل في معرضك...";
     await setDoc(itemRef, {
       ownerUid: state.user.uid,
@@ -751,8 +753,9 @@ async function handlePortfolioSubmit(event) {
     console.error("Portfolio creation failed", error);
     if (imagePath) await deleteObject(storageRef(storage, imagePath)).catch(() => {});
     const detail = error.code ? ` (${error.code})` : "";
-    if (message) message.textContent = `تعذر إضافة العمل${detail}.`;
-    showToast(`تعذر إضافة العمل. تحقق من الصورة والصلاحيات${detail}.`);
+    const source = phase === "upload" ? "رفع الصورة" : "حفظ بيانات العمل";
+    if (message) message.textContent = `تعذر ${source}${detail}.`;
+    showToast(`تعذر ${source}. تحقق من الصلاحيات${detail}.`);
   } finally {
     submit.disabled = false;
   }

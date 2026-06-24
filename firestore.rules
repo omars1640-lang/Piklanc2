@@ -865,10 +865,17 @@ service cloud.firestore {
     }
 
     match /portfolioItems/{itemId} {
+      function activePortfolioOwner() {
+        let user = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+        return signedIn()
+          && user.status == "active"
+          && user.accountType == "freelancer";
+      }
+
       allow read: if isAdmin()
         || resource.data.published == true
-        || (activeUser() && resource.data.ownerUid == request.auth.uid);
-      allow create: if activeUser()
+        || (signedIn() && resource.data.ownerUid == request.auth.uid);
+      allow create: if activePortfolioOwner()
         && request.resource.data.keys().hasOnly([
           "ownerUid", "title", "category", "description", "imageUrl", "imagePath",
           "published", "createdAt", "updatedAt"
@@ -903,7 +910,7 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
       allow update: if isAdmin()
         || (
-          activeUser()
+          activePortfolioOwner()
           && resource.data.ownerUid == request.auth.uid
           && request.resource.data.ownerUid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -929,7 +936,7 @@ service cloud.firestore {
           && request.resource.data.updatedAt == request.time
         );
       allow delete: if isAdmin()
-        || (activeUser() && resource.data.ownerUid == request.auth.uid);
+        || (activePortfolioOwner() && resource.data.ownerUid == request.auth.uid);
     }
 
     match /serviceCategories/{categoryId} {
