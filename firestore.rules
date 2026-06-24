@@ -886,11 +886,12 @@ service cloud.firestore {
         && request.resource.data.imageUrl.size() <= 3000
         && (
           (
-            request.resource.data.imageUrl == ""
+            request.resource.data.published == false
+            && request.resource.data.imageUrl == ""
             && request.resource.data.imagePath == ""
           )
           || (
-            request.resource.data.imageUrl.size() > 0
+            request.resource.data.published == true
             && (
               request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.jpg"
               || request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.png"
@@ -898,7 +899,6 @@ service cloud.firestore {
             )
           )
         )
-        && request.resource.data.published == true
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
       allow update: if isAdmin()
@@ -912,9 +912,19 @@ service cloud.firestore {
           && request.resource.data.imageUrl is string
           && request.resource.data.imageUrl.size() <= 3000
           && (
-            request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.jpg"
-            || request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.png"
-            || request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.webp"
+            (
+              request.resource.data.published == false
+              && request.resource.data.imageUrl == ""
+              && request.resource.data.imagePath == ""
+            )
+            || (
+              request.resource.data.published == true
+              && (
+                request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.jpg"
+                || request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.png"
+                || request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.webp"
+              )
+            )
           )
           && request.resource.data.updatedAt == request.time
         );
