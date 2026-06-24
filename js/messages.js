@@ -56,7 +56,7 @@ let currentUser = null;
 let currentProfile = null;
 let conversations = [];
 let activeChat = null;
-let selectedFile = null;
+let selectedFiles = [];
 let activeFilter = "all";
 let unsubscribeChats = null;
 let unsubscribeMessages = null;
@@ -545,16 +545,18 @@ function validateFile(file) {
   return true;
 }
 
-function setSelectedFile(file) {
-  selectedFile = file;
-  elements.attachmentPreview.hidden = !file;
-  if (!file) {
+function setSelectedFiles(files) {
+  selectedFiles = files;
+  elements.attachmentPreview.hidden = !files.length;
+  if (!files.length) {
     elements.fileInput.value = "";
     return;
   }
-  text("attachmentKind", file.type.startsWith("image/") ? "صورة" : "ملف");
-  text("attachmentName", file.name);
-  text("attachmentSize", formatFileSize(file.size));
+  const first = files[0];
+  const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+  text("attachmentKind", files.length > 1 ? String(files.length) : first.type.startsWith("image/") ? "صورة" : "ملف");
+  text("attachmentName", files.length > 1 ? `${files.length} مرفقات جاهزة للإرسال` : first.name);
+  text("attachmentSize", formatFileSize(totalSize));
 }
 
 async function uploadAttachment(file, chatId, messageId) {
@@ -593,39 +595,50 @@ async function updateConversationAfterMessage(message) {
 async function sendMessage(event) {
   event.preventDefault();
   const textValue = elements.input.value.trim();
-  if ((!textValue && !selectedFile) || !activeChat) return;
+  const filesToSend = [...selectedFiles];
+  if ((!textValue && !filesToSend.length) || !activeChat) return;
 
   const originalLabel = elements.send.querySelector("span").textContent;
   elements.send.disabled = true;
-  elements.send.querySelector("span").textContent = selectedFile ? "جاري الرفع" : "جاري الإرسال";
+  elements.send.querySelector("span").textContent = filesToSend.length ? "جاري الرفع" : "جاري الإرسال";
 
-  const messageReference = doc(collection(db, "chats", activeChat.id, "messages"));
-  let attachment = null;
+  const sentMessages = [];
+  const uploadedAttachments = [];
   try {
-    if (selectedFile) attachment = await uploadAttachment(selectedFile, activeChat.id, messageReference.id);
-    const message = {
-      text: textValue,
-      senderUid: currentUser.uid,
-      timestamp: serverTimestamp(),
-      type: attachment ? (textValue ? "mixed" : "attachment") : "text",
-      readBy: [currentUser.uid],
-      ...(attachment ? { attachment } : {})
-    };
-    await setDoc(messageReference, message);
+    const total = Math.max(filesToSend.length, 1);
+    for (let index = 0; index < total; index += 1) {
+      const file = filesToSend[index];
+      const messageReference = doc(collection(db, "chats", activeChat.id, "messages"));
+      const attachment = file ? await uploadAttachment(file, activeChat.id, messageReference.id) : null;
+      if (attachment) uploadedAttachments.push(attachment);
+      const messageText = index === 0 ? textValue : "";
+      const message = {
+        text: messageText,
+        senderUid: currentUser.uid,
+        timestamp: serverTimestamp(),
+        type: attachment ? (messageText ? "mixed" : "attachment") : "text",
+        readBy: [currentUser.uid],
+        ...(attachment ? { attachment } : {})
+      };
+      await setDoc(messageReference, message);
+      sentMessages.push(message);
+    }
+
     elements.input.value = "";
     elements.input.style.height = "";
-    elements.limit.textContent = "0/2000";
-    setSelectedFile(null);
+    setSelectedFiles([]);
 
     try {
-      await updateConversationAfterMessage(message);
+      await updateConversationAfterMessage(sentMessages[sentMessages.length - 1]);
     } catch (summaryError) {
       console.warn("Message saved but conversation summary failed", summaryError);
       showToast("تم إرسال الرسالة، لكن تعذر تحديث ملخص المحادثة مؤقتاً.");
     }
   } catch (error) {
     console.error("Unable to send message", error);
-    if (attachment?.path) deleteObject(ref(storage, attachment.path)).catch(() => {});
+    uploadedAttachments.forEach(attachment => {
+      if (attachment?.path) deleteObject(ref(storage, attachment.path)).catch(() => {});
+    });
     showToast(`تعذر إرسال الرسالة (${error.code || "unknown"}).`);
   } finally {
     elements.send.disabled = false;
@@ -644,9 +657,8 @@ function bindEvents() {
   });
   elements.form.addEventListener("submit", sendMessage);
   elements.input.addEventListener("input", () => {
-    elements.limit.textContent = `${elements.input.value.length}/2000`;
     elements.input.style.height = "auto";
-    elements.input.style.height = `${Math.min(elements.input.scrollHeight, 125)}px`;
+    elements.input.style.height = `${Math.min(elements.input.scrollHeight, Math.round(window.innerHeight * 0.34), 220)}px`;
   });
   elements.input.addEventListener("keydown", event => {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -656,11 +668,12 @@ function bindEvents() {
   });
   document.getElementById("attachButton").addEventListener("click", () => elements.fileInput.click());
   elements.fileInput.addEventListener("change", () => {
-    const file = elements.fileInput.files[0];
-    if (validateFile(file)) setSelectedFile(file);
-    else setSelectedFile(null);
+    const files = [...elements.fileInput.files];
+    const validFiles = files.filter(validateFile);
+    if (validFiles.length === files.length) setSelectedFiles(validFiles);
+    else setSelectedFiles([]);
   });
-  document.getElementById("removeAttachment").addEventListener("click", () => setSelectedFile(null));
+  document.getElementById("removeAttachment").addEventListener("click", () => setSelectedFiles([]));
   document.getElementById("mobileBack").addEventListener("click", () => elements.shell.classList.remove("chat-open"));
   document.getElementById("detailsToggle").addEventListener("click", () => {
     elements.details.hidden = !elements.details.hidden;

@@ -1,6 +1,7 @@
 const footerCopy = "© 2026 PikLance. جميع الحقوق محفوظة.";
 
 function ensureFooterCopy() {
+  if (document.body?.dataset.noGlobalFooter === "true") return;
   const existing = document.querySelectorAll("footer small, .footer-bottom, .piklance-global-footer");
   if (existing.length) {
     existing.forEach(element => {
