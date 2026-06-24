@@ -868,7 +868,7 @@ service cloud.firestore {
       allow read: if isAdmin()
         || resource.data.published == true
         || (activeUser() && resource.data.ownerUid == request.auth.uid);
-      allow create: if isAccountType("freelancer")
+      allow create: if activeUser()
         && request.resource.data.keys().hasOnly([
           "ownerUid", "title", "category", "description", "imageUrl", "imagePath",
           "published", "createdAt", "updatedAt"
@@ -903,7 +903,7 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
       allow update: if isAdmin()
         || (
-          isAccountType("freelancer")
+          activeUser()
           && resource.data.ownerUid == request.auth.uid
           && request.resource.data.ownerUid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -929,7 +929,7 @@ service cloud.firestore {
           && request.resource.data.updatedAt == request.time
         );
       allow delete: if isAdmin()
-        || (isAccountType("freelancer") && resource.data.ownerUid == request.auth.uid);
+        || (activeUser() && resource.data.ownerUid == request.auth.uid);
     }
 
     match /serviceCategories/{categoryId} {
