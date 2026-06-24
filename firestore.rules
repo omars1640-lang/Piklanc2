@@ -878,6 +878,10 @@ service cloud.firestore {
       allow create: if activePortfolioOwner()
         && request.resource.data.keys().hasOnly([
           "ownerUid", "title", "category", "description", "imageUrl", "imagePath",
+          "mediaType", "mediaUrl", "mediaPath", "published", "createdAt", "updatedAt"
+        ])
+        && request.resource.data.keys().hasAll([
+          "ownerUid", "title", "category", "description", "mediaType", "mediaPath",
           "published", "createdAt", "updatedAt"
         ])
         && request.resource.data.ownerUid == request.auth.uid
@@ -889,23 +893,15 @@ service cloud.firestore {
         && request.resource.data.category.size() <= 60
         && request.resource.data.description is string
         && request.resource.data.description.size() <= 600
-        && request.resource.data.imageUrl is string
-        && request.resource.data.imageUrl.size() <= 3000
-        && (
-          (
-            request.resource.data.published == false
-            && request.resource.data.imageUrl == ""
-            && request.resource.data.imagePath == ""
-          )
-          || (
-            request.resource.data.published == true
-            && (
-              request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.jpg"
-              || request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.png"
-              || request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.webp"
-            )
-          )
-        )
+        && request.resource.data.mediaType in ["image", "video"]
+        && request.resource.data.mediaPath is string
+        && request.resource.data.mediaPath.size() > 0
+        && request.resource.data.mediaPath.size() <= 3000
+        && request.resource.data.mediaPath.matches("^portfolio-media/" + request.auth.uid + "/" + itemId + "/cover\\.(jpg|png|webp|mp4|webm|mov)$")
+        && (!request.resource.data.keys().hasAny(["mediaUrl"]) || (request.resource.data.mediaUrl is string && request.resource.data.mediaUrl.size() <= 3000))
+        && (!request.resource.data.keys().hasAny(["imageUrl"]) || (request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 3000))
+        && (!request.resource.data.keys().hasAny(["imagePath"]) || request.resource.data.imagePath == "" || request.resource.data.imagePath == request.resource.data.mediaPath)
+        && request.resource.data.published == true
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
       allow update: if isAdmin()
@@ -914,25 +910,15 @@ service cloud.firestore {
           && resource.data.ownerUid == request.auth.uid
           && request.resource.data.ownerUid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            "title", "category", "description", "imageUrl", "imagePath", "published", "updatedAt"
+            "title", "category", "description", "imageUrl", "imagePath",
+            "mediaType", "mediaUrl", "mediaPath", "published", "updatedAt"
           ])
-          && request.resource.data.imageUrl is string
-          && request.resource.data.imageUrl.size() <= 3000
-          && (
-            (
-              request.resource.data.published == false
-              && request.resource.data.imageUrl == ""
-              && request.resource.data.imagePath == ""
-            )
-            || (
-              request.resource.data.published == true
-              && (
-                request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.jpg"
-                || request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.png"
-                || request.resource.data.imagePath == "portfolio-images/" + request.auth.uid + "/" + itemId + "/cover.webp"
-              )
-            )
-          )
+          && request.resource.data.mediaType in ["image", "video"]
+          && request.resource.data.mediaPath is string
+          && request.resource.data.mediaPath.matches("^portfolio-media/" + request.auth.uid + "/" + itemId + "/cover\\.(jpg|png|webp|mp4|webm|mov)$")
+          && (!request.resource.data.keys().hasAny(["mediaUrl"]) || (request.resource.data.mediaUrl is string && request.resource.data.mediaUrl.size() <= 3000))
+          && (!request.resource.data.keys().hasAny(["imageUrl"]) || (request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 3000))
+          && (!request.resource.data.keys().hasAny(["imagePath"]) || request.resource.data.imagePath == "" || request.resource.data.imagePath == request.resource.data.mediaPath)
           && request.resource.data.updatedAt == request.time
         );
       allow delete: if isAdmin()

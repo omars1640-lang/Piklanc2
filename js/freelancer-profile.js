@@ -79,7 +79,9 @@ function closePortfolioModal() {
 }
 
 function openPortfolioModal(item) {
-  $("modalProjectImage").src = item.imageUrl || "assets/service-placeholder.svg";
+  $("modalProjectImage").src = item.mediaType === "video"
+    ? "assets/service-placeholder.svg"
+    : (item.mediaUrl || item.imageUrl || "assets/service-placeholder.svg");
   $("modalProjectImage").alt = item.title || "عمل منجز";
   $("modalProjectCategory").textContent = item.category || "مشروع";
   $("modalProjectTitle").textContent = item.title || "عمل منجز";
@@ -93,11 +95,19 @@ function portfolioCard(item, featured = false) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = featured ? "featured-item" : "portfolio-item";
-  const image = document.createElement("img");
-  image.src = item.imageUrl || "assets/service-placeholder.svg";
-  image.alt = item.title || "عمل منجز";
-  image.loading = "lazy";
-  image.addEventListener("error", () => { image.src = "assets/service-placeholder.svg"; });
+  const isVideo = item.mediaType === "video";
+  const media = document.createElement(isVideo ? "video" : "img");
+  if (isVideo) {
+    media.src = item.mediaUrl || "";
+    media.muted = true;
+    media.preload = "metadata";
+    media.playsInline = true;
+  } else {
+    media.src = item.mediaUrl || item.imageUrl || "assets/service-placeholder.svg";
+    media.alt = item.title || "عمل منجز";
+    media.loading = "lazy";
+    media.addEventListener("error", () => { media.src = "assets/service-placeholder.svg"; });
+  }
   const overlay = document.createElement("span");
   overlay.className = "work-overlay";
   const title = document.createElement("strong");
@@ -105,7 +115,7 @@ function portfolioCard(item, featured = false) {
   const category = document.createElement("span");
   category.textContent = item.category || "مشروع";
   overlay.append(title, category);
-  button.append(image, overlay);
+  button.append(media, overlay);
   button.addEventListener("click", () => openPortfolioModal(item));
   return button;
 }
@@ -191,8 +201,11 @@ async function loadProfile() {
       .filter(item => item.ownerUid === uid)
       .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     await Promise.all(portfolio.map(async item => {
-      if (item.imageUrl || !item.imagePath) return;
-      item.imageUrl = await getDownloadURL(ref(storage, item.imagePath)).catch(() => "");
+      const mediaPath = item.mediaPath || item.imagePath;
+      if ((item.mediaUrl || item.imageUrl) || !mediaPath) return;
+      const url = await getDownloadURL(ref(storage, mediaPath)).catch(() => "");
+      item.mediaUrl = url;
+      if (!item.mediaType || item.mediaType === "image") item.imageUrl = url;
     }));
     if (profile.accountType !== "freelancer" || (profile.status !== "active" && !services.length)) {
       showNotFound();

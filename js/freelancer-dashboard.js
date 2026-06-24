@@ -663,9 +663,19 @@ async function saveProfile(event) {
 function portfolioCard(item) {
   const card = document.createElement("article");
   card.className = "portfolio-dashboard-card";
-  const image = document.createElement("img");
-  image.src = item.imageUrl || "assets/service-placeholder.svg";
-  image.alt = item.title || "عمل منجز";
+  const mediaUrl = item.mediaUrl || item.imageUrl || "";
+  const isVideo = item.mediaType === "video";
+  const media = document.createElement(isVideo ? "video" : "img");
+  if (isVideo) {
+    media.src = mediaUrl;
+    media.controls = true;
+    media.preload = "metadata";
+    media.muted = true;
+  } else {
+    media.src = mediaUrl || "assets/service-placeholder.svg";
+    media.alt = item.title || "عمل منجز";
+    media.addEventListener("error", () => { media.src = "assets/service-placeholder.svg"; });
+  }
   const copy = document.createElement("div");
   const title = document.createElement("strong");
   title.textContent = item.title || "عمل منجز";
@@ -679,9 +689,8 @@ function portfolioCard(item) {
   remove.className = "table-button danger";
   remove.textContent = "حذف العمل";
   remove.addEventListener("click", () => deletePortfolioItem(item));
-  image.addEventListener("error", () => { image.src = "assets/service-placeholder.svg"; });
   copy.append(title, category, description, remove);
-  card.append(image, copy);
+  card.append(media, copy);
   return card;
 }
 
@@ -703,7 +712,8 @@ async function deletePortfolioItem(item) {
 }
 
 async function deletePortfolioItemConfirmed(item) {
-  if (item.imagePath) await deleteObject(storageRef(storage, item.imagePath)).catch(() => {});
+  const mediaPath = item.mediaPath || item.imagePath;
+  if (mediaPath) await deleteObject(storageRef(storage, mediaPath)).catch(() => {});
   await deleteDoc(doc(db, "portfolioItems", item.id));
   state.portfolio = state.portfolio.filter(entry => entry.id !== item.id);
   renderPortfolio();
@@ -714,22 +724,25 @@ async function deletePortfolioItemConfirmed(item) {
 async function handlePortfolioSubmit(event) {
   event.preventDefault();
   const file = $("portfolioImage").files[0];
-  if (!file || !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
-    showToast("اختر صورة JPG أو PNG أو WebP بحجم لا يتجاوز 5MB.");
+  const isImage = ["image/jpeg", "image/png", "image/webp"].includes(file?.type);
+  const isVideo = ["video/mp4", "video/webm", "video/quicktime"].includes(file?.type);
+  const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+  if (!file || (!isImage && !isVideo) || file.size > maxSize) {
+    showToast("اختر صورة حتى 5MB أو فيديو MP4/WebM حتى 50MB.");
     return;
   }
   const submit = $("portfolioSubmitButton");
   const message = $("portfolioMessage");
   submit.disabled = true;
   const itemRef = doc(collection(db, "portfolioItems"));
-  let imagePath = "";
+  let mediaPath = "";
   let phase = "upload";
   try {
-    if (message) message.textContent = "جاري رفع الصورة...";
-    const extension = file.type.split("/")[1].replace("jpeg", "jpg");
-    imagePath = `portfolio-images/${state.user.uid}/${itemRef.id}/cover.${extension}`;
-    const imageRef = storageRef(storage, imagePath);
-    await uploadBytes(imageRef, file, { contentType: file.type });
+    if (message) message.textContent = isVideo ? "جاري رفع الفيديو..." : "جاري رفع الصورة...";
+    const extension = file.type.split("/")[1].replace("jpeg", "jpg").replace("quicktime", "mov");
+    mediaPath = `portfolio-media/${state.user.uid}/${itemRef.id}/cover.${extension}`;
+    const mediaRef = storageRef(storage, mediaPath);
+    await uploadBytes(mediaRef, file, { contentType: file.type });
 
     phase = "database";
     if (message) message.textContent = "جاري نشر العمل في معرضك...";
@@ -738,8 +751,11 @@ async function handlePortfolioSubmit(event) {
       title: $("portfolioTitle").value.trim(),
       category: $("portfolioCategory").value.trim(),
       description: $("portfolioDescription").value.trim(),
+      mediaType: isVideo ? "video" : "image",
+      mediaUrl: "",
+      mediaPath,
       imageUrl: "",
-      imagePath,
+      imagePath: isImage ? mediaPath : "",
       published: true,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -751,7 +767,7 @@ async function handlePortfolioSubmit(event) {
     showToast("تم نشر العمل في ملفك الشخصي.");
   } catch (error) {
     console.error("Portfolio creation failed", error);
-    if (imagePath) await deleteObject(storageRef(storage, imagePath)).catch(() => {});
+    if (mediaPath) await deleteObject(storageRef(storage, mediaPath)).catch(() => {});
     const detail = error.code ? ` (${error.code})` : "";
     const source = phase === "upload" ? "رفع الصورة" : "حفظ بيانات العمل";
     if (message) message.textContent = `تعذر ${source}${detail}.`;
@@ -763,9 +779,12 @@ async function handlePortfolioSubmit(event) {
 
 async function hydratePortfolioImages() {
   await Promise.all(state.portfolio.map(async item => {
-    if (item.imageUrl || !item.imagePath) return;
+    const mediaPath = item.mediaPath || item.imagePath;
+    if ((item.mediaUrl || item.imageUrl) || !mediaPath) return;
     try {
-      item.imageUrl = await getDownloadURL(storageRef(storage, item.imagePath));
+      const url = await getDownloadURL(storageRef(storage, mediaPath));
+      item.mediaUrl = url;
+      if (!item.mediaType || item.mediaType === "image") item.imageUrl = url;
     } catch (error) {
       console.warn("Unable to resolve portfolio image", item.id, error);
     }
