@@ -705,26 +705,19 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2rem;
       margin: 0 auto 1rem;
     }
 
-    .category-icon { color: transparent; font-size: 0; }
-    .category-icon::before {
-      width: 34px;
-      height: 34px;
-      display: grid;
-      place-items: center;
-      color: currentColor;
-      font-size: 1.45rem;
-      font-weight: 900;
+    .theme-icon {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      display: block;
     }
-    .icon-design::before { content: "D"; color: #6C5CE7; }
-    .icon-code::before { content: "</>"; color: #2563EB; font-size: 1.1rem; }
-    .icon-write::before { content: "T"; color: #B45309; }
-    .icon-market::before { content: "↗"; color: #059669; }
-    .icon-audio::before { content: "♪"; color: #DB2777; }
-    .icon-video::before { content: "▶"; color: #4F46E5; }
+
+    .theme-icon-dark { display: none; }
+    html[data-theme="dark"] .theme-icon-light { display: none; }
+    html[data-theme="dark"] .theme-icon-dark { display: block; }
 
     .icon-design { color: #6C5CE7; background: #EDE9FE; }
     .icon-code { color: #2563EB; background: #DBEAFE; }
@@ -1183,32 +1176,50 @@
       </div>
       <div class="categories-grid">
         <a href="services.html?cat=design" class="category-card">
-          <div class="category-icon icon-design">🎨</div>
+          <div class="category-icon icon-design">
+            <img class="theme-icon theme-icon-light" src="assets/icons/light/design.svg" alt="" aria-hidden="true">
+            <img class="theme-icon theme-icon-dark" src="assets/icons/dark/design.svg" alt="" aria-hidden="true">
+          </div>
           <div class="category-title">تصميم</div>
           <div class="category-count" data-category-count="design">0 خدمة</div>
         </a>
         <a href="services.html?cat=code" class="category-card">
-          <div class="category-icon icon-code">💻</div>
+          <div class="category-icon icon-code">
+            <img class="theme-icon theme-icon-light" src="assets/icons/light/code.svg" alt="" aria-hidden="true">
+            <img class="theme-icon theme-icon-dark" src="assets/icons/dark/code.svg" alt="" aria-hidden="true">
+          </div>
           <div class="category-title">برمجة</div>
           <div class="category-count" data-category-count="code">0 خدمة</div>
         </a>
         <a href="services.html?cat=write" class="category-card">
-          <div class="category-icon icon-write">✍️</div>
+          <div class="category-icon icon-write">
+            <img class="theme-icon theme-icon-light" src="assets/icons/light/writing.svg" alt="" aria-hidden="true">
+            <img class="theme-icon theme-icon-dark" src="assets/icons/dark/writing.svg" alt="" aria-hidden="true">
+          </div>
           <div class="category-title">كتابة</div>
           <div class="category-count" data-category-count="write">0 خدمة</div>
         </a>
         <a href="services.html?cat=market" class="category-card">
-          <div class="category-icon icon-market">📈</div>
+          <div class="category-icon icon-market">
+            <img class="theme-icon theme-icon-light" src="assets/icons/light/marketing.svg" alt="" aria-hidden="true">
+            <img class="theme-icon theme-icon-dark" src="assets/icons/dark/marketing.svg" alt="" aria-hidden="true">
+          </div>
           <div class="category-title">تسويق</div>
           <div class="category-count" data-category-count="market">0 خدمة</div>
         </a>
         <a href="services.html?cat=audio" class="category-card">
-          <div class="category-icon icon-audio">🎤</div>
+          <div class="category-icon icon-audio">
+            <img class="theme-icon theme-icon-light" src="assets/icons/light/audio.svg" alt="" aria-hidden="true">
+            <img class="theme-icon theme-icon-dark" src="assets/icons/dark/audio.svg" alt="" aria-hidden="true">
+          </div>
           <div class="category-title">صوتيات</div>
           <div class="category-count" data-category-count="audio">0 خدمة</div>
         </a>
         <a href="services.html?cat=video" class="category-card">
-          <div class="category-icon icon-video">🎬</div>
+          <div class="category-icon icon-video">
+            <img class="theme-icon theme-icon-light" src="assets/icons/light/video.svg" alt="" aria-hidden="true">
+            <img class="theme-icon theme-icon-dark" src="assets/icons/dark/video.svg" alt="" aria-hidden="true">
+          </div>
           <div class="category-title">فيديو</div>
           <div class="category-count" data-category-count="video">0 خدمة</div>
         </a>

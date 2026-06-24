@@ -315,8 +315,43 @@
     }
 
     .step-icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 1rem;
+      display: grid;
+      place-items: center;
+      border-radius: 22px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 10px 24px var(--shadow-color);
+    }
+
+    .theme-icon {
+      width: 42px;
+      height: 42px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .theme-icon-dark { display: none; }
+    html[data-theme="dark"] .theme-icon-light { display: none; }
+    html[data-theme="dark"] .theme-icon-dark { display: block; }
+
+    .feature-icon {
+      width: 66px;
+      height: 66px;
+      margin: 0 auto 1rem;
+      display: grid;
+      place-items: center;
+      border-radius: 20px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 10px 24px var(--shadow-color);
+    }
+
+    .feature-icon .theme-icon {
+      width: 38px;
+      height: 38px;
     }
 
     .step-card h3 {
@@ -355,11 +390,6 @@
 
     .feature-card:hover {
       box-shadow: 0 15px 30px var(--shadow-color);
-    }
-
-    .feature-icon {
-      font-size: 2.8rem;
-      margin-bottom: 1rem;
     }
 
     .feature-card h4 {
@@ -520,19 +550,28 @@
       <div id="client-steps" class="steps-grid active">
         <div class="step-card">
           <div class="step-number">1</div>
-          <div class="step-icon">🔍</div>
+          <div class="step-icon">
+            <img class="theme-icon theme-icon-light" src="assets/icons/light/search-service.svg" alt="" aria-hidden="true">
+            <img class="theme-icon theme-icon-dark" src="assets/icons/dark/search-service.svg" alt="" aria-hidden="true">
+          </div>
           <h3>ابحث عن الخدمة</h3>
           <p>تصفح الخدمات الرقمية المنشورة في التصميم، البرمجة، الكتابة، التسويق والمزيد. استخدم الفلاتر للعثور على ما يناسبك تماماً.</p>
         </div>
         <div class="step-card">
           <div class="step-number">2</div>
-          <div class="step-icon">💬</div>
+          <div class="step-icon">
+            <img class="theme-icon theme-icon-light" src="assets/icons/light/contact-order.svg" alt="" aria-hidden="true">
+            <img class="theme-icon theme-icon-dark" src="assets/icons/dark/contact-order.svg" alt="" aria-hidden="true">
+          </div>
           <h3>تواصل واطلب</h3>
           <p>قبل الطلب، يمكنك مراسلة المستقل للاستفسار عن التفاصيل. ثم اطلب الخدمة مباشرة وادفع عبر محفظتك.</p>
         </div>
         <div class="step-card">
           <div class="step-number">3</div>
-          <div class="step-icon">✅</div>
+          <div class="step-icon">
+            <img class="theme-icon theme-icon-light" src="assets/icons/light/receive-service.svg" alt="" aria-hidden="true">
+            <img class="theme-icon theme-icon-dark" src="assets/icons/dark/receive-service.svg" alt="" aria-hidden="true">
+          </div>
           <h3>استلم خدمتك</h3>
           <p>سيقوم المستقل بتسليم العمل في الموعد المحدد. راجع العمل ووافق على الاستلام، أو اطلب تعديلات بسيطة.</p>
         </div>
@@ -542,19 +581,28 @@
       <div id="freelancer-steps" class="steps-grid">
         <div class="step-card">
           <div class="step-number">1</div>
-          <div class="step-icon">📝</div>
+          <div class="step-icon">
+            <img class="theme-icon theme-icon-light" src="assets/icons/light/create-profile.svg" alt="" aria-hidden="true">
+            <img class="theme-icon theme-icon-dark" src="assets/icons/dark/create-profile.svg" alt="" aria-hidden="true">
+          </div>
           <h3>أنشئ ملفك</h3>
           <p>سجل مجاناً وأكمل ملفك الشخصي: أضف صورة، نبذة، مهاراتك، ومعرض أعمالك لتبرز للعملاء.</p>
         </div>
         <div class="step-card">
           <div class="step-number">2</div>
-          <div class="step-icon">🚀</div>
+          <div class="step-icon">
+            <img class="theme-icon theme-icon-light" src="assets/icons/light/add-services.svg" alt="" aria-hidden="true">
+            <img class="theme-icon theme-icon-dark" src="assets/icons/dark/add-services.svg" alt="" aria-hidden="true">
+          </div>
           <h3>أضف خدماتك</h3>
           <p>أنشئ خدماتك الرقمية: حدد السعر، مدة التسليم، ووصف دقيق. كلما كانت خدماتك واضحة، زادت فرص بيعها.</p>
         </div>
         <div class="step-card">
           <div class="step-number">3</div>
-          <div class="step-icon">💰</div>
+          <div class="step-icon">
+            <img class="theme-icon theme-icon-light" src="assets/icons/light/earn-profits.svg" alt="" aria-hidden="true">
+            <img class="theme-icon theme-icon-dark" src="assets/icons/dark/earn-profits.svg" alt="" aria-hidden="true">
+          </div>
           <h3>اكسب أرباحك</h3>
           <p>عند وصول طلبك، نفّذ العمل وسلّمه داخل المنصة. السحب المالي سيُتاح بعد ربط بوابة الدفع المحلية رسمياً.</p>
         </div>
@@ -569,10 +617,10 @@
         <h2 style="font-size:2.2rem; margin-top:1rem; color:var(--text-heading);">لماذا PikLance؟</h2>
       </div>
       <div class="features-grid">
-        <div class="feature-card"><div class="feature-icon">🔒</div><h4>دورة طلب موثّقة</h4><p>نظام طلب تجريبي يربط الرسائل والتسليم والنزاع بالعمل نفسه.</p></div>
-        <div class="feature-card"><div class="feature-icon">⚡</div><h4>تنفيذ سريع</h4><p>متوسط زمن التسليم أقل من 48 ساعة للخدمات الصغيرة.</p></div>
-        <div class="feature-card"><div class="feature-icon">💬</div><h4>دعم متواصل</h4><p>فريق دعم فني جاهز لمساعدتك على مدار الساعة.</p></div>
-        <div class="feature-card"><div class="feature-icon">💳</div><h4>الدفع قيد التجهيز</h4><p>لن تُحصّل أموال حقيقية حتى الإعلان عن تفعيل بوابة الدفع.</p></div>
+        <div class="feature-card"><div class="feature-icon"><img class="theme-icon theme-icon-light" src="assets/icons/light/verified-order.svg" alt="" aria-hidden="true"><img class="theme-icon theme-icon-dark" src="assets/icons/dark/verified-order.svg" alt="" aria-hidden="true"></div><h4>دورة طلب موثّقة</h4><p>نظام طلب تجريبي يربط الرسائل والتسليم والنزاع بالعمل نفسه.</p></div>
+        <div class="feature-card"><div class="feature-icon"><img class="theme-icon theme-icon-light" src="assets/icons/light/fast-delivery.svg" alt="" aria-hidden="true"><img class="theme-icon theme-icon-dark" src="assets/icons/dark/fast-delivery.svg" alt="" aria-hidden="true"></div><h4>تنفيذ سريع</h4><p>متوسط زمن التسليم أقل من 48 ساعة للخدمات الصغيرة.</p></div>
+        <div class="feature-card"><div class="feature-icon"><img class="theme-icon theme-icon-light" src="assets/icons/light/support.svg" alt="" aria-hidden="true"><img class="theme-icon theme-icon-dark" src="assets/icons/dark/support.svg" alt="" aria-hidden="true"></div><h4>دعم متواصل</h4><p>فريق دعم فني جاهز لمساعدتك على مدار الساعة.</p></div>
+        <div class="feature-card"><div class="feature-icon"><img class="theme-icon theme-icon-light" src="assets/icons/light/payment-preparing.svg" alt="" aria-hidden="true"><img class="theme-icon theme-icon-dark" src="assets/icons/dark/payment-preparing.svg" alt="" aria-hidden="true"></div><h4>الدفع قيد التجهيز</h4><p>لن تُحصّل أموال حقيقية حتى الإعلان عن تفعيل بوابة الدفع.</p></div>
       </div>
     </div>
   </section>

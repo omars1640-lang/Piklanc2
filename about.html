@@ -141,7 +141,15 @@
       transition:var(--transition);
     }
     .card:hover { transform:translateY(-5px); box-shadow:0 25px 50px var(--shadow-lg-color); }
-    .card-icon { font-size:2.5rem; margin-bottom:1rem; }
+    .card-icon {
+      width:66px; height:66px; margin:0 auto 1rem; display:grid; place-items:center;
+      border-radius:20px; background:var(--bg-secondary); border:1px solid var(--border-color);
+      box-shadow:0 10px 24px var(--shadow-color);
+    }
+    .theme-icon { width:38px; height:38px; object-fit:contain; display:block; }
+    .theme-icon-dark { display:none; }
+    html[data-theme="dark"] .theme-icon-light { display:none; }
+    html[data-theme="dark"] .theme-icon-dark { display:block; }
     .card h3 { font-size:1.4rem; color:var(--text-heading); margin-bottom:0.8rem; }
     .card p { color:var(--text-secondary); }
 
@@ -241,17 +249,26 @@
 
     <div class="cards-grid">
       <div class="card">
-        <div class="card-icon">🎯</div>
+        <div class="card-icon">
+          <img class="theme-icon theme-icon-light" src="assets/icons/light/mission.svg" alt="" aria-hidden="true">
+          <img class="theme-icon theme-icon-dark" src="assets/icons/dark/mission.svg" alt="" aria-hidden="true">
+        </div>
         <h3>رسالتنا</h3>
         <p>تمكين المستقلين السوريين من تحقيق دخل مستدام عبر تقديم خدماتهم الرقمية للعالم.</p>
       </div>
       <div class="card">
-        <div class="card-icon">🔭</div>
+        <div class="card-icon">
+          <img class="theme-icon theme-icon-light" src="assets/icons/light/vision.svg" alt="" aria-hidden="true">
+          <img class="theme-icon theme-icon-dark" src="assets/icons/dark/vision.svg" alt="" aria-hidden="true">
+        </div>
         <h3>رؤيتنا</h3>
         <p>أن نكون المنصة الرقمية الأولى في المنطقة لدعم الاقتصاد الرقمي والمواهب الشابة.</p>
       </div>
       <div class="card">
-        <div class="card-icon">💡</div>
+        <div class="card-icon">
+          <img class="theme-icon theme-icon-light" src="assets/icons/light/values.svg" alt="" aria-hidden="true">
+          <img class="theme-icon theme-icon-dark" src="assets/icons/dark/values.svg" alt="" aria-hidden="true">
+        </div>
         <h3>قيمنا</h3>
         <p>الشفافية، الجودة، الأمان، ودعم المجتمع المحلي هي حجر الأساس لكل قرار نتخذه.</p>
       </div>

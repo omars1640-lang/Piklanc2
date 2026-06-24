@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Creator: CorelDRAW -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="1.15993in" height="1.30181in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 213.94 240.11"
+ xmlns:xlink="http://www.w3.org/1999/xlink"
+ xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
+ <defs>
+  <style type="text/css">
+   <![CDATA[
+    .fil1 {fill:#373154}
+    .fil0 {fill:#5F51DC}
+    .fil4 {fill:#C94442}
+    .fil3 {fill:#FF6764}
+    .fil5 {fill:white}
+    .fil2 {fill:#F8F9FD;fill-rule:nonzero}
+   ]]>
+  </style>
+ </defs>
+ <g id="Layer_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <g id="_1608053570256">
+   <path class="fil0" d="M15.3 0l110.75 0 60.19 60.19 0 164.62c0,8.42 -6.88,15.3 -15.3,15.3l-155.64 0c-8.42,0 -15.3,-6.88 -15.3,-15.3l0 -209.52c0,-8.42 6.88,-15.3 15.3,-15.3z"/>
+   <polygon class="fil1" points="186.23,60.19 126.04,60.19 126.04,0 "/>
+   <path class="fil2" d="M40.57 92.73c-1.62,0 -2.94,-1.32 -2.94,-2.94 0,-1.62 1.32,-2.94 2.94,-2.94l103.76 0c1.62,0 2.94,1.32 2.94,2.94 0,1.62 -1.32,2.94 -2.94,2.94l-103.76 0zm0 76.66c-1.62,0 -2.94,-1.32 -2.94,-2.94 0,-1.62 1.32,-2.94 2.94,-2.94l103.76 0c1.62,0 2.94,1.32 2.94,2.94 0,1.62 -1.32,2.94 -2.94,2.94l-103.76 0zm0 -25.55c-1.62,0 -2.94,-1.32 -2.94,-2.94 0,-1.62 1.32,-2.94 2.94,-2.94l103.76 0c1.62,0 2.94,1.32 2.94,2.94 0,1.62 -1.32,2.94 -2.94,2.94l-103.76 0zm0 -25.55c-1.62,0 -2.94,-1.32 -2.94,-2.94 0,-1.62 1.32,-2.94 2.94,-2.94l103.76 0c1.62,0 2.94,1.32 2.94,2.94 0,1.62 -1.32,2.94 -2.94,2.94l-103.76 0z"/>
+   <g>
+    <path class="fil3" d="M210.81 116.44c4.35,4.74 4.18,12.21 -0.56,16.54l-117.25 107.13 -36.6 -0.08 3.21 -36.46 117.22 -107.16c4.75,-4.34 12.2,-3.83 16.53,0.92 4.33,4.75 17.46,19.1 17.46,19.1z"/>
+    <polygon class="fil4" points="93,240.11 56.4,240.03 59.61,203.58 "/>
+    <polygon class="fil5" points="194.73,147.15 189.49,151.95 156.07,115.39 161.32,110.6 "/>
+   </g>
+  </g>
+ </g>
+</svg>
