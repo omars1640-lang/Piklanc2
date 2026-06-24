@@ -723,34 +723,26 @@ async function handlePortfolioSubmit(event) {
   submit.disabled = true;
   const itemRef = doc(collection(db, "portfolioItems"));
   let imagePath = "";
-  let draftCreated = false;
   try {
-    if (message) message.textContent = "جاري تجهيز العمل...";
+    if (message) message.textContent = "جاري رفع الصورة...";
+    const extension = file.type.split("/")[1].replace("jpeg", "jpg");
+    imagePath = `portfolio-images/${state.user.uid}/${itemRef.id}/cover.${extension}`;
+    const imageRef = storageRef(storage, imagePath);
+    await uploadBytes(imageRef, file, { contentType: file.type });
+
+    if (message) message.textContent = "جاري نشر العمل في معرضك...";
     await setDoc(itemRef, {
       ownerUid: state.user.uid,
       title: $("portfolioTitle").value.trim(),
       category: $("portfolioCategory").value.trim(),
       description: $("portfolioDescription").value.trim(),
       imageUrl: "",
-      imagePath: "",
-      published: false,
+      imagePath,
+      published: true,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
-    draftCreated = true;
 
-    if (message) message.textContent = "جاري رفع الصورة...";
-    const extension = file.type.split("/")[1].replace("jpeg", "jpg");
-    imagePath = `portfolio-images/${state.user.uid}/${itemRef.id}/cover.${extension}`;
-    const imageRef = storageRef(storage, imagePath);
-    await uploadBytes(imageRef, file, { contentType: file.type });
-    if (message) message.textContent = "جاري نشر العمل في معرضك...";
-    await updateDoc(itemRef, {
-      imageUrl: "",
-      imagePath,
-      published: true,
-      updatedAt: serverTimestamp()
-    });
     event.currentTarget.reset();
     await loadWorkspace();
     if (message) message.textContent = "تم نشر العمل بنجاح.";
@@ -758,7 +750,6 @@ async function handlePortfolioSubmit(event) {
   } catch (error) {
     console.error("Portfolio creation failed", error);
     if (imagePath) await deleteObject(storageRef(storage, imagePath)).catch(() => {});
-    if (draftCreated) await deleteDoc(itemRef).catch(() => {});
     const detail = error.code ? ` (${error.code})` : "";
     if (message) message.textContent = `تعذر إضافة العمل${detail}.`;
     showToast(`تعذر إضافة العمل. تحقق من الصورة والصلاحيات${detail}.`);
