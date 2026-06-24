@@ -1,9 +1,3 @@
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import {
-  collection, doc, getDoc, onSnapshot, query, where
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { auth, db } from "./firebase.js";
-import { refreshImageFromStorage, resolveProfileAvatar } from "./avatar-utils.js";
 import "./cookie-consent.js";
 import "./footer-copy.js";
 
@@ -13,6 +7,9 @@ const actions = document.getElementById("siteHeaderActions");
 const mobileButton = document.getElementById("siteHeaderMobile");
 const themeButton = document.getElementById("themeToggle");
 let stopNotifications = null;
+let firebaseDeps = null;
+let signOutUser = async () => {};
+let refreshHeaderImage = async () => false;
 
 function renderSiteBrand() {
   const brands = [header?.querySelector(".site-header-brand"), ...document.querySelectorAll(".footer-brand")].filter(Boolean);
@@ -106,7 +103,7 @@ function renderSignedInActions(user, profile) {
     image.src = profile.avatar;
     image.alt = `صورة ${profile.name || user.email || "الحساب"}`;
     image.addEventListener("error", async () => {
-      const recovered = await refreshImageFromStorage(image, user.uid, profile);
+      const recovered = await refreshHeaderImage(image, user.uid, profile);
       if (!recovered) avatar.textContent = (profile.name || user.email || "م").charAt(0);
     });
     avatar.appendChild(image);
@@ -129,19 +126,85 @@ function renderSignedInActions(user, profile) {
   logout.setAttribute("aria-label", "تسجيل الخروج");
   logout.textContent = "↪";
   logout.addEventListener("click", async () => {
-    await signOut(auth);
+    await signOutUser();
     location.href = "index.html";
   });
   actions.replaceChildren(themeButton, notifications, messages, account, logout);
   stopNotifications?.();
-  stopNotifications = onSnapshot(
-    query(collection(db, "notifications", user.uid, "items"), where("read", "==", false)),
-    snapshot => {
-      notificationCount.textContent = snapshot.size;
-      notificationCount.hidden = snapshot.empty;
-    },
-    () => { notificationCount.hidden = true; }
-  );
+  if (firebaseDeps) {
+    const { collection, db, onSnapshot, query, where } = firebaseDeps;
+    stopNotifications = onSnapshot(
+      query(collection(db, "notifications", user.uid, "items"), where("read", "==", false)),
+      snapshot => {
+        notificationCount.textContent = snapshot.size;
+        notificationCount.hidden = snapshot.empty;
+      },
+      () => { notificationCount.hidden = true; }
+    );
+  }
+}
+
+async function initHeaderAuth() {
+  try {
+    const [
+      authModule,
+      firestoreModule,
+      firebaseModule,
+      avatarModule
+    ] = await Promise.all([
+      import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"),
+      import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"),
+      import("./firebase.js"),
+      import("./avatar-utils.js")
+    ]);
+    const { onAuthStateChanged, signOut } = authModule;
+    const { collection, doc, getDoc, onSnapshot, query, where } = firestoreModule;
+    const { auth, db } = firebaseModule;
+    const { refreshImageFromStorage, resolveProfileAvatar } = avatarModule;
+    firebaseDeps = { collection, db, onSnapshot, query, where };
+    signOutUser = () => signOut(auth);
+    refreshHeaderImage = refreshImageFromStorage;
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        renderSignedOutActions();
+        return;
+      }
+      try {
+        const snapshot = await getDoc(doc(db, "users", user.uid));
+        if (!snapshot.exists()) {
+          renderSignedOutActions();
+          return;
+        }
+        const profile = snapshot.data();
+        if (profile.status !== "active" && profile.role !== "admin") {
+          renderSignedOutActions();
+          return;
+        }
+        const publicSnapshot = await getDoc(doc(db, "publicProfiles", user.uid));
+        const publicProfile = publicSnapshot.exists() ? publicSnapshot.data() : {};
+        const avatar = await resolveProfileAvatar(user.uid, publicProfile);
+        renderSignedInActions(user, {
+          ...profile,
+          ...publicProfile,
+          avatar
+        });
+      } catch {
+        renderSignedOutActions();
+      }
+    });
+  } catch (error) {
+    console.warn("Unable to initialize authenticated header", error);
+    renderSignedOutActions();
+  }
+}
+
+function scheduleHeaderAuth() {
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(initHeaderAuth, { timeout: 1200 });
+  } else {
+    window.setTimeout(initHeaderAuth, 300);
+  }
 }
 
 if (header) {
@@ -165,32 +228,5 @@ if (header) {
     if (event.key === "Escape") closeMenu();
   });
 
-  onAuthStateChanged(auth, async user => {
-    if (!user) {
-      renderSignedOutActions();
-      return;
-    }
-    try {
-      const snapshot = await getDoc(doc(db, "users", user.uid));
-      if (!snapshot.exists()) {
-        renderSignedOutActions();
-        return;
-      }
-      const profile = snapshot.data();
-      if (profile.status !== "active" && profile.role !== "admin") {
-        renderSignedOutActions();
-        return;
-      }
-      const publicSnapshot = await getDoc(doc(db, "publicProfiles", user.uid));
-      const publicProfile = publicSnapshot.exists() ? publicSnapshot.data() : {};
-      const avatar = await resolveProfileAvatar(user.uid, publicProfile);
-      renderSignedInActions(user, {
-        ...profile,
-        ...publicProfile,
-        avatar
-      });
-    } catch {
-      renderSignedOutActions();
-    }
-  });
+  scheduleHeaderAuth();
 }

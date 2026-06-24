@@ -1,10 +1,3 @@
-import {
-  collection, doc, getDoc, getDocs, query, where
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { db, storage } from "./firebase.js";
-import { resolveProfileAvatar } from "./avatar-utils.js";
-
 const categoryAliases = {
   "تصميم": "design", design: "design", "برمجة": "code", web: "code", code: "code",
   "كتابة": "write", writing: "write", write: "write", "تسويق": "market",
@@ -12,6 +5,36 @@ const categoryAliases = {
   "فيديو": "video", video: "video"
 };
 const FEATURED_ROTATION_MS = 10 * 60 * 1000;
+let marketplaceDeps = null;
+
+async function loadMarketplaceDeps() {
+  if (marketplaceDeps) return marketplaceDeps;
+  const [
+    firestoreModule,
+    storageModule,
+    firebaseModule,
+    avatarModule
+  ] = await Promise.all([
+    import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"),
+    import("https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js"),
+    import("./firebase.js"),
+    import("./avatar-utils.js")
+  ]);
+  marketplaceDeps = {
+    collection: firestoreModule.collection,
+    doc: firestoreModule.doc,
+    getDoc: firestoreModule.getDoc,
+    getDocs: firestoreModule.getDocs,
+    query: firestoreModule.query,
+    where: firestoreModule.where,
+    getDownloadURL: storageModule.getDownloadURL,
+    ref: storageModule.ref,
+    db: firebaseModule.db,
+    storage: firebaseModule.storage,
+    resolveProfileAvatar: avatarModule.resolveProfileAvatar
+  };
+  return marketplaceDeps;
+}
 
 function shuffle(items) {
   const copy = [...items];
@@ -130,7 +153,21 @@ function createFeaturedRotator(container, services, profiles) {
 
 async function loadHomeData() {
   const featured = document.getElementById("homeFeaturedServices");
+  if (!featured) return;
   try {
+    const {
+      collection,
+      db,
+      doc,
+      getDoc,
+      getDocs,
+      getDownloadURL,
+      query,
+      ref,
+      resolveProfileAvatar,
+      storage,
+      where
+    } = await loadMarketplaceDeps();
     const [servicesSnapshot, profilesSnapshot, settingsSnapshot] = await Promise.all([
       getDocs(query(collection(db, "services"), where("status", "==", "published"))),
       getDocs(query(collection(db, "publicProfiles"), where("accountType", "==", "freelancer"))),
@@ -182,4 +219,12 @@ async function loadHomeData() {
   }
 }
 
-loadHomeData();
+function scheduleHomeDataLoad() {
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(loadHomeData, { timeout: 1600 });
+  } else {
+    window.setTimeout(loadHomeData, 500);
+  }
+}
+
+scheduleHomeDataLoad();
