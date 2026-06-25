@@ -1046,8 +1046,12 @@
   <link rel="stylesheet" href="css/site-header.css">
   <link rel="icon" type="image/svg+xml" href="assets/brand/logo-icon.svg">
   <link rel="stylesheet" href="css/brand.css">
+  <link rel="stylesheet" href="css/home-particles.css">
 </head>
 <body>
+  <!-- خلفية الجسيمات التفاعلية للصفحة الرئيسية فقط: ضع هذا العنصر مباشرة بعد <body> وقبل محتوى الصفحة. -->
+  <div id="homeParticleBackground" aria-hidden="true"></div>
+
   <!-- Navbar -->
   <header class="site-header" id="navbar">
     <div class="site-header-inner">
@@ -1377,6 +1381,8 @@
       }
     }
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+  <script src="js/home-particles.js"></script>
   <script type="module" src="js/site-header.js"></script>
   <script type="module" src="js/home-marketplace.js"></script>
 </body>
