@@ -865,24 +865,10 @@ service cloud.firestore {
     }
 
     match /portfolioItems/{itemId} {
-      function activePortfolioOwner() {
-        let user = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-        return signedIn()
-          && user.status == "active";
-      }
-
       allow read: if isAdmin()
         || resource.data.published == true
         || (signedIn() && resource.data.ownerUid == request.auth.uid);
-      allow create: if activePortfolioOwner()
-        && request.resource.data.keys().hasOnly([
-          "ownerUid", "title", "category", "description", "imageUrl", "imagePath",
-          "mediaType", "mediaUrl", "mediaPath", "published", "createdAt", "updatedAt"
-        ])
-        && request.resource.data.keys().hasAll([
-          "ownerUid", "title", "category", "description", "mediaType", "mediaPath",
-          "published", "createdAt", "updatedAt"
-        ])
+      allow create: if signedIn()
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.title is string
         && request.resource.data.title.size() >= 3
@@ -894,34 +880,28 @@ service cloud.firestore {
         && request.resource.data.description.size() <= 600
         && request.resource.data.mediaType in ["image", "video"]
         && request.resource.data.mediaPath is string
-        && request.resource.data.mediaPath.size() > 0
         && request.resource.data.mediaPath.size() <= 3000
-        && request.resource.data.mediaPath.matches("^portfolio-media/" + request.auth.uid + "/.+")
-        && (!request.resource.data.keys().hasAny(["mediaUrl"]) || (request.resource.data.mediaUrl is string && request.resource.data.mediaUrl.size() <= 3000))
-        && (!request.resource.data.keys().hasAny(["imageUrl"]) || (request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 3000))
-        && (!request.resource.data.keys().hasAny(["imagePath"]) || request.resource.data.imagePath == "" || request.resource.data.imagePath == request.resource.data.mediaPath)
-        && request.resource.data.published == true
-        && request.resource.data.createdAt is timestamp
-        && request.resource.data.updatedAt is timestamp;
+        && request.resource.data.published is bool;
       allow update: if isAdmin()
         || (
-          activePortfolioOwner()
+          signedIn()
           && resource.data.ownerUid == request.auth.uid
           && request.resource.data.ownerUid == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            "title", "category", "description", "imageUrl", "imagePath",
-            "mediaType", "mediaUrl", "mediaPath", "published", "updatedAt"
-          ])
+          && request.resource.data.title is string
+          && request.resource.data.title.size() >= 3
+          && request.resource.data.title.size() <= 100
+          && request.resource.data.category is string
+          && request.resource.data.category.size() > 0
+          && request.resource.data.category.size() <= 60
+          && request.resource.data.description is string
+          && request.resource.data.description.size() <= 600
           && request.resource.data.mediaType in ["image", "video"]
           && request.resource.data.mediaPath is string
-          && request.resource.data.mediaPath.matches("^portfolio-media/" + request.auth.uid + "/.+")
-          && (!request.resource.data.keys().hasAny(["mediaUrl"]) || (request.resource.data.mediaUrl is string && request.resource.data.mediaUrl.size() <= 3000))
-          && (!request.resource.data.keys().hasAny(["imageUrl"]) || (request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 3000))
-          && (!request.resource.data.keys().hasAny(["imagePath"]) || request.resource.data.imagePath == "" || request.resource.data.imagePath == request.resource.data.mediaPath)
-          && request.resource.data.updatedAt is timestamp
+          && request.resource.data.mediaPath.size() <= 3000
+          && request.resource.data.published is bool
         );
       allow delete: if isAdmin()
-        || (activePortfolioOwner() && resource.data.ownerUid == request.auth.uid);
+        || (signedIn() && resource.data.ownerUid == request.auth.uid);
     }
 
     match /serviceCategories/{categoryId} {
