@@ -739,6 +739,7 @@ async function handlePortfolioSubmit(event) {
   submit.disabled = true;
   const itemRef = doc(collection(db, PORTFOLIO_COLLECTION));
   let mediaPath = "";
+  let uploadedMediaUrl = "";
   let phase = "upload";
   let saved = false;
   try {
@@ -747,6 +748,7 @@ async function handlePortfolioSubmit(event) {
     mediaPath = `freelancer-portfolio/${state.user.uid}/${itemRef.id}/cover.${extension}`;
     const mediaRef = storageRef(storage, mediaPath);
     await uploadBytes(mediaRef, file, { contentType: file.type });
+    uploadedMediaUrl = await getDownloadURL(mediaRef).catch(() => "");
 
     phase = "database";
     if (message) message.textContent = "جاري نشر العمل في معرضك...";
@@ -782,16 +784,24 @@ async function handlePortfolioSubmit(event) {
         id: itemRef.id,
         sourceCollection: PORTFOLIO_COLLECTION,
         ...portfolioPayload,
+        mediaUrl: uploadedMediaUrl,
+        imageUrl: isImage ? uploadedMediaUrl : "",
         createdAt: new Date(),
         updatedAt: new Date()
       });
-      await hydratePortfolioImages();
       renderPortfolio();
+      fillProfile(state.user, state.profile);
     }
     if (message) message.textContent = "تم نشر العمل بنجاح.";
     showToast("تم نشر العمل في ملفك الشخصي.");
   } catch (error) {
     console.error("Portfolio creation failed", error);
+    if (saved) {
+      if (message) message.textContent = "تم نشر العمل بنجاح.";
+      showToast("تم نشر العمل في ملفك الشخصي.");
+      setTimeout(() => location.reload(), 700);
+      return;
+    }
     if (!saved && mediaPath) await deleteObject(storageRef(storage, mediaPath)).catch(() => {});
     const detail = error.code ? ` (${error.code})` : "";
     const source = phase === "upload" ? "رفع الصورة" : "حفظ بيانات العمل";
