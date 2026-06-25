@@ -737,6 +737,7 @@ async function handlePortfolioSubmit(event) {
   const itemRef = doc(collection(db, "portfolioItems"));
   let mediaPath = "";
   let phase = "upload";
+  let saved = false;
   try {
     if (message) message.textContent = isVideo ? "جاري رفع الفيديو..." : "جاري رفع الصورة...";
     const extension = file.type.split("/")[1].replace("jpeg", "jpg").replace("quicktime", "mov");
@@ -766,14 +767,27 @@ async function handlePortfolioSubmit(event) {
       updatedAt: "serverTimestamp"
     });
     await setDoc(itemRef, portfolioPayload);
+    saved = true;
 
     event.currentTarget.reset();
-    await loadWorkspace();
+    try {
+      await loadWorkspace();
+    } catch (refreshError) {
+      console.warn("Portfolio saved but workspace refresh failed", refreshError);
+      state.portfolio.unshift({
+        id: itemRef.id,
+        ...portfolioPayload,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      await hydratePortfolioImages();
+      renderPortfolio();
+    }
     if (message) message.textContent = "تم نشر العمل بنجاح.";
     showToast("تم نشر العمل في ملفك الشخصي.");
   } catch (error) {
     console.error("Portfolio creation failed", error);
-    if (mediaPath) await deleteObject(storageRef(storage, mediaPath)).catch(() => {});
+    if (!saved && mediaPath) await deleteObject(storageRef(storage, mediaPath)).catch(() => {});
     const detail = error.code ? ` (${error.code})` : "";
     const source = phase === "upload" ? "رفع الصورة" : "حفظ بيانات العمل";
     if (message) message.textContent = `تعذر ${source}${detail}.`;
