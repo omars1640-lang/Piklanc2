@@ -18,6 +18,9 @@ const serviceStatus = {
   published: ["منشورة", "success"], paused: ["متوقفة", "neutral"], rejected: ["مرفوضة", "danger"]
 };
 const orderStatus = { pending: "بانتظار التأكيد", funded: "طلب تجريبي جاهز", active: "قيد التنفيذ", delivered: "بانتظار مراجعة العميل", completed: "مكتمل", disputed: "نزاع مفتوح", cancelled: "ملغي", ...orderStatusLabels };
+const PORTFOLIO_COLLECTION = "freelancerPortfolio";
+const LEGACY_PORTFOLIO_COLLECTION = "portfolioItems";
+
 const state = {
   user: null, profile: null, services: [], orders: [], notifications: [], categories: [], portfolio: [],
   editingServiceId: null,
@@ -714,7 +717,7 @@ async function deletePortfolioItem(item) {
 async function deletePortfolioItemConfirmed(item) {
   const mediaPath = item.mediaPath || item.imagePath;
   if (mediaPath) await deleteObject(storageRef(storage, mediaPath)).catch(() => {});
-  await deleteDoc(doc(db, "portfolioItems", item.id));
+  await deleteDoc(doc(db, item.sourceCollection || PORTFOLIO_COLLECTION, item.id));
   state.portfolio = state.portfolio.filter(entry => entry.id !== item.id);
   renderPortfolio();
   fillProfile(state.user, state.profile);
@@ -734,14 +737,14 @@ async function handlePortfolioSubmit(event) {
   const submit = $("portfolioSubmitButton");
   const message = $("portfolioMessage");
   submit.disabled = true;
-  const itemRef = doc(collection(db, "portfolioItems"));
+  const itemRef = doc(collection(db, PORTFOLIO_COLLECTION));
   let mediaPath = "";
   let phase = "upload";
   let saved = false;
   try {
     if (message) message.textContent = isVideo ? "جاري رفع الفيديو..." : "جاري رفع الصورة...";
     const extension = file.type.split("/")[1].replace("jpeg", "jpg").replace("quicktime", "mov");
-    mediaPath = `portfolio-media/${state.user.uid}/${itemRef.id}/cover.${extension}`;
+    mediaPath = `freelancer-portfolio/${state.user.uid}/${itemRef.id}/cover.${extension}`;
     const mediaRef = storageRef(storage, mediaPath);
     await uploadBytes(mediaRef, file, { contentType: file.type });
 
@@ -758,6 +761,7 @@ async function handlePortfolioSubmit(event) {
       imageUrl: "",
       imagePath: isImage ? mediaPath : "",
       published: true,
+      source: "freelancer-dashboard",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
@@ -776,6 +780,7 @@ async function handlePortfolioSubmit(event) {
       console.warn("Portfolio saved but workspace refresh failed", refreshError);
       state.portfolio.unshift({
         id: itemRef.id,
+        sourceCollection: PORTFOLIO_COLLECTION,
         ...portfolioPayload,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -842,19 +847,24 @@ function renderAccountPerformance() {
 
 async function loadWorkspace() {
   const uid = state.user.uid;
-  const [servicesSnapshot, ordersSnapshot, notificationsSnapshot, categoriesSnapshot, portfolioSnapshot] = await Promise.all([
+  const [servicesSnapshot, ordersSnapshot, notificationsSnapshot, categoriesSnapshot, portfolioSnapshot, legacyPortfolioSnapshot] = await Promise.all([
     getDocs(query(collection(db, "services"), where("ownerUid", "==", uid))),
     getDocs(query(collection(db, "orders"), where("freelancerUid", "==", uid))),
     getDocs(collection(db, "notifications", uid, "items")),
     getDocs(query(collection(db, "serviceCategories"), where("active", "==", true))),
-    getDocs(query(collection(db, "portfolioItems"), where("ownerUid", "==", uid)))
+    getDocs(query(collection(db, PORTFOLIO_COLLECTION), where("ownerUid", "==", uid))),
+    getDocs(query(collection(db, LEGACY_PORTFOLIO_COLLECTION), where("ownerUid", "==", uid))).catch(() => ({ docs: [] }))
   ]);
   state.services = sortNewest(servicesSnapshot.docs.map(item => ({ id: item.id, ...item.data() })));
   state.orders = sortNewest(ordersSnapshot.docs.map(item => ({ id: item.id, ...item.data() })), "createdAt");
   state.notifications = sortNewest(notificationsSnapshot.docs.map(item => ({ id: item.id, ...item.data() })), "createdAt");
   state.categories = categoriesSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+  const portfolioItems = [
+    ...portfolioSnapshot.docs.map(item => ({ id: item.id, sourceCollection: PORTFOLIO_COLLECTION, ...item.data() })),
+    ...legacyPortfolioSnapshot.docs.map(item => ({ id: item.id, sourceCollection: LEGACY_PORTFOLIO_COLLECTION, ...item.data() }))
+  ];
   state.portfolio = sortNewest(
-    portfolioSnapshot.docs.map(item => ({ id: item.id, ...item.data() })).filter(item => item.published === true),
+    portfolioItems.filter(item => item.published === true),
     "createdAt"
   );
   await hydratePortfolioImages();

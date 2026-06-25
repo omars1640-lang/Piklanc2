@@ -6,6 +6,8 @@ import { db, storage } from "./firebase.js";
 import { refreshImageFromStorage, resolveProfileAvatar } from "./avatar-utils.js";
 
 const uid = new URLSearchParams(location.search).get("uid") || "";
+const PORTFOLIO_COLLECTION = "freelancerPortfolio";
+const LEGACY_PORTFOLIO_COLLECTION = "portfolioItems";
 const $ = id => document.getElementById(id);
 const specialtyLabels = {
   design: "مصمم جرافيك", web: "مطور برمجيات وويب", writing: "كاتب ومحرر",
@@ -182,10 +184,11 @@ async function loadProfile() {
     return;
   }
   try {
-    const [profileSnapshot, servicesSnapshot, portfolioSnapshot] = await Promise.all([
+    const [profileSnapshot, servicesSnapshot, portfolioSnapshot, legacyPortfolioSnapshot] = await Promise.all([
       getDoc(doc(db, "publicProfiles", uid)),
       getDocs(query(collection(db, "services"), where("status", "==", "published"))),
-      getDocs(query(collection(db, "portfolioItems"), where("published", "==", true)))
+      getDocs(query(collection(db, PORTFOLIO_COLLECTION), where("ownerUid", "==", uid))),
+      getDocs(query(collection(db, LEGACY_PORTFOLIO_COLLECTION), where("ownerUid", "==", uid))).catch(() => ({ docs: [] }))
     ]);
     if (!profileSnapshot.exists()) {
       showNotFound();
@@ -196,9 +199,11 @@ async function loadProfile() {
     const services = servicesSnapshot.docs
       .map(item => ({ id: item.id, ...item.data() }))
       .filter(item => item.ownerUid === uid);
-    const portfolio = portfolioSnapshot.docs
-      .map(item => ({ id: item.id, ...item.data() }))
-      .filter(item => item.ownerUid === uid)
+    const portfolio = [
+      ...portfolioSnapshot.docs.map(item => ({ id: item.id, ...item.data() })),
+      ...legacyPortfolioSnapshot.docs.map(item => ({ id: item.id, ...item.data() }))
+    ]
+      .filter(item => item.ownerUid === uid && item.published === true)
       .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     await Promise.all(portfolio.map(async item => {
       const mediaPath = item.mediaPath || item.imagePath;

@@ -864,6 +864,46 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    match /freelancerPortfolio/{itemId} {
+      allow read: if isAdmin()
+        || resource.data.published == true
+        || (signedIn() && resource.data.ownerUid == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 3
+        && request.resource.data.title.size() <= 100
+        && request.resource.data.category is string
+        && request.resource.data.category.size() > 0
+        && request.resource.data.category.size() <= 60
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 600
+        && request.resource.data.mediaType in ["image", "video"]
+        && request.resource.data.mediaPath is string
+        && request.resource.data.mediaPath.size() <= 3000
+        && request.resource.data.published is bool;
+      allow update: if isAdmin()
+        || (
+          signedIn()
+          && resource.data.ownerUid == request.auth.uid
+          && request.resource.data.ownerUid == request.auth.uid
+          && request.resource.data.title is string
+          && request.resource.data.title.size() >= 3
+          && request.resource.data.title.size() <= 100
+          && request.resource.data.category is string
+          && request.resource.data.category.size() > 0
+          && request.resource.data.category.size() <= 60
+          && request.resource.data.description is string
+          && request.resource.data.description.size() <= 600
+          && request.resource.data.mediaType in ["image", "video"]
+          && request.resource.data.mediaPath is string
+          && request.resource.data.mediaPath.size() <= 3000
+          && request.resource.data.published is bool
+        );
+      allow delete: if isAdmin()
+        || (signedIn() && resource.data.ownerUid == request.auth.uid);
+    }
+
     match /portfolioItems/{itemId} {
       allow read: if isAdmin()
         || resource.data.published == true
