@@ -868,8 +868,7 @@ service cloud.firestore {
       function activePortfolioOwner() {
         let user = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
         return signedIn()
-          && user.status == "active"
-          && user.accountType == "freelancer";
+          && user.status == "active";
       }
 
       allow read: if isAdmin()
@@ -897,13 +896,13 @@ service cloud.firestore {
         && request.resource.data.mediaPath is string
         && request.resource.data.mediaPath.size() > 0
         && request.resource.data.mediaPath.size() <= 3000
-        && request.resource.data.mediaPath.matches("^portfolio-media/" + request.auth.uid + "/" + itemId + "/cover\\.(jpg|png|webp|mp4|webm|mov)$")
+        && request.resource.data.mediaPath.matches("^portfolio-media/" + request.auth.uid + "/.+")
         && (!request.resource.data.keys().hasAny(["mediaUrl"]) || (request.resource.data.mediaUrl is string && request.resource.data.mediaUrl.size() <= 3000))
         && (!request.resource.data.keys().hasAny(["imageUrl"]) || (request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 3000))
         && (!request.resource.data.keys().hasAny(["imagePath"]) || request.resource.data.imagePath == "" || request.resource.data.imagePath == request.resource.data.mediaPath)
         && request.resource.data.published == true
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time;
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp;
       allow update: if isAdmin()
         || (
           activePortfolioOwner()
@@ -915,11 +914,11 @@ service cloud.firestore {
           ])
           && request.resource.data.mediaType in ["image", "video"]
           && request.resource.data.mediaPath is string
-          && request.resource.data.mediaPath.matches("^portfolio-media/" + request.auth.uid + "/" + itemId + "/cover\\.(jpg|png|webp|mp4|webm|mov)$")
+          && request.resource.data.mediaPath.matches("^portfolio-media/" + request.auth.uid + "/.+")
           && (!request.resource.data.keys().hasAny(["mediaUrl"]) || (request.resource.data.mediaUrl is string && request.resource.data.mediaUrl.size() <= 3000))
           && (!request.resource.data.keys().hasAny(["imageUrl"]) || (request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 3000))
           && (!request.resource.data.keys().hasAny(["imagePath"]) || request.resource.data.imagePath == "" || request.resource.data.imagePath == request.resource.data.mediaPath)
-          && request.resource.data.updatedAt == request.time
+          && request.resource.data.updatedAt is timestamp
         );
       allow delete: if isAdmin()
         || (activePortfolioOwner() && resource.data.ownerUid == request.auth.uid);

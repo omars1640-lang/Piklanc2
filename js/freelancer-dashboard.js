@@ -746,7 +746,7 @@ async function handlePortfolioSubmit(event) {
 
     phase = "database";
     if (message) message.textContent = "جاري نشر العمل في معرضك...";
-    await setDoc(itemRef, {
+    const portfolioPayload = {
       ownerUid: state.user.uid,
       title: $("portfolioTitle").value.trim(),
       category: $("portfolioCategory").value.trim(),
@@ -759,7 +759,13 @@ async function handlePortfolioSubmit(event) {
       published: true,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
+    };
+    console.info("Saving portfolio item", {
+      ...portfolioPayload,
+      createdAt: "serverTimestamp",
+      updatedAt: "serverTimestamp"
     });
+    await setDoc(itemRef, portfolioPayload);
 
     event.currentTarget.reset();
     await loadWorkspace();
