@@ -22,6 +22,67 @@ footer {
   font-family: "Cairo", sans-serif;
 }
 
+:root {
+  --piklance-footer-bg: #f7f8ff;
+  --piklance-footer-ink: #202638;
+  --piklance-footer-muted: #5f687b;
+  --piklance-footer-link: #5f52d9;
+  --piklance-footer-border: #e4e6f3;
+}
+
+[data-theme="dark"] {
+  --piklance-footer-bg: #111827;
+  --piklance-footer-ink: #f4f7fb;
+  --piklance-footer-muted: #a9b3c4;
+  --piklance-footer-link: #d9d6ff;
+  --piklance-footer-border: rgba(255, 255, 255, .09);
+}
+
+body > footer.footer,
+body > footer.legal-footer,
+body > footer.blog-footer,
+body > footer.piklance-global-footer {
+  color: var(--piklance-footer-muted) !important;
+  background: var(--piklance-footer-bg) !important;
+  border-top: 1px solid var(--piklance-footer-border) !important;
+}
+
+body > footer.footer h3,
+body > footer.footer h4,
+body > footer.footer strong,
+body > footer.legal-footer h3,
+body > footer.legal-footer h4,
+body > footer.legal-footer strong,
+body > footer.blog-footer h3,
+body > footer.blog-footer h4,
+body > footer.blog-footer strong,
+body > footer.piklance-global-footer strong {
+  color: var(--piklance-footer-ink) !important;
+}
+
+body > footer.footer p,
+body > footer.footer small,
+body > footer.footer .footer-bottom,
+body > footer.legal-footer p,
+body > footer.legal-footer small,
+body > footer.blog-footer p,
+body > footer.blog-footer small,
+body > footer.piklance-global-footer {
+  color: var(--piklance-footer-muted) !important;
+}
+
+body > footer.footer a,
+body > footer.legal-footer a,
+body > footer.blog-footer a {
+  color: var(--piklance-footer-link) !important;
+}
+
+body > footer.footer .footer-bottom,
+body > footer.blog-footer small,
+body > footer.legal-footer small {
+  border-top-color: var(--piklance-footer-border) !important;
+}
+
 footer h3,
 footer h4,
 footer strong {
@@ -354,6 +415,13 @@ footer small,
 
   .site-header-actions {
     gap: 5px;
+  }
+
+  body > footer.footer,
+  body > footer.legal-footer,
+  body > footer.blog-footer,
+  body > footer.piklance-global-footer {
+    text-align: center;
   }
 }
 
