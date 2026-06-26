@@ -532,12 +532,101 @@ function fillProfile(user, profile) {
   $("profileSpecialty").value = profile.specialty || "";
   $("profileAboutInput").value = profile.about || "";
   $("profileSkills").value = Array.isArray(profile.skills) ? profile.skills.join("، ") : "";
+  fillCareer(profile.careerItems || []);
   $("profileCardSpecialty").textContent = specialtyLabels[profile.specialty] || "مستقل محترف";
-  const completionFields = [profile.name, profile.phone, profile.specialty, user.email, profile.about, profile.skills?.length];
+  const completionFields = [profile.name, profile.phone, profile.specialty, user.email, profile.about, profile.skills?.length, profile.careerItems?.length];
   const progress = Math.round((completionFields.filter(Boolean).length / completionFields.length) * 100);
   $("profileProgressValue").textContent = `${progress}%`;
   $("profileProgressBar").style.width = `${progress}%`;
   $("profileCompletionCard").hidden = progress === 100;
+}
+
+function normalizeCareerItems(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map(item => ({
+      title: String(item?.title || "").trim().slice(0, 90),
+      organization: String(item?.organization || "").trim().slice(0, 90),
+      period: String(item?.period || "").trim().slice(0, 60),
+      description: String(item?.description || "").trim().slice(0, 260)
+    }))
+    .filter(item => item.title)
+    .slice(0, 8);
+}
+
+function parseCareerInput() {
+  return $("careerItemsInput").value
+    .split(/\n+/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => {
+      const [title = "", organization = "", period = "", ...description] = line.split("|").map(part => part.trim());
+      return {
+        title: title.slice(0, 90),
+        organization: organization.slice(0, 90),
+        period: period.slice(0, 60),
+        description: description.join(" | ").slice(0, 260)
+      };
+    })
+    .filter(item => item.title)
+    .slice(0, 8);
+}
+
+function formatCareerInput(items) {
+  return normalizeCareerItems(items)
+    .map(item => [item.title, item.organization, item.period, item.description].filter(Boolean).join(" | "))
+    .join("\n");
+}
+
+function renderCareerPreview(items = parseCareerInput()) {
+  const list = $("careerPreviewList");
+  if (!list) return;
+  const rows = normalizeCareerItems(items);
+  if (!rows.length) {
+    list.innerHTML = '<div class="empty-state"><strong>لا توجد محطات بعد</strong><p>أضف أول خبرة أو شهادة في الحقل أعلاه.</p></div>';
+    return;
+  }
+  list.replaceChildren(...rows.map(item => {
+    const card = document.createElement("article");
+    card.className = "career-preview-item";
+    const title = document.createElement("strong");
+    title.textContent = item.title;
+    const meta = document.createElement("span");
+    meta.textContent = [item.organization, item.period].filter(Boolean).join(" · ");
+    const description = document.createElement("p");
+    description.textContent = item.description || "بدون وصف إضافي.";
+    card.append(title, meta, description);
+    return card;
+  }));
+}
+
+function fillCareer(items) {
+  const input = $("careerItemsInput");
+  if (!input) return;
+  input.value = formatCareerInput(items);
+  renderCareerPreview(items);
+}
+
+async function saveCareer(event) {
+  event.preventDefault();
+  const careerItems = parseCareerInput();
+  const submit = $("saveCareerButton");
+  const message = $("careerMessage");
+  submit.disabled = true;
+  if (message) message.textContent = "جاري حفظ المسيرة المهنية...";
+  try {
+    await setDoc(doc(db, "publicProfiles", state.user.uid), { careerItems }, { merge: true });
+    state.profile = { ...state.profile, careerItems };
+    fillProfile(state.user, state.profile);
+    if (message) message.textContent = "تم حفظ المسيرة المهنية بنجاح.";
+    showToast("تم تحديث المسيرة المهنية في ملفك العام.");
+  } catch (error) {
+    console.error("Career update failed", error);
+    if (message) message.textContent = "تعذر حفظ المسيرة المهنية. تحقق من الصلاحيات وحاول مجدداً.";
+    showToast("تعذر حفظ المسيرة المهنية حالياً.");
+  } finally {
+    submit.disabled = false;
+  }
 }
 
 function renderAvatars(url, name) {
@@ -900,6 +989,8 @@ function bindEvents() {
   elements.serviceForm.addEventListener("submit", handleServiceSubmit);
   elements.deliveryForm.addEventListener("submit", handleDeliverySubmit);
   elements.profileForm.addEventListener("submit", saveProfile);
+  $("careerForm").addEventListener("submit", saveCareer);
+  $("careerItemsInput").addEventListener("input", () => renderCareerPreview());
   $("portfolioForm").addEventListener("submit", handlePortfolioSubmit);
   $("profileAvatarInput").addEventListener("change", async event => {
     const file = event.target.files[0];

@@ -98,6 +98,9 @@
         <button class="side-link" type="button" data-section="profile">
           <span class="nav-icon">○</span><span>الملف الشخصي</span>
         </button>
+        <button class="side-link" type="button" data-section="career">
+          <span class="nav-icon">↗</span><span>المسيرة المهنية</span>
+        </button>
         <button class="side-link" type="button" data-section="portfolio">
           <span class="nav-icon">▧</span><span>معرض الأعمال</span>
           <span class="nav-count" id="portfolioNavCount" hidden>0</span>
@@ -357,6 +360,33 @@
               <span class="form-message" id="profileMessage"></span>
               <button class="button button-primary" id="saveProfileButton" type="submit">حفظ التعديلات</button>
             </div>
+          </div>
+        </form>
+      </section>
+
+      <section class="dashboard-section" id="section-career">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">الخبرة والتعليم</p>
+            <h1>المسيرة المهنية</h1>
+            <p>أضف محطاتك المهنية والتعليمية لتظهر في صفحة المستقل العامة.</p>
+          </div>
+        </div>
+        <form class="panel form-panel career-panel" id="careerForm">
+          <div class="panel-header">
+            <div><p class="panel-kicker">محطات المسيرة</p><h2>إضافة وتعديل الخبرات</h2></div>
+          </div>
+          <label>
+            المسيرة المهنية
+            <textarea id="careerItemsInput" rows="8" maxlength="2500" placeholder="مثال:
+مصمم واجهات مستخدم | شركة تقنية ناشئة | 2024 - الآن | تصميم واجهات وتجارب استخدام للويب والموبايل
+دبلوم تصميم جرافيك | مركز تدريبي | 2022 | أساسيات الهوية البصرية والطباعة"></textarea>
+          </label>
+          <small class="service-image-hint">اكتب كل محطة في سطر منفصل، وافصل بين الحقول بعلامة |. يمكنك إضافة حتى 8 محطات.</small>
+          <div class="career-preview-list" id="careerPreviewList"></div>
+          <div class="form-actions">
+            <span class="form-message" id="careerMessage"></span>
+            <button class="button button-primary" id="saveCareerButton" type="submit">حفظ المسيرة المهنية</button>
           </div>
         </form>
       </section>

@@ -122,6 +122,23 @@ function portfolioCard(item, featured = false) {
   return button;
 }
 
+function careerCard(item) {
+  const row = document.createElement("article");
+  row.className = "experience-item";
+  const dot = document.createElement("span");
+  dot.className = "experience-dot";
+  const copy = document.createElement("div");
+  const title = document.createElement("h3");
+  title.textContent = item.title || "محطة مهنية";
+  const meta = document.createElement("p");
+  meta.textContent = [item.organization, item.period].filter(Boolean).join(" · ") || "مسيرة مهنية";
+  const description = document.createElement("small");
+  description.textContent = item.description || "";
+  copy.append(title, meta, description);
+  row.append(dot, copy);
+  return row;
+}
+
 function renderProfile(profile, services, portfolio) {
   const specialty = specialtyLabels[profile.specialty] || profile.headline || "مستقل للخدمات الرقمية";
   const skills = Array.isArray(profile.skills) && profile.skills.length ? profile.skills : [specialty];
@@ -166,7 +183,13 @@ function renderProfile(profile, services, portfolio) {
   $("reviewStars").textContent = `${"★".repeat(Math.round(rating))}${"☆".repeat(5 - Math.round(rating))}`;
   $("reviewTotal").textContent = Number(profile.reviewsCount || 0);
   $("ratingBars").replaceChildren();
-  $("experienceList").replaceChildren();
+  const careerItems = Array.isArray(profile.careerItems) ? profile.careerItems.filter(item => item?.title).slice(0, 8) : [];
+  $("experienceList").replaceChildren(...(careerItems.length ? careerItems.map(careerCard) : [careerCard({
+    title: "المسيرة المهنية قيد التحديث",
+    organization: "PikLance",
+    period: "قريباً",
+    description: "سيضيف المستقل خبراته وشهاداته من لوحة التحكم."
+  })]));
 
   const messageUrl = `messages.html?withUid=${encodeURIComponent(uid)}`;
   $("messageButton").href = messageUrl;
@@ -187,8 +210,8 @@ async function loadProfile() {
     const [profileSnapshot, servicesSnapshot, portfolioSnapshot, legacyPortfolioSnapshot] = await Promise.all([
       getDoc(doc(db, "publicProfiles", uid)),
       getDocs(query(collection(db, "services"), where("status", "==", "published"))),
-      getDocs(query(collection(db, PORTFOLIO_COLLECTION), where("ownerUid", "==", uid))),
-      getDocs(query(collection(db, LEGACY_PORTFOLIO_COLLECTION), where("ownerUid", "==", uid))).catch(() => ({ docs: [] }))
+      getDocs(query(collection(db, PORTFOLIO_COLLECTION), where("published", "==", true))),
+      getDocs(query(collection(db, LEGACY_PORTFOLIO_COLLECTION), where("published", "==", true))).catch(() => ({ docs: [] }))
     ]);
     if (!profileSnapshot.exists()) {
       showNotFound();

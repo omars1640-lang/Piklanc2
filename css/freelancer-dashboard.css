@@ -349,6 +349,12 @@ td { padding: 13px 12px; border-bottom: 1px solid var(--border); font-size: 12px
 .portfolio-dashboard-card strong { font-size: 15px; }.portfolio-dashboard-card small { color: var(--muted); font-size: 12px; }
 .portfolio-dashboard-description { margin: 4px 0 2px; color: var(--muted); font-size: 12px; line-height: 1.8; }
 .portfolio-dashboard-card button { width: fit-content; margin-top: 5px; }
+.career-panel { max-width: 900px; }
+.career-preview-list { margin-top: 14px; display: grid; gap: 10px; }
+.career-preview-item { padding: 13px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-alt); }
+.career-preview-item strong { display: block; color: var(--ink); font-size: 14px; }
+.career-preview-item span { display: block; margin-top: 2px; color: var(--primary); font-size: 12px; font-weight: 800; }
+.career-preview-item p { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.8; }
 .text-button.danger { color: var(--danger); }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
 .form-actions { display: flex; align-items: center; justify-content: flex-end; gap: 13px; margin-top: 7px; }.form-message { color: var(--green); font-size: 12px; }
