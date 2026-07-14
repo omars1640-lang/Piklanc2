@@ -44,10 +44,10 @@ async function loadAboutStats() {
     const services = servicesSnapshot.docs.map(item => item.data());
     const categories = new Set(services.map(service => normalizeCategory(service.category)));
     const categoryCount = categories.size || 0;
-    const formattedFee = `${feePercent.toLocaleString("ar-SY")}%`;
+    const formattedFee = `${feePercent.toLocaleString("en-US")}%`;
     setText("aboutPlatformFee", formattedFee);
     setText("aboutStoryPlatformFee", formattedFee);
-    setText("aboutCategoryCount", categoryCount.toLocaleString("ar-SY"));
+    setText("aboutCategoryCount", categoryCount.toLocaleString("en-US"));
   } catch (error) {
     console.warn("Unable to load about page stats", error);
   }

@@ -13,12 +13,15 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { deleteObject, getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { auth, db, storage } from "./firebase.js";
+import { sendOfficialEmail } from "./email-client.js";
+import { seedDefaultBadges } from "./piklance-access.js";
 
 const sectionMeta = {
   overview: ["مركز العمليات", "نظرة عامة"],
   verifications: ["الثقة والأمان", "طلبات التوثيق"],
   users: ["إدارة المجتمع", "المستخدمون"],
   ranks: ["نمو المستقلين", "رتب المستقلين"],
+  promotions: ["النمو والدعوات", "الأكواد والشارات"],
   conversations: ["سلامة التواصل", "المحادثات"],
   marketplace: ["تشغيل السوق", "الخدمات والطلبات"],
   finance: ["الإدارة المالية", "المدفوعات والعمولات"],
@@ -93,6 +96,9 @@ const actionLabels = {
   suspend_user: "إيقاف حساب مستخدم",
   activate_user: "إعادة تفعيل مستخدم",
   update_freelancer_rank: "تحديث رتبة مستقل",
+  create_promo_codes: "إنشاء أكواد",
+  assign_badge: "إسناد شارة",
+  create_badge: "إنشاء شارة",
   update_settings: "تحديث إعدادات المنصة"
 };
 
@@ -102,6 +108,10 @@ const state = {
   orders: [],
   chats: [],
   audit: [],
+  promoCodes: [],
+  badges: [],
+  referrals: [],
+  benefits: [],
   settings: null,
   selectedUser: null,
   pendingDecision: null
@@ -137,7 +147,7 @@ function toDate(value) {
 function formatDate(value, includeTime = false) {
   const date = toDate(value);
   if (!date) return "-";
-  return date.toLocaleString("ar-SY", includeTime
+  return date.toLocaleString("en-US", includeTime
     ? { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }
     : { year: "numeric", month: "short", day: "numeric" });
 }
@@ -236,6 +246,328 @@ function ensureRanksUi() {
   }
 }
 
+const defaultBadges = {
+  friends: { id: "friends", label: "أصدقاء PikLance", icon: "◆", tone: "purple" },
+  ambassador: { id: "ambassador", label: "سفير", icon: "✦", tone: "gold" }
+};
+
+function normalizeAdminCode(value) {
+  return String(value || "").trim().toUpperCase().replace(/\s+/g, "-").replace(/[^A-Z0-9-]/g, "");
+}
+
+function randomCode(prefix = "PIK") {
+  const random = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return normalizeAdminCode(`${prefix}-${random}`);
+}
+
+function ensurePromotionsUi() {
+  if (!document.querySelector('[data-section="promotions"]')) {
+    const ranksLink = document.querySelector('[data-section="ranks"]') || document.querySelector('[data-section="users"]');
+    const link = document.createElement("button");
+    link.className = "nav-link";
+    link.type = "button";
+    link.dataset.section = "promotions";
+    link.innerHTML = "<span>✦</span><b>الأكواد والشارات</b>";
+    ranksLink?.after(link);
+    link.addEventListener("click", () => showSection("promotions"));
+  }
+
+  if (document.getElementById("promotions-section")) return;
+  const section = document.createElement("section");
+  section.className = "admin-section";
+  section.id = "promotions-section";
+  section.innerHTML = `
+    <div class="section-heading">
+      <div><p>النمو والدعوات</p><h2>إدارة الأكواد والشارات</h2><span>أنشئ أكواد وصول مسبق أو دعوات، وامنح الشارات اليدوية من مكان واحد.</span></div>
+      <div class="heading-stat"><strong id="promoCodesCount">0</strong><small>كود</small></div>
+    </div>
+    <div class="content-admin-grid">
+      <form class="content-editor" id="promoCodeForm">
+        <header><div><small>قائمة أكواد جديدة</small><h3>إنشاء أكواد</h3></div></header>
+        <div class="content-form-row">
+          <label>نوع الكود<select id="promoType"><option value="early_access">وصول مسبق</option><option value="discount">خصم عام</option><option value="referral">دعوة شخصية</option></select></label>
+          <label>عدد الأكواد<input id="promoCount" type="number" min="1" max="200" value="10"></label>
+        </div>
+        <div class="content-form-row">
+          <label>بادئة الكود<input id="promoPrefix" type="text" maxlength="16" value="FRIEND"></label>
+          <label>نسبة الخصم %<input id="promoDiscount" type="number" min="0" max="100" step="1" value="0"></label>
+        </div>
+        <div class="content-form-row">
+          <label>مدة الخصم بالأيام<input id="promoDuration" type="number" min="0" max="365" value="0"></label>
+          <label>الشارة<select id="promoBadge"><option value="">بدون شارة</option><option value="friends">أصدقاء PikLance</option><option value="ambassador">سفير</option></select></label>
+        </div>
+        <button class="primary-button" type="submit">إنشاء القائمة</button>
+      </form>
+      <div class="content-list-panel">
+        <div class="panel-head"><div><p>الأكواد الحالية</p><h3>آخر الأكواد</h3></div><b id="promoActiveCount">0</b></div>
+        <div class="promo-tools">
+          <input id="promoSearch" type="search" placeholder="ابحث عن كود أو اسم المالك">
+          <select id="promoStatusFilter">
+            <option value="all">كل الحالات</option>
+            <option value="active">نشط</option>
+            <option value="used">مستخدم</option>
+          </select>
+          <select id="promoTypeFilter">
+            <option value="all">كل الأنواع</option>
+            <option value="early_access">وصول مسبق</option>
+            <option value="referral">دعوة</option>
+            <option value="discount">خصم</option>
+          </select>
+          <button class="secondary-button" id="exportPromoCodes" type="button">تصدير CSV</button>
+        </div>
+        <div class="admin-content-list" id="promoCodesList"></div>
+      </div>
+      <form class="content-editor" id="badgeAssignForm">
+        <header><div><small>شارة يدوية</small><h3>إسناد شارة لمستخدم</h3></div></header>
+        <div class="content-form-row">
+          <label>بحث المستخدم<input id="badgeUserSearch" type="search" placeholder="ابحث بالاسم أو البريد"></label>
+          <label>نوع الحساب<select id="badgeUserTypeFilter"><option value="all">كل الحسابات</option><option value="freelancer">المستقلون</option><option value="buyer">العملاء</option><option value="admin">الإدارة</option></select></label>
+        </div>
+        <label>المستخدم<select id="badgeUserSelect"></select></label>
+        <label>الشارة<select id="manualBadge"></select></label>
+        <button class="primary-button" type="submit">إسناد الشارة</button>
+      </form>
+      <form class="content-editor" id="badgeCreateForm">
+        <header><div><small>شارة جديدة</small><h3>إضافة شارة للمنصة</h3></div></header>
+        <div class="content-form-row">
+          <label>معرّف الشارة<input id="newBadgeId" type="text" maxlength="32" placeholder="example-badge" required></label>
+          <label>اسم الشارة<input id="newBadgeLabel" type="text" maxlength="40" placeholder="اسم الشارة" required></label>
+        </div>
+        <div class="content-form-row">
+          <label>الأيقونة<input id="newBadgeIcon" type="text" maxlength="4" value="◆" required></label>
+          <label>اللون<select id="newBadgeTone"><option value="purple">بنفسجي</option><option value="gold">ذهبي</option><option value="blue">أزرق</option><option value="green">أخضر</option><option value="red">أحمر</option></select></label>
+        </div>
+        <label>وصف الشارة<textarea id="newBadgeDescription" rows="2" maxlength="180" placeholder="وصف قصير يظهر للإدارة"></textarea></label>
+        <button class="primary-button" type="submit">إضافة الشارة</button>
+      </form>
+      <div class="content-list-panel">
+        <div class="panel-head"><div><p>الشارات</p><h3>شارات المنصة</h3></div><b id="badgesCount">0</b></div>
+        <div class="admin-content-list" id="badgesList"></div>
+      </div>
+    </div>
+  `;
+  document.getElementById("users-section")?.after(section);
+  document.getElementById("promoCodeForm").addEventListener("submit", createPromoCodes);
+  document.getElementById("badgeAssignForm").addEventListener("submit", assignManualBadge);
+  document.getElementById("badgeCreateForm").addEventListener("submit", createPlatformBadge);
+  document.getElementById("badgeUserSearch").addEventListener("input", renderPromotions);
+  document.getElementById("badgeUserTypeFilter").addEventListener("change", renderPromotions);
+  document.getElementById("promoSearch").addEventListener("input", renderPromotions);
+  document.getElementById("promoStatusFilter").addEventListener("change", renderPromotions);
+  document.getElementById("promoTypeFilter").addEventListener("change", renderPromotions);
+  document.getElementById("exportPromoCodes").addEventListener("click", exportPromoCodes);
+}
+
+function filteredPromoCodes() {
+  const searchText = (document.getElementById("promoSearch")?.value || "").trim().toLowerCase();
+  const statusFilter = document.getElementById("promoStatusFilter")?.value || "all";
+  const typeFilter = document.getElementById("promoTypeFilter")?.value || "all";
+  return [...state.promoCodes]
+    .filter(code => {
+      const haystack = [code.code, code.id, code.type, code.status, code.ownerName, code.ownerUid, code.groupId]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return (!searchText || haystack.includes(searchText))
+        && (statusFilter === "all" || (code.status || "active") === statusFilter)
+        && (typeFilter === "all" || (code.type || "promo") === typeFilter);
+    })
+    .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+}
+
+function renderPromotions() {
+  const userSearch = (document.getElementById("badgeUserSearch")?.value || "").trim().toLowerCase();
+  const userTypeFilter = document.getElementById("badgeUserTypeFilter")?.value || "all";
+  const users = state.users.filter(user => {
+    const haystack = `${user.name || ""} ${user.email || ""}`.toLowerCase();
+    return user.status === "active"
+      && (!userSearch || haystack.includes(userSearch))
+      && (userTypeFilter === "all" || user.accountType === userTypeFilter || user.role === userTypeFilter);
+  }).slice(0, 80);
+  const badges = state.badges.length ? state.badges : Object.values(defaultBadges);
+  const userSelect = document.getElementById("badgeUserSelect");
+  if (userSelect) {
+    userSelect.replaceChildren(...users.map(user => new Option(`${user.name || user.email} - ${user.role === "admin" ? "إدارة" : accountTypeLabel(user.accountType)}`, user.id)));
+  }
+  const manualBadge = document.getElementById("manualBadge");
+  const promoBadge = document.getElementById("promoBadge");
+  if (manualBadge) {
+    const current = manualBadge.value;
+    manualBadge.replaceChildren(...badges.map(badge => new Option(badge.label, badge.id)));
+    if (badges.some(badge => badge.id === current)) manualBadge.value = current;
+  }
+  if (promoBadge) {
+    const current = promoBadge.value;
+    promoBadge.replaceChildren(new Option("بدون شارة", ""), ...badges.map(badge => new Option(badge.label, badge.id)));
+    if (current && badges.some(badge => badge.id === current)) promoBadge.value = current;
+  }
+
+  const codes = [...state.promoCodes].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  const filteredCodes = filteredPromoCodes();
+
+  document.getElementById("promoCodesCount").textContent = codes.length;
+  document.getElementById("promoActiveCount").textContent = filteredCodes.filter(code => (code.status || "active") === "active").length;
+  document.getElementById("promoCodesList").replaceChildren(...filteredCodes.slice(0, 120).map(code => {
+    const row = document.createElement("article");
+    const value = code.code || code.id;
+    row.className = "admin-content-item promo-code-item";
+    row.innerHTML = `
+      <div class="promo-code-copy">
+        <code>${value}</code>
+        <button class="secondary-button promo-copy-button" type="button" data-code="${value}">نسخ</button>
+      </div>
+      <div>
+        <strong>${code.ownerName || code.type || "كود منصة"}</strong>
+        <small>${code.type || "promo"} · ${code.status || "active"} · ${Number(code.usedCount || 0)}/${Number(code.maxUses || 1)}</small>
+      </div>
+      <span>${code.discountPercent ? `${code.discountPercent}%` : code.badgeIds?.join(", ") || "-"}</span>
+    `;
+    row.querySelector("[data-code]").addEventListener("click", async event => {
+      await navigator.clipboard?.writeText(event.currentTarget.dataset.code).catch(() => {});
+      showToast("تم نسخ الكود.");
+    });
+    return row;
+  }));
+
+  document.getElementById("badgesCount").textContent = badges.length;
+  document.getElementById("badgesList").replaceChildren(...badges.map(badge => {
+    const row = document.createElement("article");
+    row.className = "admin-content-item";
+    row.innerHTML = `<div><strong>${badge.icon} ${badge.label}</strong><small>${badge.id}</small></div><span>${badge.tone}</span>`;
+    return row;
+  }));
+}
+
+function exportPromoCodes() {
+  const headers = ["code", "type", "status", "usedCount", "maxUses", "discountPercent", "discountDays", "ownerName", "ownerUid", "groupId"];
+  const rows = filteredPromoCodes().map(code => [
+    code.code || code.id || "",
+    code.type || "",
+    code.status || "active",
+    Number(code.usedCount || 0),
+    Number(code.maxUses || 1),
+    Number(code.discountPercent || 0),
+    Number(code.discountDays || 0),
+    code.ownerName || "",
+    code.ownerUid || "",
+    code.groupId || ""
+  ]);
+  const csv = [headers, ...rows]
+    .map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+  const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `piklance-promo-codes-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+async function createPromoCodes(event) {
+  event.preventDefault();
+  const type = document.getElementById("promoType").value;
+  const count = Math.max(1, Math.min(200, Number(document.getElementById("promoCount").value || 1)));
+  const prefix = normalizeAdminCode(document.getElementById("promoPrefix").value || "PIK");
+  const discountPercent = Number(document.getElementById("promoDiscount").value || 0);
+  const discountDays = Number(document.getElementById("promoDuration").value || 0);
+  const badgeId = document.getElementById("promoBadge").value;
+  const groupRef = doc(collection(db, "promoCodeGroups"));
+  const batch = writeBatch(db);
+  batch.set(groupRef, {
+    name: `${prefix} - ${type}`,
+    type,
+    prefix,
+    count,
+    discountPercent,
+    discountDays,
+    badgeIds: badgeId ? [badgeId] : [],
+    status: "active",
+    createdAt: serverTimestamp(),
+    createdBy: state.admin.id
+  });
+  const created = new Set();
+  while (created.size < count) created.add(randomCode(prefix));
+  created.forEach(code => {
+    batch.set(doc(db, "promoCodes", code), {
+      code,
+      groupId: groupRef.id,
+      type,
+      status: "active",
+      maxUses: 1,
+      usedCount: 0,
+      discountPercent,
+      discountDays,
+      badgeIds: badgeId ? [badgeId] : [],
+      usedBy: [],
+      createdAt: serverTimestamp(),
+      createdBy: state.admin.id
+    });
+  });
+  batch.set(doc(collection(db, "adminAuditLogs")), auditData("create_promo_codes", {}, `${type} ${prefix} x${count}`));
+  await batch.commit();
+  showToast(`تم إنشاء ${count} كود بنجاح.`);
+  await loadData();
+}
+
+async function assignManualBadge(event) {
+  event.preventDefault();
+  const uid = document.getElementById("badgeUserSelect").value;
+  const badgeId = document.getElementById("manualBadge").value;
+  const user = state.users.find(item => item.id === uid);
+  const badge = state.badges.find(item => item.id === badgeId) || defaultBadges[badgeId];
+  if (!uid || !badge || !user) return;
+  const batch = writeBatch(db);
+  batch.set(doc(db, "userBadges", `${uid}_${badge.id}`), {
+    uid,
+    badgeId: badge.id,
+    label: badge.label,
+    icon: badge.icon,
+    tone: badge.tone,
+    source: "manual_admin",
+    assignedBy: state.admin.id,
+    assignedAt: serverTimestamp()
+  });
+  batch.set(doc(db, "publicProfiles", uid), {
+    badges: { [badge.id]: { label: badge.label, icon: badge.icon, tone: badge.tone } }
+  }, { merge: true });
+  batch.set(doc(collection(db, "adminAuditLogs")), auditData("assign_badge", user, badge.label));
+  await batch.commit();
+  showToast("تم إسناد الشارة بنجاح.");
+  await loadData();
+}
+
+async function createPlatformBadge(event) {
+  event.preventDefault();
+  const id = normalizeAdminCode(document.getElementById("newBadgeId").value).toLowerCase();
+  const label = document.getElementById("newBadgeLabel").value.trim();
+  const icon = document.getElementById("newBadgeIcon").value.trim() || "◆";
+  const tone = document.getElementById("newBadgeTone").value;
+  const description = document.getElementById("newBadgeDescription").value.trim();
+  if (!id || !label) {
+    showToast("أدخل معرّف واسم الشارة أولاً.");
+    return;
+  }
+  const batch = writeBatch(db);
+  batch.set(doc(db, "badges", id), {
+    id,
+    label,
+    icon,
+    tone,
+    description,
+    active: true,
+    custom: true,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    createdBy: state.admin.id
+  }, { merge: true });
+  batch.set(doc(collection(db, "adminAuditLogs")), auditData("create_badge", { id, title: label }, description));
+  await batch.commit();
+  event.currentTarget.reset();
+  document.getElementById("newBadgeIcon").value = "◆";
+  showToast("تمت إضافة الشارة بنجاح.");
+  await loadData();
+}
+
 function showSection(sectionName) {
   document.querySelectorAll(".admin-section").forEach(section => section.classList.toggle("active", section.id === `${sectionName}-section`));
   document.querySelectorAll(".nav-link").forEach(link => link.classList.toggle("active", link.dataset.section === sectionName));
@@ -304,7 +636,7 @@ function renderRegistrationChart() {
     const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);
     months.push({
       key: `${date.getFullYear()}-${date.getMonth()}`,
-      label: date.toLocaleDateString("ar-SY", { month: "short" }),
+      label: date.toLocaleDateString("en-US", { month: "short" }),
       count: 0
     });
   }
@@ -469,7 +801,7 @@ function renderRanks() {
     selector.addEventListener("change", () => updateFreelancerRank(user, selector.value));
     [
       userCell(user),
-      completed.toLocaleString("ar-SY"),
+      completed.toLocaleString("en-US"),
       badge(rank.label, `rank-badge rank-${rank.color}`),
       selector
     ].forEach(value => {
@@ -582,17 +914,26 @@ async function syncAutomaticRanks() {
 async function loadData() {
   document.getElementById("refreshData").disabled = true;
   try {
-    const [usersSnapshot, ordersSnapshot, chatsSnapshot, auditSnapshot, settingsSnapshot] = await Promise.all([
+    await seedDefaultBadges().catch(error => console.warn("Unable to seed default badges", error));
+    const [usersSnapshot, ordersSnapshot, chatsSnapshot, auditSnapshot, settingsSnapshot, promoCodesSnapshot, badgesSnapshot, referralsSnapshot, benefitsSnapshot] = await Promise.all([
       getDocs(collection(db, "users")),
       getDocs(collection(db, "orders")),
       getDocs(collection(db, "chats")),
       getDocs(query(collection(db, "adminAuditLogs"), orderBy("createdAt", "desc"), limit(100))),
-      getDoc(doc(db, "platformSettings", "general"))
+      getDoc(doc(db, "platformSettings", "general")),
+      getDocs(collection(db, "promoCodes")),
+      getDocs(collection(db, "badges")),
+      getDocs(collection(db, "referrals")),
+      getDocs(collection(db, "userBenefits"))
     ]);
     state.users = usersSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.orders = ordersSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.chats = chatsSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.audit = auditSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    state.promoCodes = promoCodesSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    state.badges = badgesSnapshot.docs.map(item => ({ id: item.id, ...item.data() })).filter(item => item.active !== false);
+    state.referrals = referralsSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    state.benefits = benefitsSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.settings = settingsSnapshot.exists() ? settingsSnapshot.data() : null;
     await syncAutomaticRanks();
     renderAll();
@@ -607,6 +948,7 @@ async function loadData() {
 
 function renderAll() {
   ensureRanksUi();
+  ensurePromotionsUi();
   populateSpecialties();
   renderMetrics();
   renderRegistrationChart();
@@ -614,6 +956,7 @@ function renderAll() {
   renderVerifications();
   renderUsers();
   renderRanks();
+  renderPromotions();
   renderChats();
   renderAudit();
   renderSettings();
@@ -633,13 +976,20 @@ function detailField(label, value) {
 function identityImage(path, label) {
   const wrapper = document.createElement("div");
   wrapper.className = "identity-image";
-  wrapper.textContent = path ? "جاري تحميل الصورة..." : "لم تُرفع الصورة";
+  wrapper.textContent = path ? "" : "لم تُرفع الصورة";
   if (!path) return wrapper;
+  const loader = document.createElement("span");
+  loader.className = "image-loading-dots";
+  loader.innerHTML = "<span><i></i><i></i><i></i></span>";
+  wrapper.style.position = "relative";
+  wrapper.appendChild(loader);
   getDownloadURL(ref(storage, path)).then(url => {
     const image = document.createElement("img");
     image.src = url;
     image.alt = label;
-    wrapper.replaceChildren(image);
+    image.addEventListener("load", () => loader.remove(), { once: true });
+    image.addEventListener("error", () => loader.remove(), { once: true });
+    wrapper.replaceChildren(image, loader);
   }).catch(() => {
     wrapper.textContent = "تعذر تحميل صورة الهوية";
   });
@@ -662,7 +1012,7 @@ function printableUserHtml(user) {
     ["تاريخ التسجيل", formatDate(user.createdAt, true)],
     ["معرف الحساب", user.id]
   ].map(([label, value]) => `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value || "-")}</td></tr>`).join("");
-  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>طلب توثيق ${escapeHtml(user.name || "")}</title><style>body{font-family:Arial,sans-serif;line-height:1.8;padding:30px;color:#222}h1{margin-top:0}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:10px;text-align:right}th{width:180px;background:#f3f3f7}@media print{button{display:none}}</style></head><body><button onclick="print()">حفظ PDF / طباعة</button><h1>طلب توثيق مستقل</h1><p>تاريخ التصدير: ${new Date().toLocaleString("ar-SY")}</p><table>${rows}</table><p>مسارات صور الهوية محفوظة في النظام: ${escapeHtml(user.idFrontPath || "-")} / ${escapeHtml(user.idBackPath || "-")}</p><script>setTimeout(()=>print(),300)</script></body></html>`;
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>طلب توثيق ${escapeHtml(user.name || "")}</title><style>body{font-family:Arial,sans-serif;line-height:1.8;padding:30px;color:#222}h1{margin-top:0}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:10px;text-align:right}th{width:180px;background:#f3f3f7}@media print{button{display:none}}</style></head><body><button onclick="print()">حفظ PDF / طباعة</button><h1>طلب توثيق مستقل</h1><p>تاريخ التصدير: ${new Date().toLocaleString("en-US")}</p><table>${rows}</table><p>مسارات صور الهوية محفوظة في النظام: ${escapeHtml(user.idFrontPath || "-")} / ${escapeHtml(user.idBackPath || "-")}</p><script>setTimeout(()=>print(),300)</script></body></html>`;
 }
 
 function exportUserPdf(user) {
@@ -783,6 +1133,79 @@ async function cleanupRejectedIdentity(user) {
   await Promise.allSettled(paths.map(path => deleteObject(ref(storage, path))));
 }
 
+function personalReferralCode(user) {
+  const base = normalizeAdminCode((user.name || user.email || user.id).split("@")[0]).replace(/-/g, "");
+  return `${base || "PIK"}-${String(user.id || "").slice(0, 5).toUpperCase()}`;
+}
+
+function addReferralActivation(batch, user, updates) {
+  const code = user.referralCode || personalReferralCode(user);
+  updates.referralCode = code;
+  batch.set(doc(db, "promoCodes", code), {
+    code,
+    type: "referral",
+    status: "active",
+    maxUses: 9999,
+    usedCount: Number(user.referralUseCount || 0),
+    ownerUid: user.id,
+    ownerName: user.name || user.email || "",
+    discountPercent: 50,
+    discountDays: 30,
+    rewardEvery: 5,
+    rewardDiscountPercent: 50,
+    rewardDiscountDays: 30,
+    updatedAt: serverTimestamp(),
+    createdAt: user.referralCode ? user.referralCodeCreatedAt || serverTimestamp() : serverTimestamp()
+  }, { merge: true });
+}
+
+function addReferralRewardIfNeeded(batch, approvedUser) {
+  if (!approvedUser.referredByUid) return;
+  const referrals = state.referrals.filter(referral =>
+    referral.inviterUid === approvedUser.referredByUid
+    && referral.status === "approved"
+    && referral.invitedUid !== approvedUser.id
+  );
+  const approvedCount = referrals.length + 1;
+  batch.set(doc(db, "referrals", `${approvedUser.referralCodeUsed || "manual"}_${approvedUser.id}`), {
+    inviterUid: approvedUser.referredByUid,
+    invitedUid: approvedUser.id,
+    invitedEmail: approvedUser.email || "",
+    invitedName: approvedUser.name || "",
+    invitedAccountType: approvedUser.accountType || "",
+    status: "approved",
+    approvedAt: serverTimestamp()
+  }, { merge: true });
+
+  if (approvedCount % 5 !== 0) return;
+  const benefitId = `${approvedUser.referredByUid}_referral_${Math.floor(approvedCount / 5)}`;
+  batch.set(doc(db, "userBenefits", benefitId), {
+    uid: approvedUser.referredByUid,
+    type: "platform_fee_discount",
+    discountPercent: 50,
+    durationDays: 30,
+    source: "referral_reward",
+    status: "active",
+    referralMilestone: approvedCount,
+    createdAt: serverTimestamp()
+  }, { merge: true });
+  batch.set(doc(db, "accountBenefits", approvedUser.referredByUid), {
+    commissionDiscountPercent: 50,
+    active: true,
+    source: "referral_reward",
+    referralMilestone: approvedCount,
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    updatedAt: serverTimestamp()
+  }, { merge: true });
+  batch.set(doc(collection(db, "notifications", approvedUser.referredByUid, "items")), {
+    type: "referral_reward",
+    title: "مكافأة دعوة جديدة",
+    body: "تم تسجيل 5 أشخاص عن طريقك. حصلت على شهر خصم 50% على عمولة المنصة.",
+    read: false,
+    createdAt: serverTimestamp()
+  });
+}
+
 function openRejectionEmail(user, reason) {
   if (!user.email) return;
   const subject = encodeURIComponent("نتيجة طلب توثيق حسابك في PikLance");
@@ -790,6 +1213,21 @@ function openRejectionEmail(user, reason) {
     `مرحباً ${user.name || ""}\n\nتمت مراجعة طلب توثيق حسابك في PikLance، ولم نتمكن من قبوله حالياً.\n\nسبب الرفض:\n${reason}\n\nيمكنك تسجيل الدخول إلى حسابك وإعادة تقديم الطلب بعد تعديل البيانات ورفع صور الهوية من جديد.\n\nفريق PikLance`
   );
   window.location.href = `mailto:${user.email}?subject=${subject}&body=${body}`;
+}
+
+async function sendFreelancerRejectionEmail(user, reason) {
+  if (!user.email) return;
+  await sendOfficialEmail({
+    purpose: "freelancer_rejection",
+    to: user.email,
+    subject: "نتيجة طلب توثيق حسابك في PikLance",
+    message: `مرحباً ${user.name || ""}\n\nتمت مراجعة طلب توثيق حسابك في PikLance، ولم نتمكن من قبوله حالياً.\n\nسبب الرفض:\n${reason}\n\nيمكنك تسجيل الدخول إلى حسابك وإعادة تقديم الطلب بعد تعديل البيانات ورفع صور الهوية من جديد.\n\nفريق PikLance`,
+    actionUrl: "https://piklance.com/register.html",
+    actionLabel: "إعادة تقديم الطلب"
+  }).catch(error => {
+    console.warn("Unable to send freelancer rejection email", error);
+    openRejectionEmail(user, reason);
+  });
 }
 
 async function executeDecision(event) {
@@ -819,18 +1257,23 @@ async function executeDecision(event) {
   document.getElementById("decisionConfirm").disabled = true;
   try {
     const batch = writeBatch(db);
+    if (["approve_user", "activate_user"].includes(decision.action)) {
+      addReferralActivation(batch, decision.user, updates);
+      addReferralRewardIfNeeded(batch, decision.user);
+    }
     batch.update(doc(db, "users", decision.user.id), updates);
     batch.set(doc(db, "publicProfiles", decision.user.id), {
       name: decision.user.name || "مستخدم PikLance",
       accountType: decision.user.accountType,
       status: updates.status,
+      ...(updates.referralCode ? { referralCode: updates.referralCode } : {}),
       ...(decision.user.specialty ? { specialty: decision.user.specialty } : {})
     }, { merge: true });
     batch.set(doc(collection(db, "adminAuditLogs")), auditData(decision.action, decision.user, reason));
     await batch.commit();
     if (decision.action === "reject_user") {
       await cleanupRejectedIdentity(decision.user);
-      openRejectionEmail(decision.user, reason);
+      await sendFreelancerRejectionEmail(decision.user, reason);
     }
     closeDecision();
     showToast(decision.action === "reject_user"
@@ -899,6 +1342,7 @@ function bindEvents() {
   document.getElementById("themeToggle").addEventListener("click", () => {
     const theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
     localStorage.setItem("admin-theme", theme);
     document.getElementById("themeToggle").textContent = theme === "dark" ? "☀" : "☾";
   });
@@ -931,6 +1375,7 @@ function bindEvents() {
 }
 
 document.documentElement.dataset.theme = localStorage.getItem("admin-theme") || "light";
+document.documentElement.style.colorScheme = document.documentElement.dataset.theme;
 document.getElementById("themeToggle").textContent = document.documentElement.dataset.theme === "dark" ? "☀" : "☾";
 buildFutureSections();
 ensureRanksUi();
@@ -950,6 +1395,8 @@ onAuthStateChanged(auth, async user => {
       return;
     }
     state.admin = { id: user.uid, email: user.email, ...profileSnapshot.data() };
+    localStorage.setItem("piklanceEarlyAccess", "true");
+    localStorage.setItem("piklanceAdminAccess", "true");
     document.getElementById("adminName").textContent = state.admin.name || user.email;
     document.getElementById("adminAvatar").textContent = initials(state.admin.name || user.email);
     document.getElementById("welcomeName").textContent = state.admin.name || "مدير المنصة";

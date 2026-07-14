@@ -125,6 +125,12 @@
       letter-spacing: -.8px;
     }
 
+    #launchTitle {
+      max-width: 1120px;
+      white-space: nowrap;
+      font-size: clamp(24px, 3vw, 38px);
+    }
+
     .lead {
       max-width: 1240px;
       margin: 14px auto 0;
@@ -227,6 +233,17 @@
       gap: 10px;
     }
 
+    .early-access-box {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .early-access-box h3 {
+      margin: 0 0 6px;
+      font-size: 18px;
+    }
+
     .email-row {
       display: flex;
       justify-content: center;
@@ -297,6 +314,10 @@
     }
 
     @media (max-width: 560px) {
+      #launchTitle {
+        white-space: normal;
+      }
+
       .launch-page {
         width: min(100% - 20px, 1180px);
         padding: 14px 0;
@@ -338,6 +359,7 @@
   </style>
   <link rel="icon" type="image/svg+xml" href="assets/brand/logo-icon.svg">
   <link rel="stylesheet" href="css/brand.css">
+  <script src="js/latin-digits.js"></script>
 </head>
 <body>
   <main class="launch-page">
@@ -347,12 +369,13 @@
           <img class="piklance-brand-logo force-dark" src="assets/brand/logo-dark.svg" alt="PikLance" width="150" height="41">
         </a>
         <p class="eyebrow">العد التنازلي بدأ… ومستقبل العمل الحر صار على الأبواب!</p>
-        <h1 id="launchTitle">PikLance ليست مجرد منصة.<br>هي الحلم الذي أصبح حقيقة.</h1>
+        <h1 id="launchTitle">PikLance ليست مجرد منصة هي الحلم الذي أصبح حقيقة</h1>
         <div class="lead">
-          <p>تخيل للحظة إنو في مكان واحد، تقدر تلاقي فيه كل يلي بتحتاجه. كل هاد وأكتر، في منصة واحدة، صممت خصيصاً لك.</p>
-          <p>هون، من قلب سوريا، ولدت <strong>PikLance</strong>.</p>
-          <p>الوقت عم يجري بسرعة. بقي أيام قليلة على الانطلاق الرسمي، والإثارة بدأت تكبر بقلوبنا.</p>
-          <p>الفريق كله عم يشتغل بكل حب وشغف، يجهز كل التفاصيل، عشان لحظة الافتتاح تكون لحظة تاريخية بمعنى الكلمة.</p>
+          <p>تخيل مكان واحد يجمع كل احتياجاتك بمنصة وحدة انعملت كرمالك!</p>
+          <p>من قلب سوريا.. ولدت منصة <strong>Piklance</strong>.</p>
+          <p>الوقت عم يمر بسرعة، وأيام قليلة بتفصلنا عن الإطلاق الرسمي والحماس عبيكبر بقلوبنا.</p>
+          <p>الفريق كله شغال بحب وشغف وعبجهز أدق التفاصيل..</p>
+          <p>بدنا لحظة الافتتاح تكون تاريخية، وتليق بانتظاركم.</p>
         </div>
       </div>
 
@@ -366,7 +389,7 @@
 
         <div class="signup-card">
           <h2>سجل بريدك الآن</h2>
-          <p>سنرسل لك إشعار الافتتاح وأي ميزات خاصة للمسجلين الأوائل.</p>
+          <p>سجل معنا هلق ليوصلك إشعار الافتتاح، وتضمن ميزات حصرية مخصصة بس للمسجلين الأوائل!</p>
           <form class="signup-form" id="launchSignupForm">
             <div class="email-row">
               <input id="subscriberEmail" type="email" inputmode="email" autocomplete="email" placeholder="example@email.com" required>
@@ -374,15 +397,26 @@
             </div>
             <p class="form-message" id="formMessage" role="status"></p>
           </form>
+          <div class="early-access-box">
+            <h3>معك كود وصول مسبق؟</h3>
+            <p>أدخل الكود لتنتقل مباشرة إلى صفحة التسجيل التجريبي.</p>
+            <form class="signup-form" id="earlyAccessForm">
+              <div class="email-row">
+                <input id="earlyAccessCode" type="text" autocomplete="off" placeholder="ACCESS-CODE">
+                <button id="earlyAccessButton" type="submit">دخول مبكر</button>
+              </div>
+              <p class="form-message" id="earlyAccessMessage" role="status"></p>
+            </form>
+          </div>
         </div>
 
         <p class="launch-date">الإطلاق الرسمي: <strong>01/08/2026</strong></p>
       </aside>
 
       <div class="closing-copy">
-        <p>كون من المسجلين الأوائل. خد خطوة واحدة اليوم، هدية لنفسك بالمستقبل.</p>
-        <p>متل ما نحنا آمنّا بموهبتك، آمن بنفسك. امنحها ثقتك. شاركنا الحلم.</p>
-        <p>كون أول من يعرف لحظة افتتاح المنصة. ابدأ معنا من اليوم الأول، واكتب قصتك الناجحة على صفحات <strong>PikLance</strong>.</p>
+        <p>احجز مكانك مع المسجلين الأوائل.. خطوة وحدة اليوم، هي أفضل استثمار لنفسك بالمستقبل!</p>
+        <p>متل ما نحنا آمنّا بموهبتك.. آمن بحالك، اعطيها ثقتك.. وشاركنا الحلم ابدأ معنا من أول يوم..</p>
+        <p>واكتب قصة نجاحك على صفحات <strong>Piklance</strong>.</p>
         <p><strong>PikLance. موهبتك لاقت بيتها.</strong></p>
       </div>
     </section>
@@ -391,12 +425,17 @@
   <script type="module">
     import { doc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { db } from "./js/firebase.js";
+    import { normalizeAccessCode, rememberEarlyAccess, validateEarlyAccessCode } from "./js/piklance-access.js";
 
     const launchAt = new Date("2026-08-01T00:00:00+03:00").getTime();
     const form = document.getElementById("launchSignupForm");
+    const earlyAccessForm = document.getElementById("earlyAccessForm");
     const emailInput = document.getElementById("subscriberEmail");
     const button = document.getElementById("signupButton");
     const message = document.getElementById("formMessage");
+    const earlyAccessCode = document.getElementById("earlyAccessCode");
+    const earlyAccessButton = document.getElementById("earlyAccessButton");
+    const earlyAccessMessage = document.getElementById("earlyAccessMessage");
     const countdown = {
       days: document.getElementById("days"),
       hours: document.getElementById("hours"),
@@ -431,6 +470,11 @@
     function setMessage(text, type = "") {
       message.textContent = text;
       message.className = `form-message ${type}`.trim();
+    }
+
+    function setEarlyMessage(text, type = "") {
+      earlyAccessMessage.textContent = text;
+      earlyAccessMessage.className = `form-message ${type}`.trim();
     }
 
     async function subscriberId(email) {
@@ -472,6 +516,34 @@
       } finally {
         button.disabled = false;
         button.textContent = "أعلمني";
+      }
+    });
+
+    earlyAccessForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      const code = normalizeAccessCode(earlyAccessCode.value);
+      if (!code) {
+        setEarlyMessage("أدخل كود الوصول المسبق أولاً.", "error");
+        return;
+      }
+      earlyAccessButton.disabled = true;
+      earlyAccessButton.textContent = "جاري التحقق...";
+      setEarlyMessage("");
+      try {
+        const access = await validateEarlyAccessCode(code);
+        if (!access) {
+          setEarlyMessage("الكود غير صحيح أو تم استخدامه مسبقاً.", "error");
+          return;
+        }
+        rememberEarlyAccess(code);
+        setEarlyMessage("الكود صحيح. يتم تحويلك الآن إلى التسجيل.", "success");
+        window.location.href = `register.html?accessCode=${encodeURIComponent(code)}`;
+      } catch (error) {
+        console.error("Early access validation failed", error);
+        setEarlyMessage("تعذر التحقق من الكود حالياً. حاول مرة ثانية.", "error");
+      } finally {
+        earlyAccessButton.disabled = false;
+        earlyAccessButton.textContent = "دخول مبكر";
       }
     });
 

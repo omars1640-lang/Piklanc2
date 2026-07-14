@@ -1,6 +1,20 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl" data-theme="light">
 <head>
+  <script>
+    (function () {
+      try {
+        var isAdminPage = /(^|\/)dashboard\.html$/i.test(location.pathname);
+        var savedTheme = localStorage.getItem(isAdminPage ? "admin-theme" : "theme") || "light";
+        if (savedTheme === "dark" || savedTheme === "light") {
+          document.documentElement.setAttribute("data-theme", savedTheme);
+          document.documentElement.style.colorScheme = savedTheme;
+        }
+      } catch (error) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>كيف تعمل - PikLance</title>
@@ -103,30 +117,7 @@
       align-items: center;
       gap: 0.3rem;
     }
-
-    .logo-icon {
-      width: 40px;
-      height: 40px;
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-size: 1.3rem;
-      font-weight: 800;
-      box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
-    }
-
-    .logo-text {
-      color: var(--text-heading);
-    }
-
-    .logo-text span {
-      color: var(--primary);
-    }
-
-    .nav-links {
+.nav-links {
       display: flex;
       gap: 2rem;
       list-style: none;
@@ -302,7 +293,7 @@
     .step-number {
       width: 64px;
       height: 64px;
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      background: linear-gradient(135deg, #FF6764, #E85653);
       color: #fff;
       border-radius: 50%;
       display: inline-flex;
@@ -311,7 +302,7 @@
       font-size: 1.8rem;
       font-weight: 800;
       margin-bottom: 1.5rem;
-      box-shadow: 0 8px 20px rgba(108, 92, 231, 0.3);
+      box-shadow: 0 8px 20px rgba(255, 103, 100, 0.30);
     }
 
     .step-icon {
@@ -509,13 +500,14 @@
   <link rel="stylesheet" href="css/site-header.css">
   <link rel="icon" type="image/svg+xml" href="assets/brand/logo-icon.svg">
   <link rel="stylesheet" href="css/brand.css">
+  <script src="js/latin-digits.js"></script>
 </head>
 <body>
   <header class="site-header" id="navbar">
     <div class="site-header-inner">
       <a class="site-header-brand" href="index.html" aria-label="PikLance home">
-        <span class="site-header-brand-mark">P</span>
-        <strong>Pik<span>Lance</span></strong>
+        <img class="piklance-brand-logo light-logo" src="assets/brand/logo-light.svg" alt="PikLance" width="150" height="41">
+        <img class="piklance-brand-logo dark-logo" src="assets/brand/logo-dark.svg" alt="" width="150" height="41" aria-hidden="true">
       </a>
       <nav class="site-header-nav" id="siteHeaderNav" aria-label="التنقل الرئيسي">
         <a href="index.html">الرئيسية</a>
@@ -604,7 +596,7 @@
             <img class="theme-icon theme-icon-dark" src="assets/icons/dark/earn-profits.svg" alt="" aria-hidden="true">
           </div>
           <h3>اكسب أرباحك</h3>
-          <p>عند وصول طلبك، نفّذ العمل وسلّمه داخل المنصة. السحب المالي سيُتاح بعد ربط بوابة الدفع المحلية رسمياً.</p>
+          <p>عند وصول طلبك، نفّذ العمل وسلّمه داخل المنصة. بعد تحرير الأرباح يمكنك طلب السحب يدوياً عبر شام كاش.</p>
         </div>
       </div>
     </div>
@@ -617,10 +609,10 @@
         <h2 style="font-size:2.2rem; margin-top:1rem; color:var(--text-heading);">لماذا PikLance؟</h2>
       </div>
       <div class="features-grid">
-        <div class="feature-card"><div class="feature-icon"><img class="theme-icon theme-icon-light" src="assets/icons/light/verified-order.svg" alt="" aria-hidden="true"><img class="theme-icon theme-icon-dark" src="assets/icons/dark/verified-order.svg" alt="" aria-hidden="true"></div><h4>دورة طلب موثّقة</h4><p>نظام طلب تجريبي يربط الرسائل والتسليم والنزاع بالعمل نفسه.</p></div>
+        <div class="feature-card"><div class="feature-icon"><img class="theme-icon theme-icon-light" src="assets/icons/light/verified-order.svg" alt="" aria-hidden="true"><img class="theme-icon theme-icon-dark" src="assets/icons/dark/verified-order.svg" alt="" aria-hidden="true"></div><h4>دورة طلب موثّقة</h4><p>نظام طلب يربط الرصيد والرسائل والتسليم والنزاع بالعمل نفسه.</p></div>
         <div class="feature-card"><div class="feature-icon"><img class="theme-icon theme-icon-light" src="assets/icons/light/fast-delivery.svg" alt="" aria-hidden="true"><img class="theme-icon theme-icon-dark" src="assets/icons/dark/fast-delivery.svg" alt="" aria-hidden="true"></div><h4>تنفيذ سريع</h4><p>متوسط زمن التسليم أقل من 48 ساعة للخدمات الصغيرة.</p></div>
         <div class="feature-card"><div class="feature-icon"><img class="theme-icon theme-icon-light" src="assets/icons/light/support.svg" alt="" aria-hidden="true"><img class="theme-icon theme-icon-dark" src="assets/icons/dark/support.svg" alt="" aria-hidden="true"></div><h4>دعم متواصل</h4><p>فريق دعم فني جاهز لمساعدتك على مدار الساعة.</p></div>
-        <div class="feature-card"><div class="feature-icon"><img class="theme-icon theme-icon-light" src="assets/icons/light/payment-preparing.svg" alt="" aria-hidden="true"><img class="theme-icon theme-icon-dark" src="assets/icons/dark/payment-preparing.svg" alt="" aria-hidden="true"></div><h4>الدفع قيد التجهيز</h4><p>لن تُحصّل أموال حقيقية حتى الإعلان عن تفعيل بوابة الدفع.</p></div>
+        <div class="feature-card"><div class="feature-icon"><img class="theme-icon theme-icon-light" src="assets/icons/light/payment-preparing.svg" alt="" aria-hidden="true"><img class="theme-icon theme-icon-dark" src="assets/icons/dark/payment-preparing.svg" alt="" aria-hidden="true"></div><h4>دفع يدوي واضح</h4><p>اشحن رصيدك عبر شام كاش وتابع رقم العملية وحالة مراجعتها من حسابك.</p></div>
       </div>
     </div>
   </section>
@@ -654,24 +646,11 @@
         <div><h4>مساعدة</h4><a href="support.html">الدعم</a><a href="faq.html">أسئلة شائعة</a></div>
         <div><h4>قانوني</h4><a href="terms.html">شروط</a><a href="privacy.html">خصوصية</a></div>
       </div>
-      <div class="footer-bottom">© 2025 PikLance. جميع الحقوق محفوظة.</div>
+      <div class="footer-bottom">© 2026 PikLance. جميع الحقوق محفوظة.</div>
     </div>
   </footer>
 
   <script>
-    const themeToggle = document.getElementById('themeToggle');
-    const htmlElement = document.documentElement;
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    htmlElement.setAttribute('data-theme', savedTheme);
-    themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-    function toggleTheme() {
-      const current = htmlElement.getAttribute('data-theme');
-      const next = current === 'light' ? 'dark' : 'light';
-      htmlElement.setAttribute('data-theme', next);
-      localStorage.setItem('theme', next);
-      themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
-    }
-
     function switchSteps(type) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.steps-grid').forEach(g => g.classList.remove('active'));

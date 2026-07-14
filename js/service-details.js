@@ -16,6 +16,7 @@ let sellerProfile = null;
 let currentUser = null;
 let currentProfile = null;
 let relatedServices = [];
+let serviceReviews = [];
 
 const $ = id => document.getElementById(id);
 
@@ -27,7 +28,7 @@ function showToast(message) {
 }
 
 function formatPrice(value) {
-  return `${Number(value || 0).toLocaleString("ar-SY")} ل.س`;
+  return `${Number(value || 0).toLocaleString("en-US")} ل.س`;
 }
 
 function revisionLabel(value) {
@@ -77,14 +78,8 @@ function renderGallery() {
   const imageUrl = service.imageUrl || "assets/service-placeholder.svg";
   $("mainServiceImage").src = imageUrl;
   $("mainServiceImage").alt = service.title;
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "active";
-  const image = document.createElement("img");
-  image.src = imageUrl;
-  image.alt = `صورة ${service.title}`;
-  button.appendChild(image);
-  $("galleryThumbs").replaceChildren(button);
+  $("galleryThumbs").replaceChildren();
+  $("galleryThumbs").hidden = true;
   $("popularBadge").hidden = true;
 }
 
@@ -143,8 +138,11 @@ function renderService() {
   $("serviceCategory").textContent = service.category || "خدمات رقمية";
   $("serviceTitle").textContent = service.title;
   $("serviceSubtitle").textContent = "خدمة منشورة ومراجعة من إدارة PikLance.";
-  $("serviceRating").textContent = Number(service.rating || 0).toFixed(1);
-  $("reviewCount").textContent = `(${Number(service.reviewsCount || 0)} تقييم)`;
+  const reviewAverage = serviceReviews.length
+    ? serviceReviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / serviceReviews.length
+    : Number(service.rating || 0);
+  $("serviceRating").textContent = reviewAverage.toFixed(1);
+  $("reviewCount").textContent = `(${serviceReviews.length || Number(service.reviewsCount || 0)} تقييم)`;
   $("ordersCount").textContent = `${Number(service.completedOrders || 0)} طلب مكتمل`;
 
   const description = document.createElement("p");
@@ -181,8 +179,21 @@ function renderService() {
   $("sellerRating").textContent = Number(sellerProfile?.rating || service.rating || 0).toFixed(1);
   $("sellerBio").textContent = sellerProfile?.about || "مستقل موثّق يقدّم خدماته عبر PikLance.";
   $("sellerProfileLink").href = `freelancer-profile.html?uid=${encodeURIComponent(sellerUid)}`;
-  $("reviewAverage").textContent = Number(service.rating || 0).toFixed(1);
-  $("reviewsList").innerHTML = '<article class="review-item"><p>لا توجد تقييمات لهذه الخدمة حتى الآن. تظهر التقييمات بعد إكمال طلب حقيقي.</p></article>';
+  $("reviewAverage").textContent = reviewAverage.toFixed(1);
+  if (serviceReviews.length) {
+    $("reviewsList").replaceChildren(...serviceReviews.map(review => {
+      const article = document.createElement("article");
+      article.className = "review-item";
+      const heading = document.createElement("strong");
+      heading.textContent = `${review.reviewerName || "عميل PikLance"} · ${"★".repeat(Number(review.rating || 0))}${"☆".repeat(5 - Number(review.rating || 0))}`;
+      const comment = document.createElement("p");
+      comment.textContent = review.comment || "ترك العميل تقييماً بدون تعليق نصي.";
+      article.append(heading, comment);
+      return article;
+    }));
+  } else {
+    $("reviewsList").innerHTML = '<article class="review-item"><p>لا توجد تقييمات لهذه الخدمة حتى الآن. تظهر التقييمات بعد إكمال طلب حقيقي.</p></article>';
+  }
   renderGallery();
   renderPackage();
   renderRelated();
@@ -210,9 +221,10 @@ async function loadService() {
       service.imageUrl = await getDownloadURL(ref(storage, service.imagePath)).catch(() => "");
     }
     sellerUid = service.ownerUid;
-    const [profileSnapshot, relatedSnapshot] = await Promise.all([
+    const [profileSnapshot, relatedSnapshot, reviewsSnapshot] = await Promise.all([
       getDoc(doc(db, "publicProfiles", sellerUid)),
-      getDocs(query(collection(db, "services"), where("status", "==", "published")))
+      getDocs(query(collection(db, "services"), where("status", "==", "published"))),
+      getDocs(query(collection(db, "reviews"), where("serviceId", "==", serviceId), where("status", "==", "published"))).catch(() => ({ docs: [] }))
     ]);
     sellerProfile = profileSnapshot.exists() ? profileSnapshot.data() : null;
     if (sellerProfile) sellerProfile.avatar = await resolveProfileAvatar(sellerUid, sellerProfile);
@@ -220,6 +232,10 @@ async function loadService() {
       .map(item => ({ id: item.id, ...item.data() }))
       .filter(item => item.id !== service.id && item.category === service.category)
       .slice(0, 3);
+    serviceReviews = reviewsSnapshot.docs
+      .map(item => ({ id: item.id, ...item.data() }))
+      .filter(item => item.status === "published" && item.reviewerType === "buyer")
+      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     renderService();
   } catch (error) {
     console.error("Unable to load service", error);
@@ -258,11 +274,16 @@ async function handleOrderService() {
       packageInfo: packageForService(),
       sellerUid
     });
-    showToast("تم إنشاء طلب تجريبي وحجز قيمته داخل بيئة الاختبار.");
+    showToast("تم شراء الخدمة وحجز قيمتها من محفظتك.");
     setTimeout(() => { location.href = `profile.html#orders`; }, 900);
   } catch (error) {
     console.error("Unable to create order", error);
-    showToast("تعذر إنشاء الطلب. تحقق من حالة الحساب وقواعد Firebase.");
+    const message = String(error.message || "");
+    const insufficient = message.includes("الرصيد غير كافٍ");
+    showToast(insufficient
+      ? "رصيدك غير كافٍ. سيتم نقلك إلى شراء الرصيد."
+      : "تعذر شراء الخدمة حالياً. تحقق من حالة الحساب والمحفظة.");
+    if (insufficient) setTimeout(() => { location.href = "profile.html#wallet"; }, 1200);
     button.disabled = false;
   }
 }

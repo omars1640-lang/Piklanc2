@@ -1,12 +1,14 @@
 import {
-  Timestamp, collection, doc, getDoc, serverTimestamp, writeBatch
+  Timestamp, collection, doc, serverTimestamp, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+import { functions } from "./firebase.js";
 
 export const ESCROW_REVIEW_DAYS = 15;
 export const DEFAULT_PLATFORM_FEE_PERCENT = 20;
 
 export const orderStatusLabels = {
-  funded: "طلب تجريبي جاهز للتنفيذ",
+  funded: "تم الدفع وجاهز للتنفيذ",
   active: "قيد التنفيذ",
   delivered: "بانتظار مراجعة العميل",
   completed: "مكتمل وتم تحرير المبلغ",
@@ -15,7 +17,7 @@ export const orderStatusLabels = {
 };
 
 export function formatMoney(value) {
-  return `${Number(value || 0).toLocaleString("ar-SY")} ل.س`;
+  return `${Number(value || 0).toLocaleString("en-US")} ل.س`;
 }
 
 export function calculateEscrow(total, feePercent = DEFAULT_PLATFORM_FEE_PERCENT) {
@@ -60,65 +62,9 @@ function notificationData(title, body, relatedOrderId = "") {
 export async function createEscrowOrder(db, { user, buyerName, service, packageInfo, sellerUid }) {
   if (!user) throw new Error("auth-required");
   if (!sellerUid) throw new Error("seller-required");
-  const total = Number(packageInfo.price || service.price || 0);
-  if (!total || total < 1) throw new Error("invalid-total");
-
-  const settingsSnapshot = await getDoc(doc(db, "platformSettings", "general"));
-  const feePercent = settingsSnapshot.exists()
-    ? settingsSnapshot.data().platformFeePercent
-    : DEFAULT_PLATFORM_FEE_PERCENT;
-  const escrow = calculateEscrow(total, feePercent);
-  const orderRef = doc(collection(db, "orders"));
-  const batch = writeBatch(db);
-
-  batch.set(orderRef, {
-    buyerUid: user.uid,
-    buyerName: buyerName || user.email || "عميل",
-    buyerEmail: user.email || "",
-    freelancerUid: sellerUid,
-    freelancerName: service.seller?.name || "مستقل",
-    serviceId: String(service.id || ""),
-    serviceTitle: service.title || "طلب خدمة",
-    serviceCategory: service.category || "",
-    serviceImage: service.images?.[0] || "",
-    packageName: packageInfo.name || "أساسية",
-    packageDelivery: packageInfo.delivery || "",
-    packageRevisions: packageInfo.revisions || "",
-    total,
-    platformFeePercent: escrow.platformFeePercent,
-    platformFeeAmount: escrow.platformFeeAmount,
-    freelancerAmount: escrow.freelancerAmount,
-    reviewDays: ESCROW_REVIEW_DAYS,
-    status: "funded",
-    escrow: {
-      ...escrow,
-      status: "held",
-      heldForOrderId: orderRef.id,
-      releaseScope: "single_order"
-    },
-    payment: {
-      status: "sandbox_confirmed",
-      method: "sandbox_test",
-      mode: "sandbox",
-      note: "Test order only. No real money was collected."
-    },
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  });
-
-  batch.set(doc(collection(db, "notifications", user.uid, "items")), notificationData(
-    "تم إنشاء طلب تجريبي",
-    `تم تسجيل ${formatMoney(total)} كرصيد تجريبي محجوز لهذا الطلب فقط.`,
-    orderRef.id
-  ));
-  batch.set(doc(collection(db, "notifications", sellerUid, "items")), notificationData(
-    "طلب تجريبي جديد",
-    `وصلك طلب تجريبي بقيمة ${formatMoney(total)} لاختبار التنفيذ والتسليم.`,
-    orderRef.id
-  ));
-
-  await batch.commit();
-  return orderRef.id;
+  const call = httpsCallable(functions, "createWalletOrder");
+  const result = await call({ serviceId: String(service.id || "") });
+  return result.data.orderId;
 }
 
 export async function deliverEscrowOrder(db, order, deliveryNote = "") {
@@ -135,50 +81,19 @@ export async function deliverEscrowOrder(db, order, deliveryNote = "") {
   });
   batch.set(doc(collection(db, "notifications", order.buyerUid, "items")), notificationData(
     "تم تسليم طلبك",
-    `سلّم المستقل طلب ${order.serviceTitle || order.id}. لديك 15 يوماً للمراجعة قبل الإغلاق التجريبي.`,
+    `سلّم المستقل طلب ${order.serviceTitle || order.id}. لديك 15 يوماً للمراجعة قبل تحرير المبلغ تلقائياً.`,
     order.id
   ));
   await batch.commit();
 }
 
 export async function approveEscrowOrder(db, order) {
-  const batch = writeBatch(db);
-  batch.update(doc(db, "orders", order.id), {
-    status: "completed",
-    releaseType: "manual_approval",
-    completedAt: serverTimestamp(),
-    releasedAt: serverTimestamp(),
-    "escrow.status": "released",
-    "escrow.releasedAt": serverTimestamp(),
-    updatedAt: serverTimestamp()
-  });
-  batch.set(doc(collection(db, "notifications", order.freelancerUid, "items")), notificationData(
-    "قبِل العميل التسليم",
-    `تم إكمال طلب ${order.serviceTitle || order.id} وتحرير رصيده التجريبي.`,
-    order.id
-  ));
-  await batch.commit();
+  const call = httpsCallable(functions, "approveWalletOrder");
+  await call({ orderId: order.id });
 }
 
 export async function autoReleaseEscrowOrder(db, order) {
-  if (!canAutoRelease(order)) return false;
-  const batch = writeBatch(db);
-  batch.update(doc(db, "orders", order.id), {
-    status: "completed",
-    releaseType: "auto_after_review_window",
-    completedAt: serverTimestamp(),
-    releasedAt: serverTimestamp(),
-    "escrow.status": "released",
-    "escrow.releasedAt": serverTimestamp(),
-    updatedAt: serverTimestamp()
-  });
-  batch.set(doc(collection(db, "notifications", order.freelancerUid, "items")), notificationData(
-    "انتهت مهلة المراجعة",
-    `أُغلق طلب ${order.serviceTitle || order.id} وتحرر رصيده التجريبي لعدم فتح نزاع.`,
-    order.id
-  ));
-  await batch.commit();
-  return true;
+  return false;
 }
 
 export async function disputeEscrowOrder(db, order, user, reason = "") {

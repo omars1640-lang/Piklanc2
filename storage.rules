@@ -130,6 +130,29 @@ service firebase.storage {
       allow delete: if isAdmin() || activePortfolioOwner(userId);
     }
 
+    match /payment-receipts/{userId}/{requestId}/{fileName} {
+      allow read: if isAdmin() || (activeUser() && request.auth.uid == userId);
+      allow create: if activeUser()
+        && request.auth.uid == userId
+        && fileName.matches("receipt\\.(jpg|png|webp)")
+        && request.resource.size > 0
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches("image/(jpeg|png|webp)");
+      allow update: if false;
+      allow delete: if isAdmin() || (activeUser() && request.auth.uid == userId);
+    }
+
+    match /payout-qr/{userId}/sham_cash/{fileName} {
+      allow read: if isAdmin() || (activeUser() && request.auth.uid == userId);
+      allow create, update: if activeUser()
+        && request.auth.uid == userId
+        && fileName.matches("qr\\.(jpg|png|webp)")
+        && request.resource.size > 0
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches("image/(jpeg|png|webp)");
+      allow delete: if isAdmin() || (activeUser() && request.auth.uid == userId);
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

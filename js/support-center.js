@@ -9,7 +9,7 @@ const $ = id => document.getElementById(id);
 const statusLabels = { open: "مفتوحة", in_progress: "قيد المعالجة", waiting_user: "بانتظار ردك", resolved: "محلولة", closed: "مغلقة" };
 const categoryLabels = { technical: "مشكلة تقنية", account: "الحساب والتوثيق", payment: "الدفع والفواتير", dispute: "نزاع", report: "بلاغ", general: "استفسار عام" };
 const toDate = value => value?.toDate?.() || (value ? new Date(value) : null);
-const formatDate = value => toDate(value)?.toLocaleString("ar-SY", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) || "-";
+const formatDate = value => toDate(value)?.toLocaleString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) || "-";
 const escapeHtml = value => String(value || "").replace(/[&<>"']/g, character => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
 }[character]));

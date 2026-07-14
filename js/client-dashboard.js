@@ -8,22 +8,26 @@ import {
 import { auth, db, storage } from "./firebase.js";
 import { cacheBustUrl } from "./avatar-utils.js";
 import {
-  approveEscrowOrder, autoReleaseEscrowOrder, disputeEscrowOrder,
+  approveEscrowOrder, disputeEscrowOrder,
   formatMoney, orderStatusLabels
 } from "./escrow.js";
+import { initializeBuyerWallet } from "./wallet-client.js";
+import {
+  canReviewOrder, createOrderReview, formatStars, hasReviewedOrder
+} from "./reviews.js";
 
 const state = {
-  user: null, profile: null, orders: [], favorites: [], tickets: [], notifications: [],
-  pendingOrderAction: null,
+  user: null, profile: null, orders: [], favorites: [], tickets: [], notifications: [], reviews: [], receivedReviews: [],
+  pendingOrderAction: null, pendingReviewOrder: null,
   avatarFile: null, avatarRemoved: false, avatarPreviewUrl: ""
 };
-const sectionTitles = { overview: "نظرة عامة", orders: "طلباتي", favorites: "الخدمات المحفوظة", support: "الدعم والنزاعات", notifications: "الإشعارات", account: "إعدادات الحساب" };
-const statusLabels = { pending: "بانتظار التأكيد", active: "قيد التنفيذ", delivered: "بانتظار الاستلام", completed: "مكتمل", cancelled: "ملغي", disputed: "نزاع مفتوح", funded: "طلب تجريبي جاهز", open: "مفتوحة", in_progress: "قيد المعالجة", waiting_user: "بانتظار ردك", resolved: "محلولة", closed: "مغلقة", ...orderStatusLabels };
+const sectionTitles = { overview: "نظرة عامة", wallet: "المحفظة", orders: "طلباتي", favorites: "الخدمات المحفوظة", support: "الدعم والنزاعات", notifications: "الإشعارات", account: "إعدادات الحساب" };
+const statusLabels = { pending: "بانتظار التأكيد", active: "قيد التنفيذ", delivered: "بانتظار الاستلام", completed: "مكتمل", cancelled: "ملغي", disputed: "نزاع مفتوح", funded: "تم الدفع وجاهز للتنفيذ", open: "مفتوحة", in_progress: "قيد المعالجة", waiting_user: "بانتظار ردك", resolved: "محلولة", closed: "مغلقة", ...orderStatusLabels };
 
 const $ = id => document.getElementById(id);
 const toDate = value => value?.toDate?.() || (value ? new Date(value) : null);
 const sortNewest = (items, field = "createdAt") => items.sort((a, b) => (toDate(b[field])?.getTime() || 0) - (toDate(a[field])?.getTime() || 0));
-const formatDate = value => toDate(value)?.toLocaleDateString("ar-SY", { year: "numeric", month: "short", day: "numeric" }) || "-";
+const formatDate = value => toDate(value)?.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) || "-";
 
 function appendSummary(row, iconText, titleText, detailText, dateText) {
   const icon = document.createElement("span");
@@ -80,7 +84,7 @@ function renderOrders() {
       row,
       "▣",
       order.serviceTitle || "طلب خدمة",
-      `${statusLabels[order.status] || order.status || "قيد المراجعة"} · ${formatMoney(order.total)} · رصيد تجريبي لهذا الطلب فقط${releaseAt && order.status === "delivered" ? ` · موعد الإغلاق ${formatDate(releaseAt)}` : ""}`,
+      `${statusLabels[order.status] || order.status || "قيد المراجعة"} · ${formatMoney(order.total)} · مدفوع من المحفظة${releaseAt && order.status === "delivered" ? ` · موعد الإغلاق ${formatDate(releaseAt)}` : ""}`,
       formatDate(order.createdAt)
     );
     const actions = document.createElement("div");
@@ -113,11 +117,25 @@ function renderOrders() {
       dispute.textContent = "فتح نزاع";
       dispute.addEventListener("click", () => openDisputeModal(order));
       actions.append(dispute);
+    } else if (order.status === "completed") {
+      if (canReviewOrder(order, state.user?.uid, state.reviews)) {
+        const review = document.createElement("button");
+        review.type = "button";
+        review.className = "secondary-button";
+        review.textContent = "تقييم المستقل";
+        review.addEventListener("click", () => openReviewModal(order));
+        actions.append(review);
+      } else if (hasReviewedOrder(state.reviews, order.id, state.user?.uid)) {
+        const reviewed = document.createElement("span");
+        reviewed.className = "review-status-pill";
+        reviewed.textContent = "تم التقييم";
+        actions.append(reviewed);
+      }
     }
     row.appendChild(actions);
     return row;
   };
-  $("ordersList").replaceChildren(...(state.orders.length ? state.orders.map(createRow) : [emptyState("▣", "لا توجد طلبات حتى الآن", "أنشئ طلباً تجريبياً لاختبار المراسلة والتسليم قبل تفعيل الدفع.", "services.html", "استكشف الخدمات")]));
+  $("ordersList").replaceChildren(...(state.orders.length ? state.orders.map(createRow) : [emptyState("▣", "لا توجد طلبات حتى الآن", "اشحن محفظتك واختر الخدمة المناسبة لبدء أول طلب.", "services.html", "استكشف الخدمات")]));
   $("overviewOrders").replaceChildren(...state.orders.slice(0, 3).map(createRow));
   $("overviewOrdersEmpty").hidden = state.orders.length > 0;
 }
@@ -133,7 +151,7 @@ function renderFavorites() {
     const title = document.createElement("h3");
     title.textContent = item.title || "خدمة";
     const price = document.createElement("p");
-    price.textContent = `${Number(item.price || 0).toLocaleString("ar-SY")} ل.س`;
+    price.textContent = `${Number(item.price || 0).toLocaleString("en-US")} ل.س`;
     const link = document.createElement("a");
     link.href = `service-details.html?id=${encodeURIComponent(item.serviceId || item.id)}`;
     link.textContent = "عرض الخدمة";
@@ -183,6 +201,20 @@ function renderProfile() {
   $("accountName").value = state.profile.name || "";
   $("accountEmail").value = state.user.email || "";
   $("accountPhone").value = state.profile.phone || "";
+  const referralCode = state.profile.referralCode || "";
+  const referralCard = $("clientReferralCard");
+  if (referralCard) referralCard.hidden = !referralCode;
+  const referralValue = $("clientReferralCode");
+  if (referralValue) referralValue.textContent = referralCode || "-";
+  renderBuyerRating();
+}
+
+function renderBuyerRating() {
+  const count = state.receivedReviews.length;
+  const average = count ? state.receivedReviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / count : 0;
+  if ($("buyerRatingAverage")) $("buyerRatingAverage").textContent = average.toFixed(1);
+  if ($("buyerRatingStars")) $("buyerRatingStars").textContent = formatStars(average);
+  if ($("buyerRatingCount")) $("buyerRatingCount").textContent = count;
 }
 
 function renderAvatars(url, name) {
@@ -277,6 +309,25 @@ function closeDisputeModal() {
   if (!$("orderApproveModal").classList.contains("open")) document.body.style.overflow = "";
 }
 
+function openReviewModal(order) {
+  state.pendingReviewOrder = order;
+  $("orderReviewSummary").textContent = `قيّم تجربتك مع المستقل في طلب "${order.serviceTitle || order.id}". يظهر التقييم على ملفه بعد الإرسال.`;
+  $("orderReviewRating").value = "5";
+  $("orderReviewStars").textContent = formatStars(5);
+  $("orderReviewComment").value = "";
+  $("orderReviewModal").classList.add("open");
+  $("orderReviewModal").setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+}
+
+function closeReviewModal() {
+  state.pendingReviewOrder = null;
+  $("orderReviewForm").reset();
+  $("orderReviewModal").classList.remove("open");
+  $("orderReviewModal").setAttribute("aria-hidden", "true");
+  if (!$("orderApproveModal").classList.contains("open") && !$("orderDisputeModal").classList.contains("open")) document.body.style.overflow = "";
+}
+
 async function approveOrder(order) {
   await approveEscrowOrder(db, order);
   state.orders = state.orders.map(item => item.id === order.id ? { ...item, status: "completed", escrow: { ...(item.escrow || {}), status: "released" } } : item);
@@ -354,6 +405,31 @@ async function handleDisputeSubmit(event) {
   }
 }
 
+async function handleReviewSubmit(event) {
+  event.preventDefault();
+  const order = state.pendingReviewOrder;
+  if (!order) return;
+  const button = $("orderReviewSubmit");
+  button.disabled = true;
+  button.textContent = "جاري نشر التقييم...";
+  try {
+    const review = await createOrderReview(db, order, state.user, state.profile, {
+      rating: Number($("orderReviewRating").value),
+      comment: $("orderReviewComment").value
+    });
+    state.reviews.unshift(review);
+    renderOrders();
+    closeReviewModal();
+    showToast("تم نشر تقييمك بنجاح.");
+  } catch (error) {
+    console.error("Order review failed", error);
+    showToast(error.code === "permission-denied" ? "تعذر نشر التقييم. تأكد أن الطلب مكتمل." : "تعذر نشر التقييم حالياً. حاول مجدداً.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "نشر التقييم";
+  }
+}
+
 async function markAllRead() {
   const unread = state.notifications.filter(item => !item.read);
   if (!unread.length) return;
@@ -403,32 +479,25 @@ async function saveAccount(event) {
 
 async function loadWorkspace() {
   const uid = state.user.uid;
-  const [ordersSnapshot, favoritesSnapshot, ticketsSnapshot, notificationsSnapshot] = await Promise.all([
+  const [ordersSnapshot, favoritesSnapshot, ticketsSnapshot, notificationsSnapshot, reviewsSnapshot, receivedReviewsSnapshot] = await Promise.all([
     getDocs(query(collection(db, "orders"), where("buyerUid", "==", uid))),
     getDocs(collection(db, "favorites", uid, "services")),
     getDocs(query(collection(db, "supportTickets"), where("requesterUid", "==", uid))),
-    getDocs(collection(db, "notifications", uid, "items"))
+    getDocs(collection(db, "notifications", uid, "items")),
+    getDocs(query(collection(db, "reviews"), where("reviewerUid", "==", uid))).catch(() => ({ docs: [] })),
+    getDocs(query(collection(db, "reviews"), where("targetUid", "==", uid))).catch(() => ({ docs: [] }))
   ]);
   state.orders = sortNewest(ordersSnapshot.docs.map(item => ({ id: item.id, ...item.data() })));
-  const releasable = state.orders.filter(order => order.status === "delivered" && order.escrow?.status === "review_hold" && toDate(order.autoReleaseAt)?.getTime() <= Date.now());
-  if (releasable.length) {
-    await Promise.all(releasable.map(order => autoReleaseEscrowOrder(db, order).catch(error => {
-      console.warn("Auto release skipped", order.id, error);
-      return false;
-    })));
-    releasable.forEach(order => {
-      order.status = "completed";
-      order.releaseType = "auto_after_review_window";
-      order.escrow = { ...(order.escrow || {}), status: "released" };
-    });
-  }
   state.favorites = favoritesSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
   state.tickets = sortNewest(ticketsSnapshot.docs.map(item => ({ id: item.id, ...item.data() })), "updatedAt");
   state.notifications = sortNewest(notificationsSnapshot.docs.map(item => ({ id: item.id, ...item.data() })));
+  state.reviews = sortNewest(reviewsSnapshot.docs.map(item => ({ id: item.id, ...item.data() })));
+  state.receivedReviews = sortNewest(receivedReviewsSnapshot.docs.map(item => ({ id: item.id, ...item.data() })).filter(item => item.targetType === "buyer"));
   renderOrders();
   renderFavorites();
   renderTickets();
   renderNotifications();
+  renderBuyerRating();
 }
 
 document.querySelectorAll("[data-section], [data-section-target]").forEach(control => control.addEventListener("click", () => showSection(control.dataset.section || control.dataset.sectionTarget)));
@@ -437,6 +506,12 @@ $("sidebarBackdrop").addEventListener("click", () => { $("sidebar").classList.re
 $("themeButton").addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
 $("markAllRead").addEventListener("click", markAllRead);
 $("accountForm").addEventListener("submit", saveAccount);
+$("copyClientReferralCode").addEventListener("click", async () => {
+  const code = $("clientReferralCode").textContent.trim();
+  if (!code || code === "-") return;
+  await navigator.clipboard?.writeText(code).catch(() => {});
+  showToast("تم نسخ كود الدعوة.");
+});
 $("accountAvatarInput").addEventListener("change", event => {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -461,14 +536,19 @@ $("removeAccountAvatar").addEventListener("click", () => {
 });
 $("orderApproveForm").addEventListener("submit", handleApproveSubmit);
 $("orderDisputeForm").addEventListener("submit", handleDisputeSubmit);
+$("orderReviewForm").addEventListener("submit", handleReviewSubmit);
+$("orderReviewRating").addEventListener("change", event => { $("orderReviewStars").textContent = formatStars(event.target.value); });
 document.querySelectorAll("[data-close-order-approve]").forEach(control => control.addEventListener("click", closeApproveModal));
 document.querySelectorAll("[data-close-order-dispute]").forEach(control => control.addEventListener("click", closeDisputeModal));
+document.querySelectorAll("[data-close-order-review]").forEach(control => control.addEventListener("click", closeReviewModal));
 $("orderApproveModal").addEventListener("click", event => { if (event.target === $("orderApproveModal")) closeApproveModal(); });
 $("orderDisputeModal").addEventListener("click", event => { if (event.target === $("orderDisputeModal")) closeDisputeModal(); });
+$("orderReviewModal").addEventListener("click", event => { if (event.target === $("orderReviewModal")) closeReviewModal(); });
 document.addEventListener("keydown", event => {
   if (event.key === "Escape") {
     closeApproveModal();
     closeDisputeModal();
+    closeReviewModal();
   }
 });
 $("logoutButton").addEventListener("click", async () => { await signOut(auth); location.replace("index.html"); });
@@ -490,9 +570,11 @@ onAuthStateChanged(auth, async user => {
     const publicSnapshot = await getDoc(doc(db, "publicProfiles", user.uid));
     state.user = user;
     state.profile = { ...profile, ...(publicSnapshot.exists() ? publicSnapshot.data() : {}) };
+    if (profile.earlyAccess) localStorage.setItem("piklanceEarlyAccess", "true");
     await refreshStoredAvatar();
     renderProfile();
     await loadWorkspace();
+    await initializeBuyerWallet(user, showToast);
     showSection(sectionTitles[location.hash.slice(1)] ? location.hash.slice(1) : "overview");
     $("dashboardLoading").classList.add("hidden");
   } catch (error) {

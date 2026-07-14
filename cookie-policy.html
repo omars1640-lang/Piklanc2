@@ -1,10 +1,26 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" data-theme="light">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>سياسة ملفات الارتباط | PikLance</title><meta name="description" content="سياسة ملفات الارتباط والتخزين المحلي وتفضيلات الخصوصية في PikLance."><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="css/site-header.css"><link rel="stylesheet" href="css/legal.css">  <link rel="icon" type="image/svg+xml" href="assets/brand/logo-icon.svg">
+<head>
+  <script>
+    (function () {
+      try {
+        var isAdminPage = /(^|\/)dashboard\.html$/i.test(location.pathname);
+        var savedTheme = localStorage.getItem(isAdminPage ? "admin-theme" : "theme") || "light";
+        if (savedTheme === "dark" || savedTheme === "light") {
+          document.documentElement.setAttribute("data-theme", savedTheme);
+          document.documentElement.style.colorScheme = savedTheme;
+        }
+      } catch (error) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>سياسة ملفات الارتباط | PikLance</title><meta name="description" content="سياسة ملفات الارتباط والتخزين المحلي وتفضيلات الخصوصية في PikLance."><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="css/site-header.css"><link rel="stylesheet" href="css/legal.css">  <link rel="icon" type="image/svg+xml" href="assets/brand/logo-icon.svg">
   <link rel="stylesheet" href="css/brand.css">
+  <script src="js/latin-digits.js"></script>
 </head>
 <body>
-  <header class="site-header"><div class="site-header-inner"><a class="site-header-brand" href="index.html"><span class="site-header-brand-mark">P</span><strong>Pik<span>Lance</span></strong></a><nav class="site-header-nav" id="siteHeaderNav"><a href="index.html">الرئيسية</a><a href="services.html">الخدمات</a><a href="legal.html">السياسات</a><a href="support.html">الدعم</a></nav><div class="site-header-actions" id="siteHeaderActions"><button class="site-header-theme" id="themeToggle" type="button">☀</button></div><button class="site-header-mobile" id="siteHeaderMobile" type="button" aria-expanded="false">☰</button></div></header>
+  <header class="site-header"><div class="site-header-inner"><a class="site-header-brand" href="index.html"><img class="piklance-brand-logo light-logo" src="assets/brand/logo-light.svg" alt="PikLance" width="150" height="41">
+        <img class="piklance-brand-logo dark-logo" src="assets/brand/logo-dark.svg" alt="" width="150" height="41" aria-hidden="true"></a><nav class="site-header-nav" id="siteHeaderNav"><a href="index.html">الرئيسية</a><a href="services.html">الخدمات</a><a href="legal.html">السياسات</a><a href="support.html">الدعم</a></nav><div class="site-header-actions" id="siteHeaderActions"><button class="site-header-theme" id="themeToggle" type="button">☀</button></div><button class="site-header-mobile" id="siteHeaderMobile" type="button" aria-expanded="false">☰</button></div></header>
   <section class="legal-hero"><div class="legal-hero-inner"><div class="legal-breadcrumbs"><a href="index.html">الرئيسية</a><span>/</span><a href="legal.html">السياسات</a><span>/</span><span>ملفات الارتباط</span></div><p>تفضيلات التصفح</p><h1>سياسة ملفات الارتباط</h1><div class="legal-lead">تشرح هذه السياسة استخدام ملفات الارتباط والتخزين المحلي والتقنيات المشابهة وكيفية التحكم بها.</div><div class="legal-meta"><span>آخر تحديث: 15 حزيران 2026</span><span>يمكن تغيير التفضيلات في أي وقت</span></div></div></section>
   <main class="legal-layout">
     <aside class="legal-toc"><strong>محتويات الصفحة</strong><nav><a href="#definition">ما هي؟</a><a href="#types">الأنواع</a><a href="#current">الاستخدام الحالي</a><a href="#control">التحكم</a><a href="#third-party">أطراف ثالثة</a><a href="#updates">الموافقة والتحديث</a></nav></aside>

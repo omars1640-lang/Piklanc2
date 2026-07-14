@@ -431,22 +431,15 @@
       position: relative;
       display: flex;
       justify-content: center;
+      transform: translateX(-2.25rem);
     }
 
     .hero-marketplace {
-      width: min(100%, 540px);
-      padding: 1.1rem;
-      border: 1px solid var(--border-color);
-      border-radius: 30px;
-      background: color-mix(in srgb, var(--card-bg) 88%, transparent);
-      box-shadow: var(--shadow-lg);
-      backdrop-filter: blur(18px);
-      animation: floatVisual 6s ease-in-out infinite;
-    }
-
-    @keyframes floatVisual {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-16px); }
+      width: min(100%, 610px);
+      padding: 0;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
     }
 
     .marketplace-top {
@@ -478,18 +471,255 @@
       white-space: nowrap;
     }
 
-    .marketplace-grid {
-      display: grid;
-      grid-template-columns: 1.15fr .85fr;
-      gap: .9rem;
-      align-items: stretch;
+    .hero-service-stack {
+      position: relative;
+      height: 520px;
+      perspective: 1400px;
+      isolation: isolate;
+      touch-action: pan-y;
+      user-select: none;
     }
 
-    .market-service {
-      padding: 1rem;
+    .hero-stack-card {
+      --stack-index: 0;
+      --stack-x: 0px;
+      --stack-y: 0px;
+      --stack-scale: 1;
+      --drag-x: 0px;
+      --drag-rotate: 0deg;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: min(86%, 374px);
+      height: 453px;
+      padding: .75rem;
+      display: flex;
+      flex-direction: column;
       border: 1px solid var(--border-color);
-      border-radius: 22px;
-      background: var(--bg-secondary);
+      border-radius: 25px;
+      background: color-mix(in srgb, var(--card-bg) 96%, var(--primary) 4%);
+      box-shadow: 0 20px 45px rgba(31, 24, 70, .14);
+      overflow: hidden;
+      z-index: calc(10 - var(--stack-index));
+      transform: translate3d(calc(-50% + var(--stack-x) + var(--drag-x)), var(--stack-y), 0) scale(var(--stack-scale)) rotate(var(--drag-rotate));
+      transform-origin: center top;
+      transition: transform .57s cubic-bezier(.22,.8,.26,1), opacity .44s ease, filter .5s ease, box-shadow .33s ease;
+    }
+
+    .hero-stack-card:not([data-stack-index="0"]) {
+      filter: saturate(calc(1 - var(--stack-index) * .08));
+    }
+
+    .hero-stack-card[data-stack-index="0"] {
+      cursor: grab;
+    }
+
+    .hero-stack-card[data-stack-index="0"]:active { cursor: grabbing; }
+
+    .hero-stack-card.is-dragging {
+      transition: box-shadow .2s ease;
+      box-shadow: 0 34px 75px rgba(70, 55, 170, .28);
+    }
+
+    .hero-stack-card.is-leaving-left {
+      opacity: 0;
+      transform: translate3d(calc(-50% - 330px), -28px, 0) rotate(-11deg) scale(.94);
+    }
+
+    .hero-stack-card.is-leaving-right {
+      opacity: 0;
+      transform: translate3d(calc(-50% + 330px), -28px, 0) rotate(11deg) scale(.94);
+    }
+
+    .hero-stack-card::after {
+      content: '';
+      position: absolute;
+      inset: auto 1.3rem .55rem;
+      height: 3px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      opacity: .2;
+    }
+
+    .hero-stack-card[data-stack-index="0"] {
+      border-color: color-mix(in srgb, var(--primary) 44%, var(--border-color));
+      box-shadow: 0 26px 65px rgba(70, 55, 170, .2);
+    }
+
+    .hero-stack-card[data-stack-index="0"]::after { opacity: 1; }
+
+    .hero-stack-card.is-skeleton {
+      pointer-events: none;
+    }
+
+    .hero-stack-card.is-skeleton .hero-stack-cover,
+    .hero-skeleton-line,
+    .service-img.is-image-loading::before,
+    .hero-stack-cover.is-image-loading::before {
+      background: linear-gradient(90deg, var(--bg-secondary) 20%, var(--border-color) 50%, var(--bg-secondary) 80%);
+      background-size: 220% 100%;
+      animation: marketplaceImageShimmer 1.3s ease-in-out infinite;
+    }
+
+    .hero-skeleton-copy {
+      padding: .8rem .25rem;
+      display: grid;
+      gap: .75rem;
+    }
+
+    .hero-skeleton-line {
+      height: 13px;
+      border-radius: 999px;
+    }
+
+    .hero-skeleton-line.short { width: 38%; }
+    .hero-skeleton-line.medium { width: 66%; }
+    .hero-skeleton-line.button { width: 100%; height: 42px; margin-top: 1.2rem; border-radius: 13px; }
+
+    .service-img.is-image-loading::before,
+    .hero-stack-cover.is-image-loading::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+    }
+
+    .service-img.image-ready,
+    .hero-stack-cover.image-ready {
+      animation: marketplaceImageReveal .45s ease both;
+    }
+
+    @keyframes marketplaceImageShimmer {
+      to { background-position: -220% 0; }
+    }
+
+    @keyframes marketplaceImageReveal {
+      from { opacity: .72; filter: blur(3px); }
+      to { opacity: 1; filter: blur(0); }
+    }
+
+    .hero-stack-cover {
+      position: relative;
+      height: 194px;
+      flex: 0 0 194px;
+      border-radius: 19px;
+      background:
+        linear-gradient(135deg, rgba(108,92,231,.9), rgba(255,107,107,.78)),
+        radial-gradient(circle at 25% 25%, rgba(255,255,255,.45), transparent 28%);
+      background-size: cover;
+      background-position: center;
+      overflow: hidden;
+    }
+
+    .hero-stack-cover::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent 48%, rgba(16, 12, 44, .5));
+    }
+
+    .hero-stack-category {
+      position: absolute;
+      z-index: 1;
+      inset: .75rem .75rem auto auto;
+      padding: .35rem .65rem;
+      border-radius: 999px;
+      color: #fff;
+      background: rgba(20, 16, 48, .58);
+      backdrop-filter: blur(10px);
+      font-size: .68rem;
+      font-weight: 900;
+    }
+
+    .hero-stack-copy {
+      min-width: 0;
+      min-height: 0;
+      padding: .65rem .25rem .2rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hero-stack-eyebrow {
+      margin-bottom: .45rem;
+      color: var(--primary);
+      font-size: .72rem;
+      font-weight: 900;
+    }
+
+    .hero-stack-title {
+      margin: 0;
+      min-height: 3.45em;
+      color: var(--text-heading);
+      font-size: 1rem;
+      line-height: 1.72;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .hero-stack-seller {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      margin-top: .45rem;
+      color: var(--text-secondary);
+      font-size: .74rem;
+      font-weight: 800;
+    }
+
+    .hero-stack-avatar {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border-radius: 10px;
+      color: #fff;
+      background: var(--primary);
+      background-size: cover;
+      background-position: center;
+    }
+
+    .hero-stack-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .6rem;
+      margin-top: .45rem;
+      color: var(--text-secondary);
+      font-size: .72rem;
+      font-weight: 800;
+    }
+
+    .hero-stack-price {
+      color: var(--primary);
+      font-size: 1rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .hero-stack-action {
+      margin-top: auto;
+      padding: .68rem .9rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: .45rem;
+      border-radius: 13px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--primary), #8173f3);
+      box-shadow: 0 10px 24px rgba(108, 92, 231, .24);
+      text-decoration: none;
+      font-size: .78rem;
+      font-weight: 900;
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+
+    .hero-stack-action:hover {
+      color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px rgba(108, 92, 231, .34);
     }
 
     .market-cover {
@@ -630,6 +860,30 @@
       font-size: 2.5rem;
       font-weight: 800;
       display: block;
+    }
+
+    .stat-loading {
+      min-height: 48px;
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+    }
+
+    .stat-loading i {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: stat-dot-wave 1s ease-in-out infinite;
+    }
+
+    .stat-loading i:nth-child(2) { animation-delay: .14s; }
+    .stat-loading i:nth-child(3) { animation-delay: .28s; }
+
+    @keyframes stat-dot-wave {
+      0%, 60%, 100% { transform: translateY(0); opacity: .4; }
+      30% { transform: translateY(-8px); opacity: 1; }
     }
 
     .stat-label {
@@ -1022,6 +1276,7 @@
     /* ========== Responsive ========== */
     @media (max-width: 1024px) {
       .hero-text h1 { font-size: 2.5rem; }
+      .hero-visual { transform: none; }
     }
 
     @media (max-width: 768px) {
@@ -1033,7 +1288,9 @@
       .hero-search { margin-inline: auto; }
       .hero-chips { justify-content: center; }
       .hero-buttons { justify-content: center; }
-      .marketplace-grid { grid-template-columns: 1fr; }
+      .hero-marketplace { width: min(100%, 560px); }
+      .hero-service-stack { height: 505px; }
+      .hero-stack-card { text-align: right; }
       .market-flow { grid-template-columns: 1fr; }
       .nav-links { display: none; }
       .mobile-toggle { display: block; }
@@ -1041,6 +1298,25 @@
       .steps-grid { grid-template-columns: 1fr; }
       .categories-grid { grid-template-columns: repeat(2, 1fr); }
       .section-title { font-size: 1.8rem; }
+    }
+
+    @media (max-width: 520px) {
+      .hero-marketplace { padding: 0; }
+      .hero-service-stack { height: 515px; }
+      .hero-stack-card {
+        left: 50%;
+        width: min(91%, 342px);
+        height: 429px;
+      }
+      .hero-stack-cover { height: 165px; flex-basis: 165px; }
+      .hero-stack-copy { padding: .55rem .2rem .15rem; }
+      .hero-stack-title { min-height: auto; font-size: .92rem; line-height: 1.75; }
+      .hero-stack-seller { margin-top: .3rem; }
+      .hero-stack-action { margin-top: .55rem; }
+      .hero-stack-card.is-skeleton:nth-child(2) { --stack-x: 72px !important; --stack-y: 24px !important; --stack-scale: .92 !important; }
+      .hero-stack-card.is-skeleton:nth-child(3) { --stack-x: 110px !important; --stack-y: 40px !important; --stack-scale: .86 !important; }
+      .hero-stack-card.is-skeleton:nth-child(4) { --stack-x: -72px !important; --stack-y: 24px !important; --stack-scale: .92 !important; }
+      .hero-stack-card.is-skeleton:nth-child(5) { --stack-x: -110px !important; --stack-y: 40px !important; --stack-scale: .86 !important; }
     }
   </style>
   <link rel="stylesheet" href="css/site-header.css">
@@ -1102,39 +1378,12 @@
         </div>
         <div class="hero-visual">
           <div class="hero-marketplace">
-            <div class="marketplace-top">
-              <div>
-                <strong>سوق خدمات حيّ ومباشر</strong>
-                <small>طلبات تجريبية، رسائل، وتسليم من مكان واحد</small>
-              </div>
-              <span class="live-pill">مباشر الآن</span>
-            </div>
-            <div class="marketplace-grid">
-              <article class="market-service" id="heroMarketService">
-                <div class="market-cover" id="heroMarketCover"><img src="assets/brand/logo-icon.svg" alt="" width="52" height="52"></div>
-                <h3 id="heroMarketTitle">تصميم هوية بصرية كاملة لمشروع ناشئ</h3>
-                <div class="market-meta">
-                  <span id="heroMarketDelivery">تسليم خلال 3 أيام</span>
-                  <strong class="market-price" id="heroMarketPrice">25,000 ل.س</strong>
-                </div>
-              </article>
-              <div class="market-side">
-                <article class="mini-card market-seller-card">
-                  <span class="market-seller-avatar" id="heroMarketSellerAvatar">م</span>
-                  <strong id="heroMarketSellerName">مستقل جاهز</strong>
-                  <small id="heroMarketSellerRank">صاحب الخدمة</small>
-                </article>
-                <article class="mini-card">
-                  <span>↗</span>
-                  <strong id="heroMarketCategory">خدمة منشورة</strong>
-                  <small id="heroMarketSummary">تتبدل هذه البطاقة تلقائياً من خدمات المنصة المنشورة.</small>
-                </article>
-              </div>
-            </div>
-            <div class="market-flow">
-              <div class="flow-step">اختر الخدمة</div>
-              <div class="flow-step">تواصل واتفق</div>
-              <div class="flow-step">استلم بأمان</div>
+            <div class="hero-service-stack" id="heroServiceStack" aria-live="polite">
+              <article class="hero-stack-card is-skeleton" data-stack-index="0" style="--stack-index:0;--stack-x:0px;--stack-y:0px;--stack-scale:1"><div class="hero-stack-cover"></div><div class="hero-skeleton-copy"><span class="hero-skeleton-line short"></span><span class="hero-skeleton-line"></span><span class="hero-skeleton-line medium"></span><span class="hero-skeleton-line button"></span></div></article>
+              <article class="hero-stack-card is-skeleton" data-stack-index="1" style="--stack-index:1;--stack-x:155px;--stack-y:22px;--stack-scale:.9"><div class="hero-stack-cover"></div></article>
+              <article class="hero-stack-card is-skeleton" data-stack-index="2" style="--stack-index:2;--stack-x:225px;--stack-y:38px;--stack-scale:.82"><div class="hero-stack-cover"></div></article>
+              <article class="hero-stack-card is-skeleton" data-stack-index="3" style="--stack-index:3;--stack-x:-155px;--stack-y:22px;--stack-scale:.9"><div class="hero-stack-cover"></div></article>
+              <article class="hero-stack-card is-skeleton" data-stack-index="4" style="--stack-index:4;--stack-x:-225px;--stack-y:38px;--stack-scale:.82"><div class="hero-stack-cover"></div></article>
             </div>
           </div>
         </div>
@@ -1147,19 +1396,19 @@
     <div class="container">
       <div class="stats-grid">
         <div class="stat-item">
-          <span class="stat-number" id="homeFreelancersCount" style="color:var(--primary);">0</span>
+          <span class="stat-number stat-loading" id="homeFreelancersCount" style="color:var(--primary);" aria-label="جارٍ تحميل عدد المستقلين"><i></i><i></i><i></i></span>
           <span class="stat-label">مستقل موثّق</span>
         </div>
         <div class="stat-item">
-          <span class="stat-number" id="homeServicesCount" style="color:var(--secondary);">0</span>
+          <span class="stat-number stat-loading" id="homeServicesCount" style="color:var(--secondary);" aria-label="جارٍ تحميل عدد الخدمات"><i></i><i></i><i></i></span>
           <span class="stat-label">خدمة منشورة</span>
         </div>
         <div class="stat-item">
-          <span class="stat-number" id="homeCategoriesCount" style="color:var(--accent);">0</span>
+          <span class="stat-number stat-loading" id="homeCategoriesCount" style="color:var(--accent);" aria-label="جارٍ تحميل عدد الفئات"><i></i><i></i><i></i></span>
           <span class="stat-label">فئة متاحة</span>
         </div>
         <div class="stat-item">
-          <span class="stat-number" id="homePlatformFee" style="color:#10B981;">20%</span>
+          <span class="stat-number stat-loading" id="homePlatformFee" style="color:#10B981;" aria-label="جارٍ تحميل عمولة المنصة"><i></i><i></i><i></i></span>
           <span class="stat-label">عمولة المنصة</span>
         </div>
       </div>
@@ -1260,8 +1509,8 @@
         </div>
         <div class="step-card">
           <div class="step-number">3</div>
-          <h3>اختبر الطلب والتسليم</h3>
-          <p>حالياً تُسجّل الطلبات في وضع الاختبار دون تحصيل أموال حقيقية</p>
+          <h3>اطلب واستلم بأمان</h3>
+          <p>ادفع من رصيدك، تابع التنفيذ، ثم راجع التسليم قبل تحرير مستحقات المستقل</p>
         </div>
       </div>
     </div>

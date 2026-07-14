@@ -6,6 +6,10 @@
   "storage": {
     "rules": "storage.rules"
   },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs22"
+  },
   "hosting": {
     "site": "piklance-c2651",
     "public": ".",
@@ -16,12 +20,18 @@
       "**/.git/**",
       ".firebase/**",
       "**/node_modules/**",
+      "functions/**",
       "firebase-debug.log",
       "firestore.rules",
       "firestore.indexes.json",
       "storage.rules",
       "SECURITY_SETUP.md",
-      "PILOT_TESTING.md"
+      "PILOT_TESTING.md",
+      "PAYMENTS_SETUP.md",
+      "BACKUP_PLAN.md",
+      "_backup_20260709/**",
+      "_restore_preview/**",
+      "_pre_restore_safety/**"
     ]
   }
 }

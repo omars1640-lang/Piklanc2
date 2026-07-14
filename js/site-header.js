@@ -6,6 +6,8 @@ const nav = document.getElementById("siteHeaderNav");
 const actions = document.getElementById("siteHeaderActions");
 const mobileButton = document.getElementById("siteHeaderMobile");
 const themeButton = document.getElementById("themeToggle");
+const HEADER_PROFILE_CACHE_KEY = "piklanceHeaderProfile";
+const HEADER_PROFILE_CACHE_TTL = 1000 * 60 * 60 * 12;
 let stopNotifications = null;
 let firebaseDeps = null;
 let signOutUser = async () => {};
@@ -39,6 +41,7 @@ function getSavedTheme() {
 }
 function setTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
+  document.documentElement.style.colorScheme = theme;
   try {
     localStorage.setItem("theme", theme);
   } catch {
@@ -74,11 +77,54 @@ function createLink(href, text, className) {
   return link;
 }
 
+function readCachedHeaderProfile() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(HEADER_PROFILE_CACHE_KEY) || "null");
+    if (!cached?.uid || Date.now() - Number(cached.cachedAt || 0) > HEADER_PROFILE_CACHE_TTL) return null;
+    return cached;
+  } catch {
+    return null;
+  }
+}
+
+function cacheHeaderProfile(user, profile) {
+  try {
+    localStorage.setItem(HEADER_PROFILE_CACHE_KEY, JSON.stringify({
+      uid: user.uid,
+      email: user.email || "",
+      profile,
+      cachedAt: Date.now()
+    }));
+  } catch {
+    // Header cache is optional; auth still resolves normally without it.
+  }
+}
+
+function clearHeaderProfileCache() {
+  try {
+    localStorage.removeItem(HEADER_PROFILE_CACHE_KEY);
+  } catch {
+    // Ignore storage restrictions.
+  }
+}
+
+function renderAuthLoadingActions() {
+  if (!actions) return;
+  actions.classList.remove("is-signed-in", "is-signed-out");
+  actions.classList.add("is-auth-loading");
+  const skeleton = document.createElement("span");
+  skeleton.className = "site-header-auth-skeleton";
+  skeleton.setAttribute("role", "status");
+  skeleton.setAttribute("aria-label", "جاري التحقق من تسجيل الدخول");
+  actions.replaceChildren(themeButton, skeleton);
+}
+
 function renderSignedOutActions() {
   if (!actions) return;
   stopNotifications?.();
   stopNotifications = null;
-  actions.classList.remove("is-signed-in");
+  clearHeaderProfileCache();
+  actions.classList.remove("is-signed-in", "is-auth-loading");
   actions.classList.add("is-signed-out");
   const login = createLink("login.html", "دخول", "site-header-button ghost");
   const join = createLink("register.html", "انضم مجاناً", "site-header-button primary");
@@ -87,11 +133,16 @@ function renderSignedOutActions() {
 
 function renderSignedInActions(user, profile) {
   if (!actions) return;
-  actions.classList.remove("is-signed-out");
+  actions.classList.remove("is-signed-out", "is-auth-loading");
   actions.classList.add("is-signed-in");
   const messages = createLink("messages.html", "الرسائل", "site-header-button ghost");
+  messages.classList.add("site-header-notifications");
+  const messagesCount = document.createElement("b");
+  messagesCount.hidden = true;
+  messages.appendChild(messagesCount);
   const accountHref = profile.role === "admin" ? "dashboard.html" : profile.accountType === "freelancer" ? "freelancer-dashboard.html" : "profile.html";
   const notifications = createLink(`${accountHref}#notifications`, "الإشعارات", "site-header-button ghost site-header-notifications");
+  const shouldWatchNotifications = profile.role !== "admin";
   const notificationCount = document.createElement("b");
   notificationCount.hidden = true;
   notifications.appendChild(notificationCount);
@@ -131,9 +182,9 @@ function renderSignedInActions(user, profile) {
   });
   actions.replaceChildren(themeButton, notifications, messages, account, logout);
   stopNotifications?.();
-  if (firebaseDeps) {
+  if (firebaseDeps && shouldWatchNotifications) {
     const { collection, db, onSnapshot, query, where } = firebaseDeps;
-    stopNotifications = onSnapshot(
+    const stopSystemNotifications = onSnapshot(
       query(collection(db, "notifications", user.uid, "items"), where("read", "==", false)),
       snapshot => {
         notificationCount.textContent = snapshot.size;
@@ -141,7 +192,30 @@ function renderSignedInActions(user, profile) {
       },
       () => { notificationCount.hidden = true; }
     );
+    const stopMessageNotifications = onSnapshot(
+      query(collection(db, "chats"), where("participantUids", "array-contains", user.uid)),
+      snapshot => {
+        const total = snapshot.docs.reduce((sum, item) => sum + Number(item.data().unreadCounts?.[user.uid] || 0), 0);
+        messagesCount.textContent = total > 99 ? "99+" : String(total);
+        messagesCount.hidden = total === 0;
+      },
+      () => { messagesCount.hidden = true; }
+    );
+    stopNotifications = () => {
+      stopSystemNotifications();
+      stopMessageNotifications();
+    };
   }
+}
+
+function renderCachedHeaderProfile() {
+  const cached = readCachedHeaderProfile();
+  if (!cached) {
+    renderAuthLoadingActions();
+    return;
+  }
+  renderSignedInActions({ uid: cached.uid, email: cached.email }, cached.profile || {});
+  actions?.classList.add("is-auth-loading");
 }
 
 async function initHeaderAuth() {
@@ -184,11 +258,13 @@ async function initHeaderAuth() {
         const publicSnapshot = await getDoc(doc(db, "publicProfiles", user.uid));
         const publicProfile = publicSnapshot.exists() ? publicSnapshot.data() : {};
         const avatar = await resolveProfileAvatar(user.uid, publicProfile);
-        renderSignedInActions(user, {
+        const mergedProfile = {
           ...profile,
           ...publicProfile,
           avatar
-        });
+        };
+        cacheHeaderProfile(user, mergedProfile);
+        renderSignedInActions(user, mergedProfile);
       } catch {
         renderSignedOutActions();
       }
@@ -200,11 +276,7 @@ async function initHeaderAuth() {
 }
 
 function scheduleHeaderAuth() {
-  if ("requestIdleCallback" in window) {
-    window.requestIdleCallback(initHeaderAuth, { timeout: 1200 });
-  } else {
-    window.setTimeout(initHeaderAuth, 300);
-  }
+  window.setTimeout(initHeaderAuth, 0);
 }
 
 if (header) {
@@ -212,7 +284,7 @@ if (header) {
   renderSiteBrand();
   normalizeHeaderLinks();
   setActiveLink();
-  renderSignedOutActions();
+  renderCachedHeaderProfile();
 
   themeButton?.addEventListener("click", () => {
     setTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");

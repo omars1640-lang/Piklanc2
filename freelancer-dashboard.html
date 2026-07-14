@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/freelancer-dashboard.css">
   <link rel="icon" type="image/svg+xml" href="assets/brand/logo-icon.svg">
   <link rel="stylesheet" href="css/brand.css">
+  <link rel="stylesheet" href="css/payments.css">
 </head>
 <body data-account-type="freelancer">
   <div class="loading-screen" id="loadingScreen">
@@ -279,33 +280,37 @@
       <section class="dashboard-section" id="section-finance">
         <div class="page-heading"><div><p class="eyebrow">المالية</p><h1>الأرباح والمعاملات</h1><p>ملخص مالي واضح لأرباحك وحركة حسابك.</p></div></div>
         <div class="finance-hero">
-          <div><span>إجمالي الأرباح</span><strong>0 <small>ل.س</small></strong><p>لم يتم تشغيل نظام الدفع بعد</p></div>
+          <div><span>إجمالي الأرباح</span><strong id="freelancerLifetimeEarnings">0 ل.س</strong><p>الأرباح المحررة من الطلبات المكتملة</p></div>
           <div class="finance-breakdown">
-            <p><span>متاح للسحب</span><strong>0 ل.س</strong></p>
-            <p><span>قيد المعالجة</span><strong>0 ل.س</strong></p>
+            <p><span>متاح للسحب</span><strong id="freelancerAvailableWallet">0 ل.س</strong></p>
+            <p><span>قيد المعالجة</span><strong id="freelancerPendingWithdrawal">0 ل.س</strong></p>
             <p><span>متنازع عليه</span><strong>0 ل.س</strong></p>
           </div>
         </div>
         <div class="panel">
           <div class="panel-header"><div><p class="panel-kicker">السجل المالي</p><h2>آخر المعاملات</h2></div></div>
-          <div class="empty-state"><span>◈</span><strong>لا توجد معاملات بعد</strong><p>ستظهر المدفوعات والسحوبات هنا بعد تشغيل نظام الدفع.</p></div>
+          <div id="withdrawalHistory"></div>
         </div>
       </section>
 
       <section class="dashboard-section" id="section-withdraw">
-        <div class="page-heading"><div><p class="eyebrow">المالية</p><h1>سحب الأرباح</h1><p>قدّم طلب سحب بعد تفعيل بوابة الدفع.</p></div></div>
+        <div class="page-heading"><div><p class="eyebrow">المالية</p><h1>سحب الأرباح</h1><p>قدّم طلب سحب يدوي عبر شام كاش.</p></div></div>
         <div class="two-column">
-          <div class="panel form-panel">
+          <form class="panel form-panel" id="withdrawForm">
             <div class="panel-header"><div><p class="panel-kicker">طلب جديد</p><h2>بيانات السحب</h2></div></div>
-            <label>طريقة السحب<select disabled><option>اختر طريقة السحب</option></select></label>
-            <label>المبلغ<input type="number" placeholder="الحد الأدنى 50,000 ل.س" disabled></label>
-            <label>رقم المحفظة أو الحساب<input type="text" placeholder="سيُتاح بعد ربط بوابة الدفع" disabled></label>
-            <button class="button button-primary" id="withdrawButton" type="button">طلب سحب</button>
-          </div>
+            <label>طريقة السحب<select id="withdrawProvider" disabled><option value="sham_cash">شام كاش</option></select></label>
+            <label>المبلغ<input id="withdrawAmount" type="number" min="100" max="5000" step="1" placeholder="من 100 إلى 5,000 ل.س" required></label>
+            <small id="withdrawAvailableHint">الرصيد المتاح حالياً: 0 ل.س</small>
+            <label>الاسم الثلاثي<input id="withdrawHolderName" type="text" maxlength="120" required></label>
+            <label>رقم محفظة شام كاش<input id="withdrawWalletNumber" type="text" maxlength="100" required></label>
+            <label>صورة QR للمحفظة<input id="withdrawQrFile" type="file" accept="image/jpeg,image/png,image/webp"><small>تُحفظ تلقائياً بعد أول طلب، ويمكن تغييرها لاحقاً برفع صورة جديدة.</small></label>
+            <img class="withdraw-qr-preview" id="withdrawQrPreview" alt="معاينة QR السحب" hidden>
+            <span class="form-message" id="withdrawMessage"></span>
+            <button class="button button-primary" id="withdrawButton" type="submit">طلب سحب</button>
+          </form>
           <aside class="panel info-panel">
-            <span class="large-icon">i</span>
-            <h2>السحب غير مفعّل حالياً</h2>
-            <p>لن يتم إرسال أي طلب مالي قبل ربط Backend وبوابة دفع موثوقة والتحقق من الأرصدة على الخادم.</p>
+            <span class="large-icon">◈</span><h2>مراجعة يدوية آمنة</h2><p>يُحجز مبلغ الطلب فور إرساله لمنع سحبه مرتين. تتم المراجعة والتحويل خلال 24–48 ساعة.</p>
+            <div class="withdraw-info-list"><p>الحد الأدنى: 100 ل.س</p><p>الحد الأعلى للعملية: 5,000 ل.س</p><p>رسوم السحب: لا توجد</p><p>عند الرفض يُعاد المبلغ تلقائياً إلى الرصيد المتاح.</p></div>
           </aside>
         </div>
       </section>
@@ -414,6 +419,10 @@
 
       <section class="dashboard-section" id="section-settings">
         <div class="page-heading"><div><p class="eyebrow">الحساب</p><h1>الإعدادات</h1><p>خصّص تجربة لوحة التحكم والتنبيهات.</p></div></div>
+        <div class="panel referral-card" id="referralCard" hidden>
+          <div><p class="panel-kicker">كود الدعوة</p><h2>شارك PikLance مع أصدقائك</h2><span>كل 5 حسابات معتمدة تسجل عبر كودك تمنحك شهراً إضافياً بخصم 50% على عمولة المنصة.</span></div>
+          <div class="referral-code-box"><strong id="referralCodeValue">-</strong><button class="button button-secondary button-small" id="copyReferralCode" type="button">نسخ الكود</button></div>
+        </div>
         <div class="panel settings-list">
           <label><span><strong>الوضع الداكن</strong><small>استخدم ألواناً مريحة في الإضاءة المنخفضة.</small></span><input id="darkModeSwitch" type="checkbox" role="switch"></label>
           <label><span><strong>تنبيهات الرسائل</strong><small>إظهار علامة عند وصول رسائل جديدة.</small></span><input type="checkbox" role="switch" checked disabled></label>
@@ -473,6 +482,21 @@
           <button class="button button-secondary" type="button" data-close-delivery-modal>إلغاء</button>
           <button class="button button-primary" id="deliverySubmitButton" type="submit">تأكيد التسليم</button>
         </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="freelancerReviewModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-review-modal></div>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="freelancerReviewModalTitle">
+      <button class="modal-close" type="button" data-close-review-modal aria-label="إغلاق">×</button>
+      <p class="eyebrow">تقييم المشتري</p><h2 id="freelancerReviewModalTitle">شارك تجربتك مع المشتري</h2>
+      <p class="modal-description" id="freelancerReviewSummary">يمكن تقييم المشتري بعد اكتمال طلب حقيقي فقط.</p>
+      <form id="freelancerReviewForm">
+        <label>التقييم<select id="freelancerReviewRating" required><option value="5">5 - ممتاز</option><option value="4">4 - جيد جداً</option><option value="3">3 - جيد</option><option value="2">2 - مقبول</option><option value="1">1 - غير مرضي</option></select></label>
+        <strong class="review-stars-preview" id="freelancerReviewStars">★★★★★</strong>
+        <label>تعليق اختياري<textarea id="freelancerReviewComment" rows="4" maxlength="1000" placeholder="اكتب ملاحظتك عن وضوح الطلب والتواصل وسرعة الرد..."></textarea></label>
+        <div class="modal-actions"><button class="button button-secondary" type="button" data-close-review-modal>إلغاء</button><button class="button button-primary" id="freelancerReviewSubmit" type="submit">نشر التقييم</button></div>
       </form>
     </div>
   </div>

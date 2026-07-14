@@ -51,6 +51,48 @@
   animation: piklance-logo-pulse 1.2s ease-in-out infinite;
 }
 
+.piklance-image-loading {
+  opacity: .28;
+  background: linear-gradient(100deg, rgba(125, 112, 190, .08) 20%, rgba(125, 112, 190, .24) 40%, rgba(125, 112, 190, .08) 60%);
+  background-size: 220% 100%;
+  animation: piklance-image-shimmer 1.25s linear infinite;
+}
+
+.piklance-image-ready {
+  animation: piklance-image-reveal .3s ease both;
+}
+
+.piklance-background-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.piklance-background-loading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(100deg, rgba(125, 112, 190, .12) 20%, rgba(255, 255, 255, .42) 40%, rgba(125, 112, 190, .12) 60%);
+  background-size: 220% 100%;
+  animation: piklance-image-shimmer 1.25s linear infinite;
+}
+
+@keyframes piklance-image-shimmer {
+  to { background-position-x: -220%; }
+}
+
+@keyframes piklance-image-reveal {
+  from { opacity: .25; filter: blur(2px); }
+  to { opacity: 1; filter: blur(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .piklance-image-loading,
+  .piklance-image-ready,
+  .piklance-background-loading::after { animation: none; }
+}
+
 @keyframes piklance-logo-pulse {
   50% { transform: scale(.94); opacity: .78; }
 }

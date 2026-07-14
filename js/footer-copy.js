@@ -1,3 +1,6 @@
+import "./image-loading.js";
+import "./latin-digits.js";
+
 const footerCopy = "© 2026 PikLance. جميع الحقوق محفوظة.";
 
 function ensureFooterCopy() {

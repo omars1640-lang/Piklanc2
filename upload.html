@@ -1,6 +1,20 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl" data-theme="light">
 <head>
+  <script>
+    (function () {
+      try {
+        var isAdminPage = /(^|\/)dashboard\.html$/i.test(location.pathname);
+        var savedTheme = localStorage.getItem(isAdminPage ? "admin-theme" : "theme") || "light";
+        if (savedTheme === "dark" || savedTheme === "light") {
+          document.documentElement.setAttribute("data-theme", savedTheme);
+          document.documentElement.style.colorScheme = savedTheme;
+        }
+      } catch (error) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="refresh" content="0; url=freelancer-dashboard.html#projects">
@@ -75,14 +89,7 @@
     }
     .navbar .container { display:flex; justify-content:space-between; align-items:center; }
     .logo { font-size:1.8rem; font-weight:800; text-decoration:none; display:flex; align-items:center; gap:0.3rem; }
-    .logo-icon {
-      width:40px; height:40px; background: linear-gradient(135deg, var(--primary), var(--secondary));
-      border-radius:12px; display:flex; align-items:center; justify-content:center;
-      color:#fff; font-size:1.3rem; font-weight:800; box-shadow:0 4px 15px rgba(108,92,231,0.3);
-    }
-    .logo-text { color: var(--text-heading); }
-    .logo-text span { color: var(--primary); }
-    .nav-links { display:flex; gap:2rem; list-style:none; }
+.nav-links { display:flex; gap:2rem; list-style:none; }
     .nav-links a {
       text-decoration:none; color:var(--text-secondary); font-weight:600; font-size:0.95rem;
       transition: var(--transition); position:relative; padding:0.3rem 0; white-space: nowrap;
@@ -225,13 +232,14 @@
   <link rel="stylesheet" href="css/site-header.css">
   <link rel="icon" type="image/svg+xml" href="assets/brand/logo-icon.svg">
   <link rel="stylesheet" href="css/brand.css">
+  <script src="js/latin-digits.js"></script>
 </head>
 <body data-account-type="freelancer">
   <header class="site-header" id="navbar">
     <div class="site-header-inner">
       <a class="site-header-brand" href="index.html" aria-label="PikLance home">
-        <span class="site-header-brand-mark">P</span>
-        <strong>Pik<span>Lance</span></strong>
+        <img class="piklance-brand-logo light-logo" src="assets/brand/logo-light.svg" alt="PikLance" width="150" height="41">
+        <img class="piklance-brand-logo dark-logo" src="assets/brand/logo-dark.svg" alt="" width="150" height="41" aria-hidden="true">
       </a>
       <nav class="site-header-nav" id="siteHeaderNav" aria-label="التنقل الرئيسي">
         <a href="index.html">الرئيسية</a>
@@ -371,25 +379,11 @@
         <div><h4>مساعدة</h4><a href="support.html">الدعم</a><a href="faq.html">أسئلة شائعة</a></div>
         <div><h4>قانوني</h4><a href="terms.html">شروط</a><a href="privacy.html">خصوصية</a></div>
       </div>
-      <div class="footer-bottom">© 2025 PikLance. جميع الحقوق محفوظة.</div>
+      <div class="footer-bottom">© 2026 PikLance. جميع الحقوق محفوظة.</div>
     </div>
   </footer>
 
   <script>
-    // Dark mode
-    const themeToggle = document.getElementById('themeToggle');
-    const htmlElement = document.documentElement;
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    htmlElement.setAttribute('data-theme', savedTheme);
-    themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-    function toggleTheme() {
-      const current = htmlElement.getAttribute('data-theme');
-      const next = current === 'light' ? 'dark' : 'light';
-      htmlElement.setAttribute('data-theme', next);
-      localStorage.setItem('theme', next);
-      themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
-    }
-
     function toggleMobileMenu() {
       const nav = document.querySelector('.nav-links');
       nav.style.display = nav.style.display === 'flex' ? 'none' : 'flex';

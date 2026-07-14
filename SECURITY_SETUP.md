@@ -21,7 +21,9 @@
 ```powershell
 firebase login
 firebase use piklance-c2651
-firebase deploy --only firestore:rules,firestore:indexes,storage
+firebase functions:secrets:set SMTP_USER
+firebase functions:secrets:set SMTP_PASS
+firebase deploy --only functions,firestore:rules,firestore:indexes,storage,hosting
 ```
 
 رفع الملفات إلى GitHub Pages لا ينشر قواعد Firebase تلقائيًا.
@@ -31,4 +33,6 @@ firebase deploy --only firestore:rules,firestore:indexes,storage
 - فعّل Email/Password من Firebase Authentication.
 - تأكد أن Firestore وStorage يستخدمان القواعد الموجودة في هذا المشروع.
 - اختبر حساب عميل موثق، حساب مستقل معلق، وحساب مدير.
-- ميزات الدفع والسحب ونشر الخدمات ما زالت معطلة عمدًا حتى يتم ربط backend موثوق.
+- اختبر الشحن والسحب بحوالات صغيرة قبل استقبال أموال حقيقية.
+- لا تحفظ App Password الخاص بالبريد داخل ملفات المشروع أو GitHub.
+- راجع سجل `adminAuditLogs` وسجل `walletLedger` عند التحقيق في أي عملية مالية.

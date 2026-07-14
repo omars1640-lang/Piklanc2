@@ -1,6 +1,23 @@
 import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from "./firebase.js";
 
+function faqIconName(category) {
+  const value = String(category || "").toLowerCase();
+  if (value.includes("دفع") || value.includes("سحب") || value === "payment") return "payment-preparing";
+  if (value.includes("مستقل") || value === "freelancer") return "earn-profits";
+  if (value.includes("مشتري") || value === "buyer") return "search-service";
+  return "support";
+}
+
+function headingIcon(name, theme) {
+  const image = document.createElement("img");
+  image.className = `faq-heading-icon ${theme}`;
+  image.src = `assets/icons/${theme}/${name}.svg`;
+  image.alt = "";
+  image.setAttribute("aria-hidden", "true");
+  return image;
+}
+
 try {
   const snapshot = await getDocs(query(collection(db, "faqItems"), where("published", "==", true)));
   const items = snapshot.docs.map(item => ({ id: item.id, ...item.data() })).sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
@@ -18,7 +35,8 @@ try {
       section.className = "faq-category";
       section.dataset.category = category;
       const heading = document.createElement("h2");
-      heading.textContent = category;
+      const icon = faqIconName(category);
+      heading.append(headingIcon(icon, "light"), headingIcon(icon, "dark"), document.createTextNode(category));
       section.appendChild(heading);
       questions.forEach(question => {
         const item = document.createElement("div");

@@ -16,7 +16,7 @@ function toDate(value) {
 }
 
 function formatDate(value) {
-  return toDate(value)?.toLocaleDateString("ar-SY", { year: "numeric", month: "long", day: "numeric" }) || "حديثاً";
+  return toDate(value)?.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) || "حديثاً";
 }
 
 function readTime(body) {
@@ -42,7 +42,7 @@ async function loadStats(article) {
 function statsNode(article) {
   const stats = document.createElement("div");
   stats.className = "article-stats";
-  stats.innerHTML = `<span>◷ ${readTime(article.body)} دقائق</span><span>♡ ${article.likesCount || 0}</span><span>◌ ${article.commentsCount || 0}</span><span>شاهد ${Number(article.views || 0).toLocaleString("ar-SY")}</span>`;
+  stats.innerHTML = `<span>◷ ${readTime(article.body)} دقائق</span><span>♡ ${article.likesCount || 0}</span><span>◌ ${article.commentsCount || 0}</span><span>شاهد ${Number(article.views || 0).toLocaleString("en-US")}</span>`;
   return stats;
 }
 
@@ -129,7 +129,7 @@ function render() {
   const items = filteredArticles();
   const featuredArticle = state.articles.find(article => article.featured) || state.articles[0];
   renderFeatured(featuredArticle);
-  resultCount.textContent = `${items.length.toLocaleString("ar-SY")} مقال`;
+  resultCount.textContent = `${items.length.toLocaleString("en-US")} مقال`;
   const maxPage = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
   state.page = Math.min(state.page, maxPage);
   const pageItems = items.slice((state.page - 1) * PAGE_SIZE, state.page * PAGE_SIZE);

@@ -11,20 +11,24 @@ import { cacheBustUrl } from "./avatar-utils.js";
 import {
   deliverEscrowOrder, orderStatusLabels
 } from "./escrow.js";
+import { initializeWithdrawals } from "./withdrawals.js";
+import {
+  canReviewOrder, createOrderReview, formatStars, hasReviewedOrder
+} from "./reviews.js";
 
 const specialtyLabels = { design: "تصميم", web: "برمجة وتطوير", writing: "كتابة وترجمة", marketing: "تسويق رقمي" };
 const serviceStatus = {
   draft: ["مسودة", "warning"], pending: ["قيد المراجعة", "neutral"],
   published: ["منشورة", "success"], paused: ["متوقفة", "neutral"], rejected: ["مرفوضة", "danger"]
 };
-const orderStatus = { pending: "بانتظار التأكيد", funded: "طلب تجريبي جاهز", active: "قيد التنفيذ", delivered: "بانتظار مراجعة العميل", completed: "مكتمل", disputed: "نزاع مفتوح", cancelled: "ملغي", ...orderStatusLabels };
+const orderStatus = { pending: "بانتظار التأكيد", funded: "تم الدفع وجاهز", active: "قيد التنفيذ", delivered: "بانتظار مراجعة العميل", completed: "مكتمل", disputed: "نزاع مفتوح", cancelled: "ملغي", ...orderStatusLabels };
 const PORTFOLIO_COLLECTION = "freelancerPortfolio";
 const LEGACY_PORTFOLIO_COLLECTION = "portfolioItems";
 
 const state = {
-  user: null, profile: null, services: [], orders: [], notifications: [], categories: [], portfolio: [],
+  user: null, profile: null, services: [], orders: [], notifications: [], reviews: [], categories: [], portfolio: [],
   editingServiceId: null,
-  pendingDeliveryOrder: null,
+  pendingDeliveryOrder: null, pendingReviewOrder: null,
   pendingConfirmAction: null,
   avatarFile: null, avatarRemoved: false, avatarPreviewUrl: ""
 };
@@ -38,8 +42,8 @@ const elements = {
   profileForm: $("profileForm"), profileMessage: $("profileMessage"), toast: $("toast")
 };
 const toDate = value => value?.toDate?.() || (value ? new Date(value) : null);
-const formatDate = value => toDate(value)?.toLocaleDateString("ar-SY", { year: "numeric", month: "short", day: "numeric" }) || "-";
-const formatMoney = value => Number(value || 0).toLocaleString("ar-SY");
+const formatDate = value => toDate(value)?.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) || "-";
+const formatMoney = value => Number(value || 0).toLocaleString("en-US");
 const sortNewest = (items, field = "updatedAt") => items.sort((a, b) => (toDate(b[field])?.getTime() || 0) - (toDate(a[field])?.getTime() || 0));
 
 function showToast(message) {
@@ -224,6 +228,20 @@ function renderOrders() {
       deliver.textContent = "تسليم العمل";
       deliver.addEventListener("click", () => openDeliveryModal(order));
       actions.appendChild(deliver);
+    } else if (order.status === "completed") {
+      if (canReviewOrder(order, state.user?.uid, state.reviews)) {
+        const review = document.createElement("button");
+        review.type = "button";
+        review.className = "table-button primary";
+        review.textContent = "تقييم المشتري";
+        review.addEventListener("click", () => openReviewModal(order));
+        actions.appendChild(review);
+      } else if (hasReviewedOrder(state.reviews, order.id, state.user?.uid)) {
+        const reviewed = document.createElement("span");
+        reviewed.className = "review-status-pill";
+        reviewed.textContent = "تم التقييم";
+        actions.appendChild(reviewed);
+      }
     }
     [
       order.serviceTitle || "طلب خدمة",
@@ -243,7 +261,6 @@ function renderOrders() {
   $("ordersEmpty").hidden = rows.length > 0;
   const revenue = state.orders.filter(order => order.status === "completed").reduce((sum, order) => sum + Number(order.freelancerAmount || order.escrow?.freelancerAmount || order.total || 0), 0);
   $("availableBalance").textContent = formatMoney(revenue);
-  updateFinanceSummary();
 }
 
 function renderNotifications() {
@@ -325,6 +342,25 @@ function closeDeliveryModal() {
   elements.deliveryModal.classList.remove("open");
   elements.deliveryModal.setAttribute("aria-hidden", "true");
   if (!elements.serviceModal.classList.contains("open")) document.body.style.overflow = "";
+}
+
+function openReviewModal(order) {
+  state.pendingReviewOrder = order;
+  $("freelancerReviewSummary").textContent = `قيّم تجربتك مع المشتري في طلب "${order.serviceTitle || order.id}". يظهر التقييم في سجل المشتري بعد الإرسال.`;
+  $("freelancerReviewRating").value = "5";
+  $("freelancerReviewStars").textContent = formatStars(5);
+  $("freelancerReviewComment").value = "";
+  $("freelancerReviewModal").classList.add("open");
+  $("freelancerReviewModal").setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+}
+
+function closeReviewModal() {
+  state.pendingReviewOrder = null;
+  $("freelancerReviewForm").reset();
+  $("freelancerReviewModal").classList.remove("open");
+  $("freelancerReviewModal").setAttribute("aria-hidden", "true");
+  if (!elements.serviceModal.classList.contains("open") && !elements.deliveryModal.classList.contains("open") && !$("confirmModal").classList.contains("open")) document.body.style.overflow = "";
 }
 
 function openConfirmModal({ title, message, actionLabel = "تأكيد", danger = false, onConfirm }) {
@@ -539,6 +575,33 @@ function fillProfile(user, profile) {
   $("profileProgressValue").textContent = `${progress}%`;
   $("profileProgressBar").style.width = `${progress}%`;
   $("profileCompletionCard").hidden = progress === 100;
+  const referralCode = profile.referralCode || "";
+  $("referralCard").hidden = !referralCode;
+  $("referralCodeValue").textContent = referralCode || "-";
+}
+
+async function handleReviewSubmit(event) {
+  event.preventDefault();
+  const order = state.pendingReviewOrder;
+  if (!order) return;
+  const button = $("freelancerReviewSubmit");
+  button.disabled = true;
+  button.textContent = "جاري نشر التقييم...";
+  try {
+    const review = await createOrderReview(db, order, state.user, state.profile, {
+      rating: Number($("freelancerReviewRating").value), comment: $("freelancerReviewComment").value
+    });
+    state.reviews.unshift(review);
+    renderOrders();
+    closeReviewModal();
+    showToast("تم نشر تقييمك للمشتري بنجاح.");
+  } catch (error) {
+    console.error("Buyer review failed", error);
+    showToast(error.code === "permission-denied" ? "تعذر نشر التقييم. تأكد أن الطلب مكتمل." : "تعذر نشر التقييم حالياً. حاول مجدداً.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "نشر التقييم";
+  }
 }
 
 function normalizeCareerItems(value) {
@@ -946,10 +1009,11 @@ function renderAccountPerformance() {
 
 async function loadWorkspace() {
   const uid = state.user.uid;
-  const [servicesSnapshot, ordersSnapshot, notificationsSnapshot, categoriesSnapshot, portfolioSnapshot, legacyPortfolioSnapshot] = await Promise.all([
+  const [servicesSnapshot, ordersSnapshot, notificationsSnapshot, reviewsSnapshot, categoriesSnapshot, portfolioSnapshot, legacyPortfolioSnapshot] = await Promise.all([
     getDocs(query(collection(db, "services"), where("ownerUid", "==", uid))),
     getDocs(query(collection(db, "orders"), where("freelancerUid", "==", uid))),
     getDocs(collection(db, "notifications", uid, "items")),
+    getDocs(query(collection(db, "reviews"), where("reviewerUid", "==", uid))).catch(() => ({ docs: [] })),
     getDocs(query(collection(db, "serviceCategories"), where("active", "==", true))),
     getDocs(query(collection(db, PORTFOLIO_COLLECTION), where("ownerUid", "==", uid))),
     getDocs(query(collection(db, LEGACY_PORTFOLIO_COLLECTION), where("ownerUid", "==", uid))).catch(() => ({ docs: [] }))
@@ -957,6 +1021,7 @@ async function loadWorkspace() {
   state.services = sortNewest(servicesSnapshot.docs.map(item => ({ id: item.id, ...item.data() })));
   state.orders = sortNewest(ordersSnapshot.docs.map(item => ({ id: item.id, ...item.data() })), "createdAt");
   state.notifications = sortNewest(notificationsSnapshot.docs.map(item => ({ id: item.id, ...item.data() })), "createdAt");
+  state.reviews = sortNewest(reviewsSnapshot.docs.map(item => ({ id: item.id, ...item.data() })), "createdAt");
   state.categories = categoriesSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
   const portfolioItems = [
     ...portfolioSnapshot.docs.map(item => ({ id: item.id, sourceCollection: PORTFOLIO_COLLECTION, ...item.data() })),
@@ -982,12 +1047,15 @@ function bindEvents() {
   document.querySelectorAll("[data-open-service-modal]").forEach(control => control.addEventListener("click", () => openServiceModal()));
   document.querySelectorAll("[data-close-modal]").forEach(control => control.addEventListener("click", closeServiceModal));
   document.querySelectorAll("[data-close-delivery-modal]").forEach(control => control.addEventListener("click", closeDeliveryModal));
+  document.querySelectorAll("[data-close-review-modal]").forEach(control => control.addEventListener("click", closeReviewModal));
   document.querySelectorAll("[data-close-confirm-modal]").forEach(control => control.addEventListener("click", closeConfirmModal));
   $("confirmModalAction").addEventListener("click", runConfirmAction);
   elements.mobileMenuButton.addEventListener("click", () => elements.sidebar.classList.contains("open") ? closeSidebar() : openSidebar());
   elements.sidebarOverlay.addEventListener("click", closeSidebar);
   elements.serviceForm.addEventListener("submit", handleServiceSubmit);
   elements.deliveryForm.addEventListener("submit", handleDeliverySubmit);
+  $("freelancerReviewForm").addEventListener("submit", handleReviewSubmit);
+  $("freelancerReviewRating").addEventListener("change", event => { $("freelancerReviewStars").textContent = formatStars(event.target.value); });
   elements.profileForm.addEventListener("submit", saveProfile);
   $("careerForm").addEventListener("submit", saveCareer);
   $("careerItemsInput").addEventListener("input", () => renderCareerPreview());
@@ -1021,9 +1089,15 @@ function bindEvents() {
   $("markAllNotificationsRead").addEventListener("click", markAllNotificationsRead);
   $("themeButton").addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
   $("darkModeSwitch").addEventListener("change", event => setTheme(event.target.checked ? "dark" : "light"));
-  $("withdrawButton").addEventListener("click", () => showToast("السحب غير مفعّل قبل ربط بوابة الدفع."));
+  $("copyReferralCode").addEventListener("click", async () => {
+    const code = $("referralCodeValue").textContent.trim();
+    if (!code || code === "-") return;
+    await navigator.clipboard?.writeText(code).catch(() => {});
+    showToast("تم نسخ كود الدعوة.");
+  });
   $("logoutButton").addEventListener("click", async () => { await signOut(auth); location.href = "index.html"; });
-  document.addEventListener("keydown", event => { if (event.key === "Escape") { closeServiceModal(); closeDeliveryModal(); closeConfirmModal(); closeSidebar(); } });
+  $("freelancerReviewModal").addEventListener("click", event => { if (event.target === $("freelancerReviewModal")) closeReviewModal(); });
+  document.addEventListener("keydown", event => { if (event.key === "Escape") { closeServiceModal(); closeDeliveryModal(); closeReviewModal(); closeConfirmModal(); closeSidebar(); } });
 }
 
 setTheme(localStorage.getItem("theme") || "light");
@@ -1042,11 +1116,13 @@ onAuthStateChanged(auth, async user => {
     }
     state.user = user;
     state.profile = { ...profile, ...(publicSnapshot.exists() ? publicSnapshot.data() : {}) };
+    if (profile.earlyAccess) localStorage.setItem("piklanceEarlyAccess", "true");
     await refreshStoredAvatar();
     fillProfile(user, state.profile);
     $("publicProfileLink").href = `freelancer-profile.html?uid=${encodeURIComponent(user.uid)}`;
     await migrateLocalServices();
     await loadWorkspace();
+    await initializeWithdrawals(user, state.profile, showToast);
     showSection(location.hash.slice(1) || "overview");
     elements.loadingScreen.classList.add("hidden");
   } catch (error) {
