@@ -50,6 +50,7 @@ button { color: inherit; font: inherit; }
 .gallery-card { padding: 12px; }
 .main-media { position: relative; height: 430px; overflow: hidden; border-radius: 10px; background: var(--primary-soft); }
 .main-media img { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: cover; transition: opacity .2s; }
+.main-media img[hidden] { display: none; }
 .main-media img.is-loading { opacity: 0; }
 .service-image-loader { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--primary-soft); }
 .service-image-loader[hidden] { display: none; }

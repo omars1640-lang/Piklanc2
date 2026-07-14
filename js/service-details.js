@@ -78,17 +78,38 @@ function renderGallery() {
   const imageUrl = service.imageUrl || "assets/service-placeholder.svg";
   const image = $("mainServiceImage");
   const loader = $("mainServiceImageLoader");
-  const finishLoading = () => {
-    image.classList.remove("is-loading");
-    loader.hidden = true;
+  const revealImage = source => {
+    let revealed = false;
+    const finish = () => {
+      if (revealed) return;
+      revealed = true;
+      image.hidden = false;
+      requestAnimationFrame(() => image.classList.remove("is-loading"));
+      loader.hidden = true;
+    };
+    image.addEventListener("load", finish, { once: true });
+    image.src = source;
+    image.alt = service.title;
+    if (image.complete && image.naturalWidth > 0) requestAnimationFrame(finish);
   };
+  const preload = new Image();
+  preload.addEventListener("load", () => revealImage(imageUrl), { once: true });
+  preload.addEventListener("error", () => {
+    if (imageUrl !== "assets/service-placeholder.svg") {
+      const fallback = new Image();
+      fallback.addEventListener("load", () => revealImage("assets/service-placeholder.svg"), { once: true });
+      fallback.addEventListener("error", () => { loader.hidden = true; }, { once: true });
+      fallback.src = "assets/service-placeholder.svg";
+      return;
+    }
+    loader.hidden = true;
+  }, { once: true });
+  image.hidden = true;
+  image.removeAttribute("src");
+  image.removeAttribute("alt");
   image.classList.add("is-loading");
   loader.hidden = false;
-  image.addEventListener("load", finishLoading, { once: true });
-  image.addEventListener("error", finishLoading, { once: true });
-  image.src = imageUrl;
-  image.alt = service.title;
-  if (image.complete) requestAnimationFrame(finishLoading);
+  preload.src = imageUrl;
   $("galleryThumbs").replaceChildren();
   $("galleryThumbs").hidden = true;
 }

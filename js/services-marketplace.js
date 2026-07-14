@@ -6,9 +6,18 @@ import { db, storage } from "./firebase.js";
 import { resolveProfileAvatar } from "./avatar-utils.js";
 
 const categoryAliases = {
-  design: "تصميم", code: "برمجة", web: "برمجة", write: "كتابة",
-  writing: "كتابة", market: "تسويق", marketing: "تسويق",
-  audio: "صوتيات", video: "فيديو"
+  design: "design", code: "code", web: "code", programming: "code",
+  write: "write", writing: "write", market: "market", marketing: "market",
+  audio: "audio", video: "video",
+  "تصميم": "design", "برمجة": "code", "برمجة وتطوير": "code",
+  "كتابة": "write", "كتابة وترجمة": "write",
+  "تسويق": "market", "تسويق رقمي": "market",
+  "صوتيات": "audio", "فيديو": "video", "فيديو وأنيميشن": "video"
+};
+
+const categoryLabels = {
+  design: "تصميم", code: "برمجة", write: "كتابة",
+  market: "تسويق", audio: "صوتيات", video: "فيديو", other: "أخرى"
 };
 
 const PAGE_SIZE = 9;
@@ -16,15 +25,23 @@ const requestedPage = Math.max(1, Number.parseInt(new URLSearchParams(location.s
 const state = { services: [], currentPage: requestedPage, filtered: [] };
 const $ = id => document.getElementById(id);
 
-function normalizedCategory(value) {
-  return categoryAliases[value] || value || "أخرى";
+function categoryFilterValue(value) {
+  const raw = String(value || "").trim();
+  const normalized = raw.toLowerCase();
+  if (!raw) return "other";
+  if (categoryAliases[raw]) return categoryAliases[raw];
+  if (categoryAliases[normalized]) return categoryAliases[normalized];
+  if (raw.includes("تصميم")) return "design";
+  if (raw.includes("برمج") || raw.includes("تطوير")) return "code";
+  if (raw.includes("كتاب") || raw.includes("ترجم")) return "write";
+  if (raw.includes("تسويق")) return "market";
+  if (raw.includes("صوت")) return "audio";
+  if (raw.includes("فيديو") || raw.includes("أنيميشن") || raw.includes("مونتاج")) return "video";
+  return "other";
 }
 
-function categoryFilterValue(value) {
-  return {
-    "تصميم": "design", "برمجة": "code", "كتابة": "write",
-    "تسويق": "market", "صوتيات": "audio", "فيديو": "video"
-  }[normalizedCategory(value)] || "other";
+function normalizedCategory(value) {
+  return categoryLabels[categoryFilterValue(value)] || String(value || "").trim() || "أخرى";
 }
 
 function initial(name) {
@@ -141,7 +158,8 @@ function applyFilters({ resetPage = false } = {}) {
   const price = $("priceFilter").value;
   const sort = $("sortFilter").value;
   const filtered = state.services.filter(service => {
-    const haystack = `${service.title || ""} ${service.ownerName || ""} ${(service.keywords || []).join(" ")}`.toLowerCase();
+    const keywords = Array.isArray(service.keywords) ? service.keywords.join(" ") : String(service.keywords || "");
+    const haystack = `${service.title || ""} ${service.description || ""} ${service.ownerName || ""} ${normalizedCategory(service.category)} ${keywords}`.toLowerCase();
     const amount = Number(service.price || 0);
     if (term && !haystack.includes(term)) return false;
     if (category !== "all" && categoryFilterValue(service.category) !== category) return false;
