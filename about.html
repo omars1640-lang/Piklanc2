@@ -1,6 +1,20 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl" data-theme="light">
 <head>
+  <script>
+    (function () {
+      try {
+        var isAdminPage = /(^|\/)dashboard\.html$/i.test(location.pathname);
+        var savedTheme = localStorage.getItem(isAdminPage ? "admin-theme" : "theme") || "light";
+        if (savedTheme === "dark" || savedTheme === "light") {
+          document.documentElement.setAttribute("data-theme", savedTheme);
+          document.documentElement.style.colorScheme = savedTheme;
+        }
+      } catch (error) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>عن المنصة - PikLance</title>
@@ -66,14 +80,7 @@
     }
     .navbar .container { display:flex; justify-content:space-between; align-items:center; }
     .logo { font-size:1.8rem; font-weight:800; text-decoration:none; display:flex; align-items:center; gap:0.3rem; }
-    .logo-icon {
-      width:40px; height:40px; background: linear-gradient(135deg, var(--primary), var(--secondary));
-      border-radius:12px; display:flex; align-items:center; justify-content:center;
-      color:#fff; font-size:1.3rem; font-weight:800; box-shadow:0 4px 15px rgba(108,92,231,0.3);
-    }
-    .logo-text { color: var(--text-heading); }
-    .logo-text span { color: var(--primary); }
-    .nav-links { display:flex; gap:2rem; list-style:none; }
+.nav-links { display:flex; gap:2rem; list-style:none; }
     .nav-links a {
       text-decoration:none; color:var(--text-secondary); font-weight:600; font-size:0.95rem;
       transition: var(--transition); position:relative; padding:0.3rem 0;
@@ -197,13 +204,14 @@
   <link rel="stylesheet" href="css/site-header.css">
   <link rel="icon" type="image/svg+xml" href="assets/brand/logo-icon.svg">
   <link rel="stylesheet" href="css/brand.css">
+  <script src="js/latin-digits.js"></script>
 </head>
 <body>
   <header class="site-header" id="navbar">
     <div class="site-header-inner">
       <a class="site-header-brand" href="index.html" aria-label="PikLance home">
-        <span class="site-header-brand-mark">P</span>
-        <strong>Pik<span>Lance</span></strong>
+        <img class="piklance-brand-logo light-logo" src="assets/brand/logo-light.svg" alt="PikLance" width="150" height="41">
+        <img class="piklance-brand-logo dark-logo" src="assets/brand/logo-dark.svg" alt="" width="150" height="41" aria-hidden="true">
       </a>
       <nav class="site-header-nav" id="siteHeaderNav" aria-label="التنقل الرئيسي">
         <a href="index.html">الرئيسية</a>
@@ -237,7 +245,7 @@
         <p>انطلق العمل ليلاً ونهاراً. كان عبدالله يصمم واجهات المستخدم بكل تفاصيلها، بينما كان عمر يكتب مئات الأسطر البرمجية ليجعل المنصة تعمل بسلاسة وأمان. تولى طارق تصميم الهوية البصرية الكاملة للمنصة، من الشعار إلى الألوان والأيقونات، ليخلق شخصية بصرية تعكس روح الإبداع السوري. أما مصعب، فكان يتنقل بين مهمتين: كتابة كل المحتوى النصي للمنصة بلغة عربية سليمة وجذابة، والمشاركة في تصميم تجربة المستخدم لضمان أن تكون المنصة سهلة ومريحة للجميع.</p>
         <p>كانت الأيام طويلة، والليالي أطول. مرات كثيرة، كانوا يعملون حتى أذان الفجر، يختبرون كل زر، وكل صفحة، وكل ميزة. كان عمر يكتب كوداً، وعبدالله يصحح لوناً، وطارق يضبط تناسقاً، ومصعب يراجع جملة. أربعة أصدقاء، أربع مواهب مختلفة، وحلم واحد يجمعهم.</p>
         <p>بعد ثمانية أشهر من العمل الشاق، ولدت PikLance. ليست مجرد منصة؛ إنها رد على كل من قال «لا يمكنك». إنها مساحة آمنة للمواهب السورية التي تستحق أن ترى النور. فيها يستطيع المستقل أن يرفع خدماته بكل فخر، ويستقبل طلباته، ويسحب أرباحه عبر محفظته مباشرة، دون خوف من حظر أو تعقيد.</p>
-        <p>اليوم، تستعد PikLance لمرحلة الإطلاق واختبار أولى رحلات التسجيل والنشر والطلب والتسليم مع مستخدمين حقيقيين. اخترنا عمولة قدرها <span id="aboutStoryPlatformFee">20%</span> لأننا نؤمن بأن المستقل يستحق الجزء الأكبر من تعبه، وسننشر أرقام المجتمع والطلبات عندما تصبح بيانات فعلية قابلة للتحقق.</p>
+        <p>اليوم، تستعد PikLance لمرحلة الإطلاق واختبار أولى رحلات التسجيل والنشر والطلب والتسليم مع مستخدمين حقيقيين. اخترنا عمولة قدرها <span id="aboutStoryPlatformFee">...</span> لأننا نؤمن بأن المستقل يستحق الجزء الأكبر من تعبه، وسننشر أرقام المجتمع والطلبات عندما تصبح بيانات فعلية قابلة للتحقق.</p>
         <p>قصة PikLance ليست قصة أربعة أشخاص. إنها قصة كل شاب سوري يملك موهبة ويحلم بفرصة. إنها قصة تحدٍّ للظروف، وإيمان بأن الإبداع السوري يمكنه أن يصل إلى العالم كله، حتى لو بدأ من مقهى صغير في حلب القديمة.</p>
         <p class="story-closing">PikLance. صُنعت في سوريا، بُنيت للمستقبل.</p>
       </div>
@@ -325,20 +333,6 @@
     </div>
   </footer>
 
-  <script>
-    const themeToggle = document.getElementById('themeToggle');
-    const htmlElement = document.documentElement;
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    htmlElement.setAttribute('data-theme', savedTheme);
-    themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-    function toggleTheme() {
-      const current = htmlElement.getAttribute('data-theme');
-      const next = current === 'light' ? 'dark' : 'light';
-      htmlElement.setAttribute('data-theme', next);
-      localStorage.setItem('theme', next);
-      themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
-    }
-  </script>
   <script type="module" src="js/site-header.js"></script>
   <script type="module" src="js/about-stats.js"></script>
 </body>

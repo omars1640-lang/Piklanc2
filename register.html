@@ -1,6 +1,20 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-theme="light">
 <head>
+  <script>
+    (function () {
+      try {
+        var isAdminPage = /(^|\/)dashboard\.html$/i.test(location.pathname);
+        var savedTheme = localStorage.getItem(isAdminPage ? "admin-theme" : "theme") || "light";
+        if (savedTheme === "dark" || savedTheme === "light") {
+          document.documentElement.setAttribute("data-theme", savedTheme);
+          document.documentElement.style.colorScheme = savedTheme;
+        }
+      } catch (error) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>إنشاء حساب | PikLance</title>
@@ -120,6 +134,14 @@
     }
     .check-row input { width: auto; margin-top: .35rem; accent-color: #6c5ce7; }
     .check-row a { color: #6c5ce7; font-weight: 800; text-decoration: none; }
+    .access-code-card {
+      margin: 0 0 1.15rem;
+      padding: 1rem;
+      border: 1px solid #e8e1f8;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #fbf8ff, #fff);
+    }
+    .access-code-card small { display:block; margin-top:.35rem; color:#777484; line-height:1.7; }
     .step-indicator { display: flex; align-items: center; gap: .5rem; margin-bottom: 1.5rem; }
     .step-dot {
       width: 30px;
@@ -160,12 +182,19 @@
   </style>
   <link rel="icon" type="image/svg+xml" href="assets/brand/logo-icon.svg">
   <link rel="stylesheet" href="css/brand.css">
+  <script src="js/latin-digits.js"></script>
 </head>
 <body>
   <div class="register-box">
     <a class="logo" href="index.html"><img class="piklance-brand-logo force-light" src="assets/brand/logo-light.svg" alt="PikLance" width="150" height="41"></a>
     <h2>إنشاء حساب جديد</h2>
     <p class="subtitle">اختر نوع الحساب وأكمل البيانات. الدخول للمنصة يتطلب تفعيل البريد الإلكتروني أولاً.</p>
+
+    <div class="access-code-card">
+      <label for="registrationCode">كود الوصول أو الدعوة (اختياري)</label>
+      <input type="text" id="registrationCode" autocomplete="off" placeholder="مثال: FRIEND-2026">
+      <small>إذا وصلت عبر كود وصول مسبق أو دعوة، سنربطه بحسابك تلقائياً بعد التسجيل.</small>
+    </div>
 
     <div id="typeSelection">
       <div class="type-selector">
@@ -288,12 +317,27 @@
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { deleteObject, ref, uploadBytes } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
     import { auth, db, storage } from "./js/firebase.js";
+    import {
+      consumeRegistrationCode,
+      getAccessCode,
+      normalizeAccessCode,
+      registrationCodeFromUrl,
+      rememberEarlyAccess
+    } from "./js/piklance-access.js";
 
     const MAX_ID_IMAGE_SIZE = 5 * 1024 * 1024;
     const params = new URLSearchParams(location.search);
     const isResubmission = params.get("resubmit") === "1";
     let resubmissionUser = null;
     let resubmissionProfile = null;
+    const incomingRegistrationCode = registrationCodeFromUrl();
+    if (!isResubmission && !incomingRegistrationCode) {
+      location.replace("coming-soon.html");
+    }
+    if (incomingRegistrationCode) {
+      document.getElementById("registrationCode").value = incomingRegistrationCode;
+      rememberEarlyAccess(incomingRegistrationCode);
+    }
 
     function normalizeEmail(value) {
       return value.trim().toLowerCase();
@@ -309,6 +353,8 @@
 
     function friendlyAuthError(error) {
       const messages = {
+        "missing-access-code": "التسجيل التجريبي يتطلب كود وصول أو دعوة.",
+        "invalid-access-code": "كود الوصول أو الدعوة غير صحيح أو تم استخدامه مسبقاً.",
         "auth/email-already-in-use": "هذا البريد مستخدم مسبقاً. لا يمكن استخدام نفس البريد لحسابين.",
         "auth/invalid-email": "صيغة البريد الإلكتروني غير صحيحة.",
         "auth/weak-password": "كلمة المرور ضعيفة. استخدم 8 أحرف على الأقل مع حرف ورقم.",
@@ -322,6 +368,23 @@
       batch.set(doc(db, "users", uid), privateProfile);
       batch.set(doc(db, "publicProfiles", uid), publicProfile);
       await batch.commit();
+    }
+
+    async function applyOptionalRegistrationCode(user, accountType, name, email) {
+      const code = normalizeAccessCode(document.getElementById("registrationCode")?.value || "");
+      if (!code) return;
+      const result = await consumeRegistrationCode({ uid: user.uid, email, name, accountType, code });
+      if (result?.type === "early_access") rememberEarlyAccess(code);
+    }
+
+    async function validateRegistrationCodeBeforeSubmit() {
+      if (isResubmission) return;
+      const code = normalizeAccessCode(document.getElementById("registrationCode")?.value || "");
+      if (!code) throw Object.assign(new Error("missing-access-code"), { code: "missing-access-code" });
+      const entry = await getAccessCode(code);
+      if (!entry?.usable || !["early_access", "referral"].includes(entry.type)) {
+        throw Object.assign(new Error("invalid-access-code"), { code: "invalid-access-code" });
+      }
     }
 
     async function cleanupFailedRegistration(user, uploadedPaths = []) {
@@ -425,6 +488,7 @@
       let createdUser = null;
       let profilesCreated = false;
       try {
+        await validateRegistrationCodeBeforeSubmit();
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         createdUser = userCredential.user;
         await createProfiles(userCredential.user.uid, {
@@ -439,6 +503,7 @@
           status: "active"
         });
         profilesCreated = true;
+        await applyOptionalRegistrationCode(userCredential.user, "buyer", name, email);
         auth.languageCode = "ar";
         await sendEmailVerification(userCredential.user);
         await signOut(auth);
@@ -607,6 +672,7 @@
       let profilesCreated = false;
       const uploadedPaths = [];
       try {
+        await validateRegistrationCodeBeforeSubmit();
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         createdUser = userCredential.user;
         const uid = userCredential.user.uid;
@@ -638,6 +704,7 @@
           specialty
         });
         profilesCreated = true;
+        await applyOptionalRegistrationCode(userCredential.user, "freelancer", name, email);
 
         auth.languageCode = "ar";
         await sendEmailVerification(userCredential.user);
@@ -657,5 +724,6 @@
       }
     };
   </script>
+  <script type="module" src="js/image-loading.js"></script>
 </body>
 </html>

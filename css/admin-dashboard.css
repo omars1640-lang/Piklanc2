@@ -32,6 +32,7 @@
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body { margin: 0; min-height: 100vh; color: var(--ink); background: var(--page); font-family: "Cairo", sans-serif; line-height: 1.65; }
+body > .piklance-global-footer { color: var(--muted) !important; background: var(--page) !important; border-top-color: var(--border) !important; }
 button, input, select, textarea { color: inherit; font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 a { color: inherit; text-decoration: none; }
@@ -123,6 +124,13 @@ button { cursor: pointer; }
 .status-badge, .type-badge { padding: 3px 7px; border-radius: 20px; font-size: 8.86px; font-weight: 800; white-space: nowrap; }.status-active { color: var(--green); background: color-mix(in srgb, var(--green) 11%, transparent); }.status-pending { color: var(--orange); background: color-mix(in srgb, var(--orange) 12%, transparent); }.status-rejected, .status-suspended { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); }.type-badge { color: var(--primary); background: var(--primary-soft); }
 .table-actions { display: flex; gap: 5px; }.table-button { min-height: 29px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); background: var(--surface); font-size: 10.33px; font-weight: 800; }.table-button:hover { color: var(--primary); border-color: var(--primary); }.table-button.approve { color: var(--green); }.table-button.reject { color: var(--danger); }
 .table-footer { padding: 10px 15px; color: var(--muted); background: var(--surface-alt); font-size: 10.33px; }
+.promo-tools { margin: 0 0 12px; display: grid; grid-template-columns: minmax(180px, 1fr) repeat(2, minmax(120px, auto)) auto; gap: 8px; }
+.promo-tools input,
+.promo-tools select { min-height: 38px; padding: 0 10px; border: 1px solid var(--border); border-radius: 9px; color: var(--ink); background: var(--surface-alt); font-size: 12.5px; outline: 0; }
+.promo-code-item { grid-template-columns: minmax(190px, .9fr) minmax(180px, 1fr) auto; align-items: center; }
+.promo-code-copy { display: inline-flex; align-items: center; gap: 8px; min-width: 0; direction: ltr; }
+.promo-code-copy code { min-width: 0; padding: 6px 10px; border: 1px dashed var(--primary); border-radius: 9px; color: var(--primary); background: var(--primary-soft); font: 800 12px/1.4 Consolas, "Courier New", monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.promo-copy-button { min-height: 31px; padding: 0 10px; font-size: 11.5px; }
 .rank-guide { margin-bottom: 14px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 .rank-guide article { padding: 13px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
 .rank-guide strong { display: block; color: var(--ink); font-size: 14.4px; }.rank-guide span { color: var(--muted); font-size: 10.8px; }
@@ -194,6 +202,11 @@ button { cursor: pointer; }
 .content-check input { width: auto; }
 .content-list-panel { align-content: start; }
 .admin-content-list { display: grid; gap: 8px; max-height: 430px; overflow: auto; }
+.admin-content-item { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 12px; padding: 11px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.admin-content-item > div { min-width: 0; display: grid; gap: 2px; }
+.admin-content-item strong { color: var(--ink); font-size: 13px; }
+.admin-content-item small { color: var(--muted); font-size: 10.8px; }
+.admin-content-item > span { color: var(--primary); font-size: 11px; font-weight: 800; white-space: nowrap; }
 .content-list-item { display: flex; align-items: center; gap: 10px; padding: 11px; border: 1px solid var(--border); border-radius: 10px; }
 .content-list-item > div { display: grid; gap: 2px; }
 .content-list-item small { color: var(--muted); font-size: 10.8px; }
@@ -218,3 +231,4 @@ button { cursor: pointer; }
 .service-preview-section p { margin: 0; color: var(--muted); font-size: 13.2px; line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
 @media(max-width:900px){.content-admin-grid{grid-template-columns:1fr}.content-form-row{grid-template-columns:1fr}}
 @media(max-width:700px){.service-preview-summary{grid-template-columns:1fr 1fr}.service-preview-cover{min-height:190px}}
+@media(max-width:700px){.promo-tools,.promo-code-item{grid-template-columns:1fr}.promo-code-copy{width:100%}.promo-code-copy code{flex:1}}

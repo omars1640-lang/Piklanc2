@@ -10,7 +10,9 @@ const specialtyLabels = {
 };
 const filterAliases = { web: "code", writing: "write", marketing: "market" };
 const $ = id => document.getElementById(id);
-const state = { freelancers: [] };
+const PAGE_SIZE = 9;
+const requestedPage = Math.max(1, Number.parseInt(new URLSearchParams(location.search).get("page") || "1", 10) || 1);
+const state = { freelancers: [], filtered: [], currentPage: requestedPage };
 
 function initial(name) {
   return (name || "م").trim().charAt(0).toUpperCase();
@@ -51,25 +53,74 @@ function card(profile) {
   return link;
 }
 
+function pageButton(label, page, options = {}) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "page-link";
+  button.textContent = label;
+  button.disabled = options.disabled === true;
+  button.classList.toggle("active", options.active === true);
+  if (options.active) button.setAttribute("aria-current", "page");
+  button.setAttribute("aria-label", options.label || `الصفحة ${label}`);
+  button.addEventListener("click", () => goToPage(page));
+  return button;
+}
+
+function renderPagination(totalItems) {
+  const pagination = $("freelancersPagination");
+  const pageCount = Math.ceil(totalItems / PAGE_SIZE);
+  pagination.hidden = pageCount <= 1;
+  if (pageCount <= 1) {
+    pagination.replaceChildren();
+    return;
+  }
+  state.currentPage = Math.min(Math.max(1, state.currentPage), pageCount);
+  const buttons = [pageButton("‹", state.currentPage - 1, { disabled: state.currentPage === 1, label: "الصفحة السابقة" })];
+  for (let page = 1; page <= pageCount; page += 1) {
+    buttons.push(pageButton(String(page), page, { active: page === state.currentPage }));
+  }
+  buttons.push(pageButton("›", state.currentPage + 1, { disabled: state.currentPage === pageCount, label: "الصفحة التالية" }));
+  pagination.replaceChildren(...buttons);
+}
+
 function render(items) {
   if (!items.length) {
     $("freelancersContainer").innerHTML = '<div class="marketplace-empty"><strong>لا يوجد مستقلون مطابقون</strong><p>جرّب تغيير معايير البحث.</p></div>';
+    renderPagination(0);
     return;
   }
-  $("freelancersContainer").replaceChildren(...items.map(card));
+  state.currentPage = Math.min(state.currentPage, Math.ceil(items.length / PAGE_SIZE));
+  const start = (state.currentPage - 1) * PAGE_SIZE;
+  $("freelancersContainer").replaceChildren(...items.slice(start, start + PAGE_SIZE).map(card));
+  renderPagination(items.length);
 }
 
-function applyFilters() {
+function goToPage(page) {
+  const pageCount = Math.max(1, Math.ceil(state.filtered.length / PAGE_SIZE));
+  const nextPage = Math.min(Math.max(1, page), pageCount);
+  if (nextPage === state.currentPage) return;
+  state.currentPage = nextPage;
+  const url = new URL(location.href);
+  if (nextPage === 1) url.searchParams.delete("page");
+  else url.searchParams.set("page", String(nextPage));
+  history.replaceState({}, "", url);
+  render(state.filtered);
+  $("freelancersContainer").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function applyFilters({ resetPage = false } = {}) {
+  if (resetPage) state.currentPage = 1;
   const term = $("searchInput").value.trim().toLowerCase();
   const category = $("categoryFilter").value;
   const minimumRating = Number($("ratingFilter").value === "all" ? 0 : $("ratingFilter").value);
-  render(state.freelancers.filter(profile => {
+  state.filtered = state.freelancers.filter(profile => {
     const haystack = `${profile.name || ""} ${profile.headline || ""} ${(profile.skills || []).join(" ")}`.toLowerCase();
     const profileCategory = filterAliases[profile.specialty] || profile.specialty;
     return (!term || haystack.includes(term))
       && (category === "all" || profileCategory === category)
       && Number(profile.rating || 0) >= minimumRating;
-  }));
+  });
+  render(state.filtered);
 }
 
 async function loadFreelancers() {
@@ -93,8 +144,8 @@ async function loadFreelancers() {
   }
 }
 
-$("searchInput").addEventListener("input", applyFilters);
-$("categoryFilter").addEventListener("change", applyFilters);
-$("ratingFilter").addEventListener("change", applyFilters);
-$("freelancerSearchButton").addEventListener("click", applyFilters);
+$("searchInput").addEventListener("input", () => applyFilters({ resetPage: true }));
+$("categoryFilter").addEventListener("change", () => applyFilters({ resetPage: true }));
+$("ratingFilter").addEventListener("change", () => applyFilters({ resetPage: true }));
+$("freelancerSearchButton").addEventListener("click", () => applyFilters({ resetPage: true }));
 loadFreelancers();

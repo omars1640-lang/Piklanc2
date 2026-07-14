@@ -55,7 +55,7 @@ function toDate(value) {
 }
 
 function formatDate(value) {
-  return toDate(value)?.toLocaleDateString("ar-SY", { year: "numeric", month: "long", day: "numeric" }) || "حديثاً";
+  return toDate(value)?.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) || "حديثاً";
 }
 
 function readTime(body) {
@@ -107,7 +107,7 @@ function renderArticle(article) {
   $("articleCategory").textContent = article.category || "عام";
   $("articleTitle").textContent = article.title;
   $("articleExcerpt").textContent = article.excerpt || "";
-  $("articleMeta").innerHTML = `<span>${article.authorName || "فريق PikLance"}</span><span>${formatDate(article.publishedAt || article.createdAt)}</span><span>◷ ${readTime(article.body)} دقائق قراءة</span><span id="articleViews">${Number(article.views || 0).toLocaleString("ar-SY")} مشاهدة</span>`;
+  $("articleMeta").innerHTML = `<span>${article.authorName || "فريق PikLance"}</span><span>${formatDate(article.publishedAt || article.createdAt)}</span><span>◷ ${readTime(article.body)} دقائق قراءة</span><span id="articleViews">${Number(article.views || 0).toLocaleString("en-US")} مشاهدة</span>`;
   if (article.coverUrl) {
     $("articleCover").style.backgroundImage = `url("${String(article.coverUrl).replace(/"/g, "%22")}")`;
     $("articleCover").hidden = false;
@@ -164,7 +164,7 @@ function renderComments(snapshot = null) {
   if (snapshot) state.comments = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
   const comments = [...state.comments];
   comments.sort((a, b) => (toDate(b.createdAt)?.getTime() || 0) - (toDate(a.createdAt)?.getTime() || 0));
-  $("commentsCount").textContent = comments.length.toLocaleString("ar-SY");
+  $("commentsCount").textContent = comments.length.toLocaleString("en-US");
   if (!comments.length) {
     $("commentsList").innerHTML = '<div class="comment-empty">كن أول من يشارك رأيه في هذا المقال.</div>';
     return;
@@ -219,7 +219,7 @@ async function registerView() {
     await updateDoc(doc(db, "articles", articleId), { views: increment(1) });
     localStorage.setItem(viewedKey, "1");
     state.article.views = Number(state.article.views || 0) + 1;
-    $("articleViews").textContent = `${state.article.views.toLocaleString("ar-SY")} مشاهدة`;
+    $("articleViews").textContent = `${state.article.views.toLocaleString("en-US")} مشاهدة`;
   } catch (error) {
     console.warn("Unable to register article view", error);
   }
@@ -272,7 +272,7 @@ if (!articleId) {
       renderArticle(state.article);
       onSnapshot(collection(db, "articles", articleId, "likes"), likes => {
         state.likeIds = likes.docs.map(item => item.id);
-        const count = likes.size.toLocaleString("ar-SY");
+        const count = likes.size.toLocaleString("en-US");
         $("likesCount").textContent = count;
         $("likesCountMobile").textContent = count;
         setLikeState(Boolean(state.user && state.likeIds.includes(state.user.uid)));

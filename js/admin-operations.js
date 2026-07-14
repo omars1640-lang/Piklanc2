@@ -7,12 +7,13 @@ import {
   deleteObject, getDownloadURL, ref as storageRef, uploadBytes
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { auth, db, storage } from "./firebase.js";
+import { sendOfficialEmail } from "./email-client.js";
 
 const state = { admin: null, services: [], tickets: [], orders: [], articles: [], faqs: [], categories: [], selectedTicket: null, replies: [], verificationCount: 0, pendingServiceReview: null, pendingConfirmAction: null };
 const $ = id => document.getElementById(id);
 const toDate = value => value?.toDate?.() || (value ? new Date(value) : null);
 const sortNewest = (items, field = "updatedAt") => items.sort((a, b) => (toDate(b[field])?.getTime() || 0) - (toDate(a[field])?.getTime() || 0));
-const formatDate = value => toDate(value)?.toLocaleDateString("ar-SY", { year: "numeric", month: "short", day: "numeric" }) || "-";
+const formatDate = value => toDate(value)?.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) || "-";
 const serviceLabels = { draft: "مسودة", pending: "قيد المراجعة", published: "منشورة", paused: "متوقفة", rejected: "مرفوضة" };
 const ticketLabels = { open: "مفتوحة", in_progress: "قيد المعالجة", waiting_user: "بانتظار المستخدم", resolved: "محلولة", closed: "مغلقة" };
 const orderLabels = { funded: "محجوز", active: "قيد التنفيذ", delivered: "قيد المراجعة", completed: "محرر", disputed: "نزاع", cancelled: "ملغي" };
@@ -42,6 +43,13 @@ function auditData(action, target = {}, reason = "") {
 
 function notificationData(title, body, link, type) {
   return { title, body, link, type, read: false, createdAt: serverTimestamp() };
+}
+
+async function serviceOwnerEmail(service) {
+  if (service.ownerEmail) return service.ownerEmail;
+  if (!service.ownerUid) return "";
+  const snapshot = await getDoc(doc(db, "users", service.ownerUid)).catch(() => null);
+  return snapshot?.exists() ? (snapshot.data().email || "") : "";
 }
 
 function openAdminConfirm({ title, message, actionLabel = "تأكيد", onConfirm }) {
@@ -100,6 +108,13 @@ function escapeHtml(value) {
 function serviceImageUrl(service) {
   const firstImage = Array.isArray(service.images) ? service.images.find(Boolean) : "";
   return service.imageUrl || service.coverUrl || service.serviceImage || service.thumbnail || firstImage || "";
+}
+
+function imageLoader() {
+  const loader = document.createElement("span");
+  loader.className = "image-loading-dots";
+  loader.innerHTML = "<span><i></i><i></i><i></i></span>";
+  return loader;
 }
 
 function ensureNavBadge(section) {
@@ -208,11 +223,15 @@ function openServicePreview(id) {
   imageWrap.className = "service-preview-cover";
   const imageUrl = serviceImageUrl(service);
   if (imageUrl) {
+    const loader = imageLoader();
+    imageWrap.style.position = "relative";
     const image = document.createElement("img");
     image.src = imageUrl;
     image.alt = service.title || "صورة الخدمة";
     image.loading = "lazy";
-    imageWrap.appendChild(image);
+    image.addEventListener("load", () => loader.remove(), { once: true });
+    image.addEventListener("error", () => loader.remove(), { once: true });
+    imageWrap.append(image, loader);
   } else {
     imageWrap.innerHTML = "<span>لا توجد صورة مرفقة لهذه الخدمة</span>";
   }
@@ -222,7 +241,7 @@ function openServicePreview(id) {
   summary.append(
     serviceDetail("المستقل", service.ownerName || "-"),
     serviceDetail("الحالة", serviceLabels[service.status] || service.status || "-"),
-    serviceDetail("السعر", `${Number(service.price || 0).toLocaleString("ar-SY")} ل.س`),
+    serviceDetail("السعر", `${Number(service.price || 0).toLocaleString("en-US")} ل.س`),
     serviceDetail("التصنيف", service.category || "-"),
     serviceDetail("مدة التسليم", service.deliveryDays ? `${service.deliveryDays} يوم` : "-"),
     serviceDetail("عدد التعديلات", service.revisions ?? "-"),
@@ -283,7 +302,7 @@ function renderServices() {
       );
     }
     actions.append(actionButton("حذف", "table-button reject", () => deleteServiceAdmin(service)));
-    [service.title || "خدمة", service.ownerName || "-", `${Number(service.price || 0).toLocaleString("ar-SY")} ل.س`, serviceLabels[service.status] || service.status, formatDate(service.updatedAt), actions].forEach(value => {
+    [service.title || "خدمة", service.ownerName || "-", `${Number(service.price || 0).toLocaleString("en-US")} ل.س`, serviceLabels[service.status] || service.status, formatDate(service.updatedAt), actions].forEach(value => {
       const cell = document.createElement("td");
       cell.append(value instanceof Node ? value : document.createTextNode(value));
       row.appendChild(cell);
@@ -332,6 +351,20 @@ async function reviewService(id, approved, reason = "") {
   ));
   batch.set(doc(collection(db, "adminAuditLogs")), auditData(approved ? "approve_service" : "reject_service", service, moderationReason));
   await batch.commit();
+  if (!approved) {
+    const ownerEmail = await serviceOwnerEmail(service);
+    await sendOfficialEmail({
+      purpose: "service_rejection",
+      to: ownerEmail,
+      subject: "نتيجة مراجعة خدمتك في PikLance",
+      message: `مرحباً ${service.ownerName || ""}\n\nتمت مراجعة خدمتك: ${service.title || ""}\n\nلم نتمكن من نشر الخدمة حالياً بسبب:\n${moderationReason}\n\nيمكنك تعديل الخدمة وإعادة إرسالها للمراجعة من لوحة المستقل.\n\nفريق PikLance`,
+      actionUrl: "https://piklance.com/freelancer-dashboard.html#services",
+      actionLabel: "تعديل الخدمة"
+    }).catch(error => {
+      console.warn("Unable to send service rejection email", error);
+      toast("تم رفض الخدمة، لكن تعذر إرسال البريد الرسمي حالياً.");
+    });
+  }
   toast(approved ? "تم نشر الخدمة وإشعار المستقل." : "تم رفض الخدمة وإرسال السبب.");
   await loadOperations();
 }
@@ -417,18 +450,18 @@ function renderFinance() {
   const held = state.orders.filter(order => ["funded", "active", "delivered", "disputed"].includes(order.status));
   const completed = state.orders.filter(order => order.status === "completed");
   $("financeOrdersTotal").textContent = state.orders.length;
-  $("financeHeldTotal").textContent = `${held.reduce((sum, order) => sum + Number(order.total || 0), 0).toLocaleString("ar-SY")} ل.س`;
-  $("financeFeeTotal").textContent = `${completed.reduce((sum, order) => sum + Number(order.platformFeeAmount || 0), 0).toLocaleString("ar-SY")} ل.س`;
-  $("financeReleasedTotal").textContent = `${completed.reduce((sum, order) => sum + Number(order.freelancerAmount || 0), 0).toLocaleString("ar-SY")} ل.س`;
+  $("financeHeldTotal").textContent = `${held.reduce((sum, order) => sum + Number(order.total || 0), 0).toLocaleString("en-US")} ل.س`;
+  $("financeFeeTotal").textContent = `${completed.reduce((sum, order) => sum + Number(order.platformFeeAmount || 0), 0).toLocaleString("en-US")} ل.س`;
+  $("financeReleasedTotal").textContent = `${completed.reduce((sum, order) => sum + Number(order.freelancerAmount || 0), 0).toLocaleString("en-US")} ل.س`;
   const rows = orders.map(order => {
     const row = document.createElement("tr");
     const values = [
       order.serviceTitle || `#${order.id.slice(0, 8)}`,
       order.buyerName || "-",
       order.freelancerName || "-",
-      `${Number(order.total || 0).toLocaleString("ar-SY")} ل.س`,
-      `${Number(order.platformFeeAmount || 0).toLocaleString("ar-SY")} ل.س`,
-      `${Number(order.freelancerAmount || 0).toLocaleString("ar-SY")} ل.س`,
+      `${Number(order.total || 0).toLocaleString("en-US")} ل.س`,
+      `${Number(order.platformFeeAmount || 0).toLocaleString("en-US")} ل.س`,
+      `${Number(order.freelancerAmount || 0).toLocaleString("en-US")} ل.س`,
       orderLabels[order.status] || order.status || "-"
     ];
     values.forEach(value => { const cell = document.createElement("td"); cell.textContent = value; row.appendChild(cell); });
@@ -501,6 +534,19 @@ async function saveTicket(event) {
   }
   batch.set(doc(collection(db, "adminAuditLogs")), auditData(reply ? "reply_ticket" : "update_ticket", ticket, `${status}${reply ? `: ${reply.slice(0, 300)}` : ""}`));
   await batch.commit();
+  if (reply && ticket.requesterEmail) {
+    await sendOfficialEmail({
+      purpose: "support_reply",
+      to: ticket.requesterEmail,
+      subject: `رد على تذكرتك: ${ticket.subject || "دعم PikLance"}`,
+      message: `مرحباً ${ticket.requesterName || ""}\n\n${reply}\n\nحالة التذكرة: ${ticketLabels[status] || status}\nرقم التذكرة: #${ticket.id.slice(0, 8)}\n\nفريق دعم PikLance`,
+      actionUrl: "https://piklance.com/support.html",
+      actionLabel: "فتح مركز الدعم"
+    }).catch(error => {
+      console.warn("Unable to send support reply email", error);
+      toast("تم حفظ الرد، لكن تعذر إرسال البريد الرسمي حالياً.");
+    });
+  }
   closeTicket();
   toast("تم حفظ التحديث وإشعار المستخدم.");
   await loadOperations();

@@ -33,6 +33,7 @@
 }
 
 * { box-sizing: border-box; }
+body > .piklance-global-footer { color: var(--muted) !important; background: var(--page) !important; border-top-color: var(--border) !important; }
 html { scroll-behavior: smooth; }
 body {
   margin: 0;
@@ -303,9 +304,10 @@ table { width: 100%; border-collapse: collapse; white-space: nowrap; }
 th { padding: 11px 12px; color: var(--muted); background: var(--surface-alt); text-align: right; font-size: 10.8px; }
 td { padding: 13px 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
 .table-service { min-width: 230px; display: grid; }.table-service strong { font-size: 12px; }.table-service small { color: var(--muted); }
-.table-actions { display: flex; gap: 6px; }
+.table-actions { display: flex; gap: 6px; align-items: center; }
 .table-button { border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; color: var(--muted); background: var(--surface); cursor: pointer; font-size: 10.8px; }
 .table-button.danger:hover { color: var(--danger); border-color: var(--danger); }
+.review-status-pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 8px; color: var(--primary); background: var(--primary-soft); font-size: 10.8px; font-weight: 800; }
 .empty-state { padding: 50px 20px; display: grid; justify-items: center; text-align: center; color: var(--muted); }
 .empty-state > span { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; color: var(--primary); background: var(--primary-soft); font-size: 24px; }
 .empty-state strong { margin-top: 10px; color: var(--ink); font-size: 14.4px; }
@@ -359,6 +361,7 @@ td { padding: 13px 12px; border-bottom: 1px solid var(--border); font-size: 12px
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
 .form-actions { display: flex; align-items: center; justify-content: flex-end; gap: 13px; margin-top: 7px; }.form-message { color: var(--green); font-size: 12px; }
 .settings-list { padding: 0 19px; }.settings-list label { padding: 17px 2px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--border); }.settings-list label:last-child { border: 0; }.settings-list span { display: grid; }.settings-list strong { font-size: 13.2px; }.settings-list small { color: var(--muted); font-size: 10.8px; }
+.referral-card { margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 18px; background: linear-gradient(135deg, var(--panel), var(--primary-soft)); }.referral-card h2 { margin: 0 0 6px; font-size: 20px; }.referral-card span { display: block; color: var(--muted); font-size: 13px; line-height: 1.8; }.referral-code-box { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px dashed var(--primary); border-radius: 14px; background: var(--panel); }.referral-code-box strong { min-width: 150px; direction: ltr; text-align: center; color: var(--primary); letter-spacing: 1px; font-size: 18px; }
 input[role="switch"] { width: 38px; min-height: 21px; height: 21px; padding: 0; appearance: none; border-radius: 20px; background: #ccd2dc; cursor: pointer; position: relative; }.settings-list input[role="switch"]::after { content:""; position:absolute; width:15px; height:15px; top:2px; right:2px; border-radius:50%; background:#fff; transition:.2s; }.settings-list input[role="switch"]:checked { background:var(--primary); }.settings-list input[role="switch"]:checked::after { transform:translateX(-17px); }
 
 .modal { position: fixed; inset: 0; z-index: 3000; display: none; place-items: center; padding: 20px; }
@@ -367,6 +370,7 @@ input[role="switch"] { width: 38px; min-height: 21px; height: 21px; padding: 0; 
 .modal-dialog { position: relative; z-index: 1; width: min(600px, 100%); max-height: 90vh; overflow-y: auto; padding: 25px; border-radius: 15px; background: var(--surface); box-shadow: 0 25px 70px rgba(0,0,0,.3); }
 .modal-close { position: absolute; top: 13px; left: 13px; width: 31px; height: 31px; border: 0; border-radius: 50%; color: var(--muted); background: var(--surface-alt); cursor: pointer; font-size: 22.8px; }
 .modal-dialog h2 { margin: 0; font-size: 21.6px; }.modal-description { margin: 5px 0 20px; color: var(--muted); font-size: 12px; }.modal textarea { resize: vertical; }.service-image-hint { display: block; margin: -6px 0 12px; color: var(--muted); font-size: 10.8px; }
+.review-stars-preview { display: block; margin: -4px 0 12px; color: var(--orange); font-size: 18px; letter-spacing: 2px; }
 .delivery-summary { display: grid; gap: 5px; margin-bottom: 14px; padding: 13px 15px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface-alt); }
 .delivery-summary strong { color: var(--ink); font-size: 14px; }
 .delivery-summary span { color: var(--muted); font-size: 12px; }

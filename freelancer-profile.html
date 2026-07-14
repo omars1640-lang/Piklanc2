@@ -1,6 +1,20 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" data-theme="light">
 <head>
+  <script>
+    (function () {
+      try {
+        var isAdminPage = /(^|\/)dashboard\.html$/i.test(location.pathname);
+        var savedTheme = localStorage.getItem(isAdminPage ? "admin-theme" : "theme") || "light";
+        if (savedTheme === "dark" || savedTheme === "light") {
+          document.documentElement.setAttribute("data-theme", savedTheme);
+          document.documentElement.style.colorScheme = savedTheme;
+        }
+      } catch (error) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="ملف مستقل احترافي على منصة PikLance">
@@ -12,6 +26,7 @@
   <link rel="stylesheet" href="css/site-header.css">
   <link rel="icon" type="image/svg+xml" href="assets/brand/logo-icon.svg">
   <link rel="stylesheet" href="css/brand.css">
+  <script src="js/latin-digits.js"></script>
 </head>
 <body>
   <div class="page-loader" id="pageLoader">
@@ -22,8 +37,8 @@
   <header class="site-header" id="navbar">
     <div class="site-header-inner">
       <a class="site-header-brand" href="index.html" aria-label="PikLance home">
-        <span class="site-header-brand-mark">P</span>
-        <strong>Pik<span>Lance</span></strong>
+        <img class="piklance-brand-logo light-logo" src="assets/brand/logo-light.svg" alt="PikLance" width="150" height="41">
+        <img class="piklance-brand-logo dark-logo" src="assets/brand/logo-dark.svg" alt="" width="150" height="41" aria-hidden="true">
       </a>
       <nav class="site-header-nav" id="siteHeaderNav" aria-label="التنقل الرئيسي">
         <a href="index.html">الرئيسية</a>
@@ -54,6 +69,7 @@
             <h1 id="profileName">مستقل PikLance</h1>
             <span class="verified-badge">✓ موثّق</span>
             <span class="profile-rank-badge" id="profileRankBadge" hidden></span>
+            <span class="profile-extra-badges" id="profileExtraBadges"></span>
           </div>
           <p class="profile-headline" id="profileHeadline">مستقل محترف للخدمات الرقمية</p>
           <div class="profile-meta">
@@ -188,7 +204,7 @@
 
   <footer class="footer">
     <div class="container footer-grid">
-      <div><a class="brand footer-brand" href="index.html"><span class="brand-mark">P</span><strong>Pik<span>Lance</span></strong></a><p>منصة سورية تجمع المواهب الرقمية مع أصحاب المشاريع.</p></div>
+      <div><a class="brand footer-brand" href="index.html"><img class="piklance-brand-logo light-logo" src="assets/brand/logo-light.svg" alt="PikLance" width="150" height="41"><img class="piklance-brand-logo dark-logo" src="assets/brand/logo-dark.svg" alt="" width="150" height="41" aria-hidden="true"></a><p>منصة سورية تجمع المواهب الرقمية مع أصحاب المشاريع.</p></div>
       <div><h3>المنصة</h3><a href="services.html">الخدمات</a><a href="freelancers.html">المستقلون</a><a href="how-it-works.html">كيف تعمل</a></div>
       <div><h3>المساعدة</h3><a href="faq.html">الأسئلة الشائعة</a><a href="contact.html">تواصل معنا</a><a href="support.html">الدعم</a></div>
       <div><h3>قانوني</h3><a href="terms.html">الشروط</a><a href="privacy.html">الخصوصية</a></div>

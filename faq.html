@@ -1,6 +1,20 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl" data-theme="light">
 <head>
+  <script>
+    (function () {
+      try {
+        var isAdminPage = /(^|\/)dashboard\.html$/i.test(location.pathname);
+        var savedTheme = localStorage.getItem(isAdminPage ? "admin-theme" : "theme") || "light";
+        if (savedTheme === "dark" || savedTheme === "light") {
+          document.documentElement.setAttribute("data-theme", savedTheme);
+          document.documentElement.style.colorScheme = savedTheme;
+        }
+      } catch (error) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>الأسئلة الشائعة - PikLance</title>
@@ -70,14 +84,7 @@
     }
     .navbar .container { display:flex; justify-content:space-between; align-items:center; }
     .logo { font-size:1.8rem; font-weight:800; text-decoration:none; display:flex; align-items:center; gap:0.3rem; }
-    .logo-icon {
-      width:40px; height:40px; background: linear-gradient(135deg, var(--primary), var(--secondary));
-      border-radius:12px; display:flex; align-items:center; justify-content:center;
-      color:#fff; font-size:1.3rem; font-weight:800; box-shadow:0 4px 15px rgba(108,92,231,0.3);
-    }
-    .logo-text { color: var(--text-heading); }
-    .logo-text span { color: var(--primary); }
-    .nav-links { display:flex; gap:2rem; list-style:none; }
+.nav-links { display:flex; gap:2rem; list-style:none; }
     .nav-links a {
       text-decoration:none; color:var(--text-secondary); font-weight:600; font-size:0.95rem;
       transition: var(--transition); position:relative; padding:0.3rem 0; white-space: nowrap;
@@ -154,6 +161,12 @@
     .faq-category h2 {
       color:var(--text-heading); margin-bottom:1.5rem; display:flex; align-items:center; gap:0.5rem;
     }
+    .faq-heading-icon {
+      width:38px; height:38px; flex:0 0 38px; object-fit:contain;
+    }
+    .faq-heading-icon.dark { display:none; }
+    html[data-theme="dark"] .faq-heading-icon.light { display:none; }
+    html[data-theme="dark"] .faq-heading-icon.dark { display:block; }
     .faq-item {
       border:1px solid var(--border-color); border-radius:12px; margin-bottom:0.8rem; overflow:hidden;
     }
@@ -209,13 +222,14 @@
   <link rel="stylesheet" href="css/site-header.css">
   <link rel="icon" type="image/svg+xml" href="assets/brand/logo-icon.svg">
   <link rel="stylesheet" href="css/brand.css">
+  <script src="js/latin-digits.js"></script>
 </head>
 <body>
   <header class="site-header" id="navbar">
     <div class="site-header-inner">
       <a class="site-header-brand" href="index.html" aria-label="PikLance home">
-        <span class="site-header-brand-mark">P</span>
-        <strong>Pik<span>Lance</span></strong>
+        <img class="piklance-brand-logo light-logo" src="assets/brand/logo-light.svg" alt="PikLance" width="150" height="41">
+        <img class="piklance-brand-logo dark-logo" src="assets/brand/logo-dark.svg" alt="" width="150" height="41" aria-hidden="true">
       </a>
       <nav class="site-header-nav" id="siteHeaderNav" aria-label="التنقل الرئيسي">
         <a href="index.html">الرئيسية</a>
@@ -259,7 +273,7 @@
   <div class="container" id="faqContainer">
     <!-- Buyer Category -->
     <div class="faq-category" data-category="buyer">
-      <h2>🛍️ للمشترين</h2>
+      <h2><img class="faq-heading-icon light" src="assets/icons/light/search-service.svg" alt=""><img class="faq-heading-icon dark" src="assets/icons/dark/search-service.svg" alt="">للمشترين</h2>
       <div class="faq-item">
         <div class="faq-question" onclick="toggleFAQ(this)">كيف أطلب خدمة؟ <span class="faq-icon">▼</span></div>
         <div class="faq-answer"><p>تصفح الخدمات، اختر ما يناسبك، ثم اضغط "اطلب الآن". إذا احتجت استفساراً، راسل المستقل أولاً.</p></div>
@@ -276,7 +290,7 @@
 
     <!-- Freelancer Category -->
     <div class="faq-category" data-category="freelancer">
-      <h2>🎨 للمستقلين</h2>
+      <h2><img class="faq-heading-icon light" src="assets/icons/light/earn-profits.svg" alt=""><img class="faq-heading-icon dark" src="assets/icons/dark/earn-profits.svg" alt="">للمستقلين</h2>
       <div class="faq-item">
         <div class="faq-question" onclick="toggleFAQ(this)">كيف أصبح مستقلاً على المنصة؟ <span class="faq-icon">▼</span></div>
         <div class="faq-answer"><p>سجل حساباً واختر "مستقل". أكمل ملفك الشخصي، أضف خدماتك، وابدأ البيع فور الموافقة.</p></div>
@@ -287,26 +301,26 @@
       </div>
       <div class="faq-item">
         <div class="faq-question" onclick="toggleFAQ(this)">متى يمكنني سحب أرباحي؟ <span class="faq-icon">▼</span></div>
-        <div class="faq-answer"><p>يمكنك السحب عندما يصل رصيدك إلى 50,000 ل.س كحد أدنى. المدة 24-48 ساعة عمل.</p></div>
+        <div class="faq-answer"><p>يمكنك طلب السحب عبر شام كاش من 100 ل.س وحتى 5,000 ل.س للعملية الواحدة، من دون رسوم سحب. تتم المراجعة خلال 24-48 ساعة.</p></div>
       </div>
     </div>
 
     <!-- Payment Category -->
     <div class="faq-category" data-category="payment">
-      <h2>💳 الدفع والسحب</h2>
+      <h2><img class="faq-heading-icon light" src="assets/icons/light/payment-preparing.svg" alt=""><img class="faq-heading-icon dark" src="assets/icons/dark/payment-preparing.svg" alt="">الدفع والسحب</h2>
       <div class="faq-item">
         <div class="faq-question" onclick="toggleFAQ(this)">ما طرق الدفع المتاحة؟ <span class="faq-icon">▼</span></div>
-        <div class="faq-answer"><p>بوابة الدفع المحلية قيد التجهيز. جميع الطلبات الحالية تجريبية ولا تخصم أموالاً حقيقية.</p></div>
+        <div class="faq-answer"><p>يمكن للعميل شراء رصيد يدوياً عبر شام كاش من 100 إلى 10,000 ل.س، ثم رفع إيصال التحويل. تضيف الإدارة الرصيد بعد مطابقة العملية خلال 2-6 ساعات ضمن أوقات العمل.</p></div>
       </div>
       <div class="faq-item">
         <div class="faq-question" onclick="toggleFAQ(this)">كم تستغرق عملية الشحن؟ <span class="faq-icon">▼</span></div>
-        <div class="faq-answer"><p>سنعلن رسوم ومدد كل وسيلة دفع عند تفعيلها رسمياً داخل المنصة.</p></div>
+        <div class="faq-answer"><p>لا توجد رسوم على السحب حالياً. تظهر قيمة الخدمة والعمولة المطبقة بوضوح، وتخضع عمولة المنصة لإعدادات الحساب والخصومات المعتمدة.</p></div>
       </div>
     </div>
 
     <!-- Technical Category -->
     <div class="faq-category" data-category="technical">
-      <h2>🔧 أسئلة تقنية</h2>
+      <h2><img class="faq-heading-icon light" src="assets/icons/light/support.svg" alt=""><img class="faq-heading-icon dark" src="assets/icons/dark/support.svg" alt="">أسئلة تقنية</h2>
       <div class="faq-item">
         <div class="faq-question" onclick="toggleFAQ(this)">هل المنصة تعمل على الجوال؟ <span class="faq-icon">▼</span></div>
         <div class="faq-answer"><p>نعم، الموقع متجاوب بالكامل ويعمل على جميع الأجهزة.</p></div>
@@ -334,24 +348,11 @@
         <div><h4>مساعدة</h4><a href="support.html">الدعم</a><a href="faq.html">أسئلة شائعة</a></div>
         <div><h4>قانوني</h4><a href="terms.html">شروط</a><a href="privacy.html">خصوصية</a></div>
       </div>
-      <div class="footer-bottom">© 2025 PikLance. جميع الحقوق محفوظة.</div>
+      <div class="footer-bottom">© 2026 PikLance. جميع الحقوق محفوظة.</div>
     </div>
   </footer>
 
   <script>
-    const themeToggle = document.getElementById('themeToggle');
-    const htmlElement = document.documentElement;
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    htmlElement.setAttribute('data-theme', savedTheme);
-    themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-    function toggleTheme() {
-      const current = htmlElement.getAttribute('data-theme');
-      const next = current === 'light' ? 'dark' : 'light';
-      htmlElement.setAttribute('data-theme', next);
-      localStorage.setItem('theme', next);
-      themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
-    }
-
     function toggleFAQ(element) {
       const answer = element.nextElementSibling;
       const allAnswers = document.querySelectorAll('.faq-answer.active');

@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="css/client-dashboard.css">
   <link rel="icon" type="image/svg+xml" href="assets/brand/logo-icon.svg">
   <link rel="stylesheet" href="css/brand.css">
+  <link rel="stylesheet" href="css/payments.css">
 </head>
 <body>
   <div class="dashboard-loading" id="dashboardLoading"><img class="piklance-loading-icon" src="assets/brand/logo-icon.svg" alt=""><strong>جاري تجهيز مساحة عملك...</strong></div>
@@ -34,6 +35,7 @@
       <nav>
         <p>مساحة العمل</p>
         <button class="nav-link active" type="button" data-section="overview"><span>⌂</span>نظرة عامة</button>
+        <button class="nav-link" type="button" data-section="wallet"><span>◈</span>المحفظة</button>
         <button class="nav-link" type="button" data-section="orders"><span>▣</span>طلباتي <b id="ordersBadge">0</b></button>
         <button class="nav-link" type="button" data-section="favorites"><span>♡</span>الخدمات المحفوظة <b id="favoritesBadge">0</b></button>
         <a class="nav-link" href="messages.html"><span>✉</span>الرسائل</a>
@@ -52,6 +54,7 @@
         <div class="metrics-grid">
           <article><span>إجمالي الطلبات</span><strong id="ordersCount">0</strong><small>مرتبطة بحسابك</small></article>
           <article><span>طلبات قيد التنفيذ</span><strong id="activeOrdersCount">0</strong><small>تحتاج متابعة</small></article>
+          <article><span>الرصيد المتاح</span><strong id="overviewWalletBalance">0 ل.س</strong><small>جاهز لشراء الخدمات</small></article>
           <article><span>الخدمات المحفوظة</span><strong id="favoritesCount">0</strong><small>للعودة إليها لاحقاً</small></article>
           <article><span>إشعارات غير مقروءة</span><strong id="unreadCount">0</strong><small>آخر تحديثات حسابك</small></article>
         </div>
@@ -65,9 +68,19 @@
             <div class="panel-head"><div><small>اختصارات</small><h2>إجراءات سريعة</h2></div></div>
             <a href="services.html"><span>▦</span><div><strong>استكشف الخدمات</strong><small>ابحث حسب التخصص والميزانية</small></div></a>
             <a href="freelancers.html"><span>◎</span><div><strong>ابحث عن مستقل</strong><small>اطلع على الملفات ومعارض الأعمال</small></div></a>
+            <button type="button" data-open-deposit><span>◈</span><div><strong>شراء رصيد</strong><small>اشحن محفظتك عبر شام كاش</small></div></button>
             <button type="button" data-section-target="support"><span>?</span><div><strong>افتح تذكرة دعم</strong><small>مساعدة تقنية أو نزاع</small></div></button>
           </aside>
         </div>
+      </section>
+
+      <section class="dashboard-section" id="section-wallet">
+        <div class="page-heading"><div><p>المعاملات المالية</p><h1>محفظتي</h1><span>اشترِ رصيداً بالليرة السورية وتابع حالة طلبات الشحن.</span></div><button class="primary-button" type="button" data-open-deposit>شراء رصيد</button></div>
+        <div class="wallet-balance-grid">
+          <article class="wallet-balance-card primary"><span>الرصيد المتاح</span><strong id="buyerAvailableBalance">0 ل.س</strong><small>يمكن استخدامه لشراء الخدمات</small></article>
+          <article class="wallet-balance-card"><span>محجوز في الطلبات</span><strong id="buyerHeldBalance">0 ل.س</strong><small>يُحرر بعد اكتمال الطلب أو يُعاد عند الاسترداد</small></article>
+        </div>
+        <div class="panel wallet-history-panel"><div class="panel-head"><div><small>السجل المالي</small><h2>طلبات شراء الرصيد</h2></div></div><div id="depositHistory"></div></div>
       </section>
 
       <section class="dashboard-section" id="section-orders">
@@ -110,6 +123,14 @@
             <label>البريد الإلكتروني<input id="accountEmail" type="email" disabled></label>
             <label>رقم الهاتف<input id="accountPhone" type="tel" maxlength="30"></label>
           </div>
+          <div class="buyer-rating-card">
+            <div><small>تقييمك كمشتري</small><strong><span id="buyerRatingAverage">0.0</span> / 5</strong><p id="buyerRatingStars">☆☆☆☆☆</p></div>
+            <span><b id="buyerRatingCount">0</b> تقييم من مستقلين بعد طلبات مكتملة</span>
+          </div>
+          <div class="referral-card" id="clientReferralCard" hidden>
+            <div><small>كود الدعوة</small><strong>شارك PikLance مع أصدقائك</strong><p>استخدم هذا الكود لدعوة مستخدمين جدد وربطهم بحسابك.</p></div>
+            <div class="referral-code-box"><b id="clientReferralCode">-</b><button class="secondary-button" id="copyClientReferralCode" type="button">نسخ الكود</button></div>
+          </div>
           <div class="form-footer"><span id="accountMessage"></span><button class="primary-button" type="submit">حفظ التعديلات</button></div>
         </form>
       </section>
@@ -144,6 +165,45 @@
         <button class="secondary-button" type="button" data-close-order-dispute>إلغاء</button>
         <button class="primary-button danger-action" id="orderDisputeSubmit" type="submit">فتح النزاع</button>
       </div>
+    </form>
+  </div>
+
+  <div class="dashboard-modal" id="orderReviewModal" aria-hidden="true">
+    <div class="dashboard-modal-backdrop" data-close-order-review></div>
+    <form class="dashboard-modal-dialog" id="orderReviewForm">
+      <button class="dashboard-modal-close" type="button" data-close-order-review aria-label="إغلاق">×</button>
+      <p>تقييم الخدمة</p>
+      <h2>شارك تجربتك مع المستقل</h2>
+      <span id="orderReviewSummary">يمكنك تقييم هذا الطلب بعد اكتماله فقط.</span>
+      <label>التقييم
+        <select id="orderReviewRating" required>
+          <option value="5">5 - ممتاز</option><option value="4">4 - جيد جداً</option><option value="3">3 - جيد</option><option value="2">2 - مقبول</option><option value="1">1 - غير مرضي</option>
+        </select>
+      </label>
+      <strong class="review-stars-preview" id="orderReviewStars">★★★★★</strong>
+      <label>تعليق اختياري<textarea id="orderReviewComment" rows="4" maxlength="1000" placeholder="اكتب ملاحظتك عن جودة العمل والتواصل والالتزام..."></textarea></label>
+      <div class="dashboard-modal-actions"><button class="secondary-button" type="button" data-close-order-review>إلغاء</button><button class="primary-button" id="orderReviewSubmit" type="submit">نشر التقييم</button></div>
+    </form>
+  </div>
+
+  <div class="dashboard-modal" id="depositModal" aria-hidden="true">
+    <div class="dashboard-modal-backdrop" data-close-deposit></div>
+    <form class="dashboard-modal-dialog deposit-dialog" id="depositForm">
+      <button class="dashboard-modal-close" type="button" data-close-deposit aria-label="إغلاق">×</button>
+      <p>شراء رصيد</p><h2>شحن المحفظة عبر شام كاش</h2>
+      <div class="deposit-steps">
+        <label><span>1. قيمة الرصيد المطلوبة</span><input id="depositAmount" type="number" min="100" max="10000" step="1" placeholder="من 100 إلى 10,000 ل.س" required></label>
+        <label><span>2. وسيلة الدفع</span><select id="depositProvider" disabled><option value="sham_cash">شام كاش</option></select></label>
+        <section class="sham-cash-instructions">
+          <img src="assets/payments/sham-cash-qr.png" alt="رمز QR للتحويل إلى محفظة شام كاش الخاصة بـ PikLance">
+          <div><strong>عمر أحمد سرماني</strong><small>رقم المحفظة</small><code>215584bb70803af7552be45bdd522124</code><p>حوّل المبلغ المطلوب من تطبيق شام كاش، ثم احتفظ برقم الحوالة وصورة الإيصال.</p></div>
+        </section>
+        <label><span>3. رقم حوالة شام كاش</span><input id="depositTransferReference" type="text" minlength="4" maxlength="100" placeholder="الرقم الظاهر بعد نجاح التحويل" required></label>
+        <label><span>4. رفع إيصال التحويل</span><input id="depositReceipt" type="file" accept="image/jpeg,image/png,image/webp" required><small>JPG أو PNG أو WebP، بحد أقصى 5MB.</small></label>
+      </div>
+      <p class="deposit-note">تتم مراجعة العملية خلال 2–6 ساعات ضمن أوقات العمل. ستصلك النتيجة في الإشعارات وعلى بريدك الإلكتروني.</p>
+      <span class="deposit-message" id="depositMessage"></span>
+      <div class="dashboard-modal-actions"><button class="secondary-button" type="button" data-close-deposit>إلغاء</button><button class="primary-button" id="depositSubmit" type="submit">شراء</button></div>
     </form>
   </div>
 

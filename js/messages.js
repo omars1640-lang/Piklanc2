@@ -102,7 +102,7 @@ function initial(value) {
 
 function formatPrice(value) {
   const number = Number(value);
-  return Number.isFinite(number) && number > 0 ? `${number.toLocaleString("ar-SY")} ل.س` : "";
+  return Number.isFinite(number) && number > 0 ? `${number.toLocaleString("en-US")} ل.س` : "";
 }
 
 function formatFileSize(bytes = 0) {
@@ -128,9 +128,9 @@ function conversationTime(timestamp) {
   if (!date) return "";
   const today = new Date();
   if (date.toDateString() === today.toDateString()) {
-    return date.toLocaleTimeString("ar-SY", { hour: "2-digit", minute: "2-digit" });
+    return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
   }
-  return date.toLocaleDateString("ar-SY", { month: "short", day: "numeric" });
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function dayLabel(date) {
@@ -139,7 +139,7 @@ function dayLabel(date) {
   yesterday.setDate(today.getDate() - 1);
   if (date.toDateString() === today.toDateString()) return "اليوم";
   if (date.toDateString() === yesterday.toDateString()) return "أمس";
-  return date.toLocaleDateString("ar-SY", { year: "numeric", month: "long", day: "numeric" });
+  return date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 }
 
 function otherParticipant(chat) {
@@ -453,7 +453,7 @@ function renderMessages(snapshot) {
       const meta = document.createElement("span");
       meta.className = "message-meta";
       const time = document.createElement("time");
-      time.textContent = date.toLocaleTimeString("ar-SY", { hour: "2-digit", minute: "2-digit" });
+      time.textContent = date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
       meta.appendChild(time);
       if (mine) {
         const read = document.createElement("span");

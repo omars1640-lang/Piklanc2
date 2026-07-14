@@ -445,6 +445,8 @@
       font-weight: 700;
       text-decoration: none;
       transition: var(--transition);
+      cursor: pointer;
+      font: inherit;
     }
 
     .page-link:hover,
@@ -586,13 +588,7 @@
     </div>
 
     <!-- Pagination -->
-    <div class="pagination" hidden>
-      <a href="#" class="page-link">←</a>
-      <a href="#" class="page-link active">1</a>
-      <a href="#" class="page-link">2</a>
-      <a href="#" class="page-link">3</a>
-      <a href="#" class="page-link">→</a>
-    </div>
+    <nav class="pagination" id="servicesPagination" aria-label="صفحات الخدمات" hidden></nav>
   </div>
 
   <!-- Footer -->

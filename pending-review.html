@@ -1,6 +1,20 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-theme="light">
 <head>
+  <script>
+    (function () {
+      try {
+        var isAdminPage = /(^|\/)dashboard\.html$/i.test(location.pathname);
+        var savedTheme = localStorage.getItem(isAdminPage ? "admin-theme" : "theme") || "light";
+        if (savedTheme === "dark" || savedTheme === "light") {
+          document.documentElement.setAttribute("data-theme", savedTheme);
+          document.documentElement.style.colorScheme = savedTheme;
+        }
+      } catch (error) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>طلبك قيد المراجعة | PikLance</title>
@@ -88,6 +102,7 @@
   </style>
   <link rel="icon" type="image/svg+xml" href="assets/brand/logo-icon.svg">
   <link rel="stylesheet" href="css/brand.css">
+  <script src="js/latin-digits.js"></script>
 </head>
 <body>
   <main>

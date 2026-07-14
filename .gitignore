@@ -1,1 +1,9 @@
 .firebase/
+functions/node_modules/
+functions/.env*
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+_backup_20260709/
+_restore_preview/
+_pre_restore_safety/

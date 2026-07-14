@@ -4,11 +4,13 @@ import {
 import { getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { db, storage } from "./firebase.js";
 import { refreshImageFromStorage, resolveProfileAvatar } from "./avatar-utils.js";
+import { formatStars } from "./reviews.js";
 
 const uid = new URLSearchParams(location.search).get("uid") || "";
 const PORTFOLIO_COLLECTION = "freelancerPortfolio";
 const LEGACY_PORTFOLIO_COLLECTION = "portfolioItems";
 const $ = id => document.getElementById(id);
+const toDate = value => value?.toDate?.() || (value ? new Date(value) : null);
 const specialtyLabels = {
   design: "مصمم جرافيك", web: "مطور برمجيات وويب", writing: "كاتب ومحرر",
   marketing: "مسوق رقمي", audio: "متخصص صوتيات", video: "منتج فيديو"
@@ -29,6 +31,13 @@ function skillTag(value) {
   const tag = document.createElement("span");
   tag.textContent = value;
   return tag;
+}
+
+function badgeChip(badge) {
+  const chip = document.createElement("span");
+  chip.className = `profile-extra-badge ${badge.tone || ""}`.trim();
+  chip.textContent = `${badge.icon || "◆"} ${badge.label || badge.id || "شارة"}`;
+  return chip;
 }
 
 function renderAvatar(profile) {
@@ -66,7 +75,7 @@ function serviceCard(service) {
   const footer = document.createElement("div");
   footer.className = "service-footer";
   const price = document.createElement("strong");
-  price.textContent = `${Number(service.price || 0).toLocaleString("ar-SY")} ل.س`;
+  price.textContent = `${Number(service.price || 0).toLocaleString("en-US")} ل.س`;
   const delivery = document.createElement("span");
   delivery.textContent = `${Number(service.deliveryDays || 1)} يوم`;
   footer.append(price, delivery);
@@ -139,11 +148,67 @@ function careerCard(item) {
   return row;
 }
 
-function renderProfile(profile, services, portfolio) {
+function renderReviewCard(review) {
+  const card = document.createElement("article");
+  card.className = "review-card";
+  const head = document.createElement("div");
+  head.className = "review-head";
+  const user = document.createElement("div");
+  user.className = "review-user";
+  const avatar = document.createElement("span");
+  avatar.className = "review-avatar";
+  avatar.textContent = initials(review.reviewerName || "ع");
+  const copy = document.createElement("div");
+  const name = document.createElement("strong");
+  name.textContent = review.reviewerName || "عميل PikLance";
+  const meta = document.createElement("small");
+  meta.textContent = [review.serviceTitle || "طلب خدمة", toDate(review.createdAt)?.toLocaleDateString("ar-SY")].filter(Boolean).join(" · ");
+  copy.append(name, meta);
+  user.append(avatar, copy);
+  const stars = document.createElement("span");
+  stars.className = "review-stars";
+  stars.textContent = formatStars(review.rating);
+  head.append(user, stars);
+  const comment = document.createElement("p");
+  comment.textContent = review.comment || "ترك العميل تقييماً بدون تعليق نصي.";
+  card.append(head, comment);
+  return card;
+}
+
+function renderReviews(reviews) {
+  const count = reviews.length;
+  const average = count ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / count : 0;
+  const rounded = Math.max(0, Math.min(5, Math.round(average)));
+  $("reviewsCount").textContent = count;
+  $("ratingStat").textContent = average.toFixed(1);
+  $("reviewAverage").textContent = average.toFixed(1);
+  $("reviewStars").textContent = `${"★".repeat(rounded)}${"☆".repeat(5 - rounded)}`;
+  $("reviewTotal").textContent = count;
+  $("reviewsList").replaceChildren(...reviews.map(renderReviewCard));
+  $("reviewsEmpty").hidden = count > 0;
+  $("ratingBars").replaceChildren(...[5, 4, 3, 2, 1].map(stars => {
+    const row = document.createElement("div");
+    row.className = "rating-row";
+    const label = document.createElement("span");
+    label.textContent = `${stars} نجوم`;
+    const track = document.createElement("div");
+    track.className = "rating-track";
+    const fill = document.createElement("span");
+    const ratingCount = reviews.filter(review => Number(review.rating) === stars).length;
+    fill.style.width = `${count ? Math.round(ratingCount / count * 100) : 0}%`;
+    track.appendChild(fill);
+    const total = document.createElement("b");
+    total.textContent = ratingCount;
+    row.append(label, track, total);
+    return row;
+  }));
+}
+
+function renderProfile(profile, services, portfolio, reviews = []) {
   const specialty = specialtyLabels[profile.specialty] || profile.headline || "مستقل للخدمات الرقمية";
   const skills = Array.isArray(profile.skills) && profile.skills.length ? profile.skills : [specialty];
   const completed = Number(profile.completedServices || profile.rank?.completedServices || 0);
-  const rating = Number(profile.rating || 0);
+  const rating = reviews.length ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length : Number(profile.rating || 0);
   document.title = `${profile.name || "مستقل PikLance"} - PikLance`;
   $("profileName").textContent = profile.name || "مستقل PikLance";
   $("profileHeadline").textContent = specialty;
@@ -164,13 +229,15 @@ function renderProfile(profile, services, portfolio) {
   const rank = profile.rank;
   $("profileRankBadge").hidden = !rank?.label;
   if (rank?.label) $("profileRankBadge").textContent = rank.label;
+  const extraBadges = profile.badges && typeof profile.badges === "object" ? Object.values(profile.badges) : [];
+  $("profileExtraBadges").replaceChildren(...extraBadges.map(badgeChip));
 
   const about = document.createElement("p");
   about.textContent = profile.about || "مستقل موثّق على PikLance. ستظهر هنا نبذة الملف عند إضافتها من إعدادات الحساب.";
   $("profileAbout").replaceChildren(about);
   $("portfolioCount").textContent = portfolio.length;
   $("servicesCount").textContent = services.length;
-  $("reviewsCount").textContent = Number(profile.reviewsCount || 0);
+  $("reviewsCount").textContent = reviews.length || Number(profile.reviewsCount || 0);
   $("servicesGrid").replaceChildren(...services.map(serviceCard));
   $("servicesEmpty").hidden = services.length > 0;
 
@@ -178,11 +245,7 @@ function renderProfile(profile, services, portfolio) {
   $("portfolioGrid").replaceChildren(...portfolio.map(item => portfolioCard(item)));
   $("featuredEmpty").hidden = portfolio.length > 0;
   $("portfolioEmpty").hidden = portfolio.length > 0;
-  $("reviewsEmpty").hidden = false;
-  $("reviewAverage").textContent = rating.toFixed(1);
-  $("reviewStars").textContent = `${"★".repeat(Math.round(rating))}${"☆".repeat(5 - Math.round(rating))}`;
-  $("reviewTotal").textContent = Number(profile.reviewsCount || 0);
-  $("ratingBars").replaceChildren();
+  renderReviews(reviews);
   const careerItems = Array.isArray(profile.careerItems) ? profile.careerItems.filter(item => item?.title).slice(0, 8) : [];
   $("experienceList").replaceChildren(...(careerItems.length ? careerItems.map(careerCard) : [careerCard({
     title: "المسيرة المهنية قيد التحديث",
@@ -207,11 +270,12 @@ async function loadProfile() {
     return;
   }
   try {
-    const [profileSnapshot, servicesSnapshot, portfolioSnapshot, legacyPortfolioSnapshot] = await Promise.all([
+    const [profileSnapshot, servicesSnapshot, portfolioSnapshot, legacyPortfolioSnapshot, reviewsSnapshot] = await Promise.all([
       getDoc(doc(db, "publicProfiles", uid)),
       getDocs(query(collection(db, "services"), where("status", "==", "published"))),
       getDocs(query(collection(db, PORTFOLIO_COLLECTION), where("published", "==", true))),
-      getDocs(query(collection(db, LEGACY_PORTFOLIO_COLLECTION), where("published", "==", true))).catch(() => ({ docs: [] }))
+      getDocs(query(collection(db, LEGACY_PORTFOLIO_COLLECTION), where("published", "==", true))).catch(() => ({ docs: [] })),
+      getDocs(query(collection(db, "reviews"), where("status", "==", "published"))).catch(() => ({ docs: [] }))
     ]);
     if (!profileSnapshot.exists()) {
       showNotFound();
@@ -228,6 +292,10 @@ async function loadProfile() {
     ]
       .filter(item => item.ownerUid === uid && item.published === true)
       .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    const reviews = reviewsSnapshot.docs
+      .map(item => ({ id: item.id, ...item.data() }))
+      .filter(item => item.targetUid === uid && item.targetType === "freelancer")
+      .sort((a, b) => (toDate(b.createdAt)?.getTime() || 0) - (toDate(a.createdAt)?.getTime() || 0));
     await Promise.all(portfolio.map(async item => {
       const mediaPath = item.mediaPath || item.imagePath;
       if ((item.mediaUrl || item.imageUrl) || !mediaPath) return;
@@ -239,7 +307,7 @@ async function loadProfile() {
       showNotFound();
       return;
     }
-    renderProfile(profile, services, portfolio);
+    renderProfile(profile, services, portfolio, reviews);
     $("pageLoader").classList.add("hidden");
   } catch (error) {
     console.error("Unable to load freelancer profile", error);

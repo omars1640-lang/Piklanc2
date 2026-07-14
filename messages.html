@@ -1,6 +1,20 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-theme="light">
 <head>
+  <script>
+    (function () {
+      try {
+        var isAdminPage = /(^|\/)dashboard\.html$/i.test(location.pathname);
+        var savedTheme = localStorage.getItem(isAdminPage ? "admin-theme" : "theme") || "light";
+        if (savedTheme === "dark" || savedTheme === "light") {
+          document.documentElement.setAttribute("data-theme", savedTheme);
+          document.documentElement.style.colorScheme = savedTheme;
+        }
+      } catch (error) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>الرسائل - PikLance</title>
@@ -11,13 +25,14 @@
   <link rel="stylesheet" href="css/messages.css">
   <link rel="icon" type="image/svg+xml" href="assets/brand/logo-icon.svg">
   <link rel="stylesheet" href="css/brand.css">
+  <script src="js/latin-digits.js"></script>
 </head>
 <body data-no-global-footer="true">
   <header class="site-header" id="navbar">
     <div class="site-header-inner">
       <a class="site-header-brand" href="index.html" aria-label="PikLance home">
-        <span class="site-header-brand-mark">P</span>
-        <strong>Pik<span>Lance</span></strong>
+        <img class="piklance-brand-logo light-logo" src="assets/brand/logo-light.svg" alt="PikLance" width="150" height="41">
+        <img class="piklance-brand-logo dark-logo" src="assets/brand/logo-dark.svg" alt="" width="150" height="41" aria-hidden="true">
       </a>
       <nav class="site-header-nav" id="siteHeaderNav" aria-label="التنقل الرئيسي">
         <a href="index.html">الرئيسية</a>

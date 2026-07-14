@@ -10,8 +10,9 @@
   <link rel="stylesheet" href="css/admin-dashboard.css">
   <link rel="icon" type="image/svg+xml" href="assets/brand/logo-icon.svg">
   <link rel="stylesheet" href="css/brand.css">
+  <link rel="stylesheet" href="css/payments.css">
 </head>
-<body>
+<body class="admin-page">
   <div class="admin-loading" id="adminLoading">
     <img class="piklance-loading-icon" src="assets/brand/logo-icon.svg" alt="">
     <strong>جاري التحقق من صلاحيات الإدارة...</strong>
@@ -53,7 +54,7 @@
 
       <p class="nav-label">تشغيل المنصة</p>
       <button class="nav-link" type="button" data-section="marketplace"><span>▦</span><b>الخدمات والطلبات</b><i>قريباً</i></button>
-      <button class="nav-link" type="button" data-section="finance"><span>◈</span><b>المدفوعات والعمولات</b></button>
+      <button class="nav-link" type="button" data-section="finance"><span>◈</span><b>المدفوعات والعمولات</b><em id="financeBadge" hidden>0</em></button>
       <button class="nav-link" type="button" data-section="support"><span>?</span><b>الدعم والنزاعات</b><i>قريباً</i></button>
       <button class="nav-link" type="button" data-section="content"><span>▤</span><b>المحتوى والتصنيفات</b><i>قريباً</i></button>
 
@@ -220,6 +221,20 @@
         <article class="metric-card orange"><span class="metric-icon">⌛</span><div><small>الرصيد المحجوز</small><strong id="financeHeldTotal">0</strong></div></article>
         <article class="metric-card green"><span class="metric-icon">%</span><div><small>عمولة المنصة</small><strong id="financeFeeTotal">0</strong></div></article>
         <article class="metric-card purple"><span class="metric-icon">✓</span><div><small>المحرر للمستقلين</small><strong id="financeReleasedTotal">0</strong></div></article>
+      </div>
+      <div class="metrics-grid compact">
+        <article class="metric-card orange"><span class="metric-icon">↑</span><div><small>طلبات شحن معلقة</small><strong id="pendingDepositsTotal">0</strong></div></article>
+        <article class="metric-card purple"><span class="metric-icon">↓</span><div><small>طلبات سحب قيد المتابعة</small><strong id="pendingWithdrawalsTotal">0</strong></div></article>
+      </div>
+      <div class="data-panel payment-admin-block">
+        <div class="panel-head"><div><p>شام كاش</p><h3>طلبات شراء الرصيد</h3></div></div>
+        <div class="table-wrap"><table><thead><tr><th>رقم العملية</th><th>العميل</th><th>المبلغ</th><th>مرجع الحوالة</th><th>الحالة</th><th>التاريخ</th><th>الإجراء</th></tr></thead><tbody id="depositRequestsTable"></tbody></table></div>
+        <div class="empty-state" id="depositRequestsEmpty"><span>↑</span><strong>لا توجد طلبات شحن</strong></div>
+      </div>
+      <div class="data-panel payment-admin-block">
+        <div class="panel-head"><div><p>شام كاش</p><h3>طلبات سحب المستقلين</h3></div></div>
+        <div class="table-wrap"><table><thead><tr><th>رقم العملية</th><th>المستقل</th><th>المبلغ</th><th>رقم المحفظة</th><th>الحالة</th><th>التاريخ</th><th>الإجراء</th></tr></thead><tbody id="withdrawalRequestsTable"></tbody></table></div>
+        <div class="empty-state" id="withdrawalRequestsEmpty"><span>↓</span><strong>لا توجد طلبات سحب</strong></div>
       </div>
       <div class="data-panel">
         <div class="data-toolbar">
@@ -388,9 +403,24 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="paymentReviewModal" aria-hidden="true">
+    <div class="modal-dialog payment-review-dialog">
+      <header><div><p>الإدارة المالية</p><h2 id="paymentReviewTitle">مراجعة العملية</h2></div><button type="button" data-close-payment-review>×</button></header>
+      <div class="modal-body">
+        <div class="payment-review-summary"><div><small>رقم العملية</small><strong id="paymentReviewReference">-</strong></div><div><small>المستخدم</small><strong id="paymentReviewUser">-</strong></div><div><small>المبلغ</small><strong id="paymentReviewAmount">0 ل.س</strong></div></div>
+        <p class="payment-review-details" id="paymentReviewDetails"></p>
+        <img class="payment-review-image" id="paymentReviewImage" alt="مستند العملية" hidden>
+        <label class="payment-review-reason">ملاحظة الإدارة أو سبب الرفض<textarea id="paymentReviewReason" rows="4" maxlength="500" placeholder="يصبح السبب إلزامياً عند الرفض"></textarea></label>
+        <span class="payment-review-message" id="paymentReviewMessage"></span>
+      </div>
+      <footer><button class="secondary-button" type="button" data-close-payment-review>إغلاق</button><button class="danger-button" id="paymentRejectButton" type="button">رفض</button><button class="primary-button" id="paymentApproveButton" type="button">موافقة</button></footer>
+    </div>
+  </div>
+
   <div class="admin-toast" id="adminToast" role="status"></div>
   <script type="module" src="js/admin-dashboard.js"></script>
   <script type="module" src="js/admin-operations.js"></script>
+  <script type="module" src="js/admin-payments.js"></script>
   <script type="module" src="js/footer-copy.js"></script>
 </body>
 </html>

@@ -272,7 +272,59 @@ service cloud.firestore {
         ]);
     }
 
+    function validReviewCreate(reviewId) {
+      let data = request.resource.data;
+      let orderPath = /databases/$(database)/documents/orders/$(data.orderId);
+      let order = get(orderPath).data;
+      return activeUser() && exists(orderPath)
+        && reviewId == data.orderId + "_" + request.auth.uid
+        && order.status == "completed"
+        && request.auth.uid in [order.buyerUid, order.freelancerUid]
+        && data.keys().hasOnly([
+          "orderId", "serviceId", "serviceTitle", "serviceCategory", "reviewerUid", "reviewerName", "reviewerType",
+          "targetUid", "targetName", "targetType", "rating", "comment", "status", "createdAt"
+        ])
+        && data.keys().hasAll([
+          "orderId", "serviceId", "serviceTitle", "reviewerUid", "reviewerName", "reviewerType",
+          "targetUid", "targetName", "targetType", "rating", "comment", "status", "createdAt"
+        ])
+        && data.reviewerUid == request.auth.uid && data.status == "published"
+        && data.rating is int && data.rating >= 1 && data.rating <= 5
+        && data.comment is string && data.comment.size() <= 1000
+        && data.serviceId is string && data.serviceId.size() <= 100
+        && data.serviceTitle is string && data.serviceTitle.size() > 0 && data.serviceTitle.size() <= 180
+        && data.serviceCategory is string && data.serviceCategory.size() <= 120
+        && data.reviewerName is string && data.reviewerName.size() > 0 && data.reviewerName.size() <= 160
+        && data.targetName is string && data.targetName.size() > 0 && data.targetName.size() <= 160
+        && data.createdAt == request.time
+        && ((request.auth.uid == order.buyerUid && data.reviewerType == "buyer" && data.targetType == "freelancer" && data.targetUid == order.freelancerUid)
+          || (request.auth.uid == order.freelancerUid && data.reviewerType == "freelancer" && data.targetType == "buyer" && data.targetUid == order.buyerUid));
+    }
+
     match /users/{userId} {
+      function validAccessUpdate() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        let codeId = request.resource.data.accessCode;
+        let codePath = /databases/$(database)/documents/promoCodes/$(codeId);
+        return changed.hasOnly(["earlyAccess", "accessCode", "badges", "accessGrantedAt"])
+          && request.resource.data.earlyAccess == true
+          && request.resource.data.accessGrantedAt == request.time
+          && existsAfter(codePath)
+          && getAfter(codePath).data.type == "early_access"
+          && getAfter(codePath).data.lastUsedBy == userId;
+      }
+
+      function validReferralUpdate() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        let codeId = request.resource.data.referralCodeUsed;
+        let codePath = /databases/$(database)/documents/promoCodes/$(codeId);
+        return changed.hasOnly(["referredByUid", "referralCodeUsed"])
+          && existsAfter(codePath)
+          && getAfter(codePath).data.type == "referral"
+          && getAfter(codePath).data.lastUsedBy == userId
+          && request.resource.data.referredByUid == getAfter(codePath).data.ownerUid;
+      }
+
       function validFreelancerResubmission() {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
         return signedIn()
@@ -340,6 +392,10 @@ service cloud.firestore {
       allow update: if isAdmin()
         || validFreelancerResubmission()
         || (
+          signedIn() && request.auth.uid == userId
+          && (validAccessUpdate() || validReferralUpdate())
+        )
+        || (
           signedIn()
           && request.auth.uid == userId
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "phone", "specialty"])
@@ -371,7 +427,7 @@ service cloud.firestore {
           signedIn()
           && request.auth.uid == userId
           && request.resource.data.keys().hasOnly([
-            "name", "accountType", "avatar", "avatarPath", "status", "specialty", "about", "skills", "careerItems"
+            "name", "accountType", "avatar", "avatarPath", "status", "specialty", "about", "skills", "careerItems", "badges", "badgeSummary", "referralCode"
           ])
           && request.resource.data.accountType in ["buyer", "freelancer"]
           && request.resource.data.name == userAfter(userId).name
@@ -407,6 +463,13 @@ service cloud.firestore {
           )
         );
       allow update: if isAdmin()
+        || (
+          signedIn() && request.auth.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["badges", "badgeSummary"])
+          && existsAfter(/databases/$(database)/documents/userBadges/$(userId + "_friends"))
+          && getAfter(/databases/$(database)/documents/userBadges/$(userId + "_friends")).data.uid == userId
+          && getAfter(/databases/$(database)/documents/userBadges/$(userId + "_friends")).data.source == "early_access_code"
+        )
         || (
           activeUser()
           && request.auth.uid == userId
@@ -650,13 +713,18 @@ service cloud.firestore {
             || resource.data.freelancerUid == request.auth.uid
           )
         );
-      allow create: if validOrderCreate();
+      allow create: if false;
       allow update: if isAdmin()
         || validOrderDelivery()
-        || validOrderApproval()
-        || validOrderAutoRelease()
         || validOrderDispute();
       allow delete: if false;
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if resource.data.status == "published" || isAdmin()
+        || (activeUser() && request.auth.uid in [resource.data.reviewerUid, resource.data.targetUid]);
+      allow create: if validReviewCreate(reviewId);
+      allow update, delete: if isAdmin();
     }
 
     match /favorites/{userId}/services/{serviceId} {
@@ -676,6 +744,62 @@ service cloud.firestore {
         && request.resource.data.launchDate == "2026-08-01"
         && request.resource.data.createdAt == request.time;
       allow read, update, delete: if isAdmin();
+    }
+
+    match /promoCodeGroups/{groupId} {
+      allow read, create, update, delete: if isAdmin();
+    }
+
+    match /promoCodes/{codeId} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        signedIn() && resource.data.status == "active" && resource.data.usedCount < resource.data.maxUses
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["usedCount", "status", "lastUsedAt", "lastUsedBy", "usedBy"])
+        && request.resource.data.usedCount == resource.data.usedCount + 1
+        && request.resource.data.usedBy is list
+        && request.resource.data.usedBy.size() == resource.data.usedBy.size() + 1
+        && request.resource.data.lastUsedBy == request.auth.uid
+        && request.resource.data.lastUsedAt == request.time
+        && request.resource.data.status in ["active", "used"]
+      );
+    }
+
+    match /badges/{badgeId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /userBadges/{badgeDocId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if isAdmin() || (
+        signedIn() && request.resource.data.uid == request.auth.uid
+        && request.resource.data.badgeId == "friends" && request.resource.data.source == "early_access_code"
+        && request.resource.data.code is string
+        && existsAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code))
+        && getAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code)).data.type == "early_access"
+        && getAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code)).data.lastUsedBy == request.auth.uid
+      );
+      allow update, delete: if isAdmin();
+    }
+
+    match /referrals/{referralId} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid in [resource.data.inviterUid, resource.data.invitedUid]);
+      allow create, update: if isAdmin() || (
+        signedIn() && request.resource.data.invitedUid == request.auth.uid && request.resource.data.status == "pending"
+        && request.resource.data.code is string
+        && existsAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code))
+        && getAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code)).data.type == "referral"
+        && getAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code)).data.lastUsedBy == request.auth.uid
+        && request.resource.data.inviterUid == getAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code)).data.ownerUid
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /userBenefits/{benefitId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create, update, delete: if isAdmin();
     }
 
     match /supportTickets/{ticketId} {
@@ -975,12 +1099,51 @@ service cloud.firestore {
           "reply_ticket", "create_article", "update_article",
           "delete_article", "manage_faq", "manage_category",
           "approve_service", "reject_service", "delete_service",
-          "update_freelancer_rank"
+          "update_freelancer_rank", "create_promo_codes", "assign_badge", "create_badge"
         ]
         && request.resource.data.reason is string
         && request.resource.data.reason.size() <= 500
         && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
+    }
+
+    match /wallets/{userId} {
+      allow read: if isAdmin() || (activeUser() && request.auth.uid == userId);
+      allow create, update, delete: if false;
+    }
+
+    match /walletLedger/{entryId} {
+      allow read: if isAdmin() || (activeUser() && resource.data.userUid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    match /depositRequests/{requestId} {
+      allow read: if isAdmin() || (activeUser() && resource.data.userUid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    match /withdrawalRequests/{requestId} {
+      allow read: if isAdmin() || (activeUser() && resource.data.userUid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    match /payoutMethods/{userId}/items/{methodId} {
+      allow read: if isAdmin() || (activeUser() && request.auth.uid == userId);
+      allow create, update, delete: if false;
+    }
+
+    match /accountBenefits/{userId} {
+      allow read: if isAdmin() || (activeUser() && request.auth.uid == userId);
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /paymentProviderReferences/{referenceId} {
+      allow read, write: if false;
+    }
+
+    match /mailQueue/{mailId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if false;
     }
 
     match /platformSettings/{settingId} {
