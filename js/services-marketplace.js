@@ -195,9 +195,10 @@ async function loadServices() {
 $("serviceSearchButton").addEventListener("click", () => applyFilters({ resetPage: true }));
 
 const searchParams = new URLSearchParams(location.search);
-const requestedCategory = searchParams.get("cat") || searchParams.get("category");
-if (requestedCategory && [...$("categoryFilter").options].some(option => option.value === requestedCategory)) {
-  $("categoryFilter").value = requestedCategory;
+const requestedCategory = (searchParams.get("cat") || searchParams.get("category") || "").trim().toLowerCase();
+const linkedCategory = categoryFilterValue(requestedCategory) === "other" ? requestedCategory : categoryFilterValue(requestedCategory);
+if (linkedCategory && [...$("categoryFilter").options].some(option => option.value === linkedCategory)) {
+  $("categoryFilter").value = linkedCategory;
 }
 const requestedSearch = new URLSearchParams(location.search).get("q");
 if (requestedSearch) $("searchInput").value = requestedSearch.slice(0, 100);

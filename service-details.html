@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+  <script>
+    (function () {
+      try {
+        var savedTheme = localStorage.getItem("theme") || "light";
+        document.documentElement.setAttribute("data-theme", savedTheme === "dark" ? "dark" : "light");
+        document.documentElement.style.colorScheme = savedTheme === "dark" ? "dark" : "light";
+      } catch (error) {}
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>تفاصيل الخدمة - PikLance</title>
@@ -38,19 +47,20 @@
     <div class="service-breadcrumb container">
       <a href="index.html">الرئيسية</a><span>‹</span>
       <a href="services.html">الخدمات</a><span>‹</span>
-      <b id="breadcrumbCategory">تفاصيل الخدمة</b>
+      <b id="breadcrumbCategory" class="service-text-loading service-text-loading-short" aria-label="جاري التحميل"></b>
     </div>
 
     <section class="service-hero">
       <div class="container service-hero-grid">
         <div class="service-heading">
-          <span class="category-pill" id="serviceCategory">تصميم</span>
-          <h1 id="serviceTitle">خدمة احترافية مصممة لنتائج واضحة</h1>
-          <p id="serviceSubtitle">تنفيذ متقن، تواصل مباشر، وتسليم ضمن الوقت المتفق عليه.</p>
+          <span class="category-pill service-text-loading service-text-loading-category" id="serviceCategory" aria-label="جاري التحميل"></span>
+          <h1 id="serviceTitle" class="service-text-loading service-text-loading-title" aria-label="جاري التحميل"></h1>
+          <p id="serviceSubtitle" class="service-text-loading service-text-loading-subtitle" aria-label="جاري التحميل"></p>
           <div class="service-proof">
-            <span class="rating"><b>★</b> <strong id="serviceRating">4.9</strong> <small id="reviewCount">(128 تقييماً)</small></span>
+            <span class="rating service-text-loading service-text-loading-proof" id="serviceProofLoading" aria-label="جاري التحميل"></span>
+            <span class="rating service-proof-content" hidden><b>★</b> <strong id="serviceRating"></strong> <small id="reviewCount"></small></span>
             <span>✓ بائع موثّق</span>
-            <span id="ordersCount">أكثر من 300 طلب</span>
+            <span id="ordersCount" class="service-text-loading service-text-loading-orders" aria-label="جاري التحميل"></span>
           </div>
         </div>
         <div class="hero-actions">
@@ -64,8 +74,8 @@
       <div class="service-content">
         <section class="gallery-card">
           <div class="main-media">
-            <img id="mainServiceImage" src="" alt="">
-            <span class="popular-badge" id="popularBadge">اختيار العملاء</span>
+            <div class="service-image-loader" id="mainServiceImageLoader" aria-label="جاري تحميل صورة الخدمة"><span></span><span></span><span></span></div>
+            <img id="mainServiceImage" class="is-loading" src="" alt="">
           </div>
           <div class="gallery-thumbs" id="galleryThumbs" hidden></div>
         </section>
@@ -82,7 +92,7 @@
             <p>عن الخدمة</p>
             <h2>خدمة مبنية حول احتياج مشروعك</h2>
           </div>
-          <div class="description-copy" id="serviceDescription"></div>
+          <div class="description-copy" id="serviceDescription"><span class="service-text-loading service-text-loading-paragraph" aria-label="جاري التحميل"></span></div>
         </section>
 
         <section class="detail-card" id="deliverables">
@@ -90,7 +100,7 @@
             <p>نطاق العمل</p>
             <h2>ماذا ستحصل عليه؟</h2>
           </div>
-          <div class="deliverables-grid" id="deliverablesGrid"></div>
+          <div class="deliverables-grid" id="deliverablesGrid"><span class="service-text-loading service-text-loading-card" aria-label="جاري التحميل"></span><span class="service-text-loading service-text-loading-card" aria-label="جاري التحميل"></span><span class="service-text-loading service-text-loading-card" aria-label="جاري التحميل"></span></div>
         </section>
 
         <section class="detail-card work-steps">
@@ -110,10 +120,10 @@
             <img id="sellerImage" src="" alt="">
             <div>
               <span class="verified">✓ موثّق</span>
-              <h2 id="sellerName">مقدم الخدمة</h2>
-              <p id="sellerSpecialty">متخصص في الخدمات الرقمية</p>
+              <h2 id="sellerName" class="service-text-loading service-text-loading-medium" aria-label="جاري التحميل"></h2>
+              <p id="sellerSpecialty" class="service-text-loading service-text-loading-short" aria-label="جاري التحميل"></p>
               <div class="seller-meta">
-                <span>★ <b id="sellerRating">4.9</b></span>
+                <span>★ <b id="sellerRating" class="service-text-loading service-text-loading-number" aria-label="جاري التحميل"></b></span>
                 <span>◷ يرد خلال ساعتين</span>
                 <span>● متاح للعمل</span>
               </div>
@@ -132,7 +142,7 @@
               <p>آراء العملاء</p>
               <h2>تقييمات موثوقة بعد التسليم</h2>
             </div>
-            <strong><span id="reviewAverage">4.9</span> ★</strong>
+            <strong><span id="reviewAverage" class="service-text-loading service-text-loading-number" aria-label="جاري التحميل"></span> ★</strong>
           </div>
           <div class="reviews-list" id="reviewsList"></div>
         </section>
@@ -144,13 +154,13 @@
           <div class="package-body">
             <div class="package-price">
               <span>تبدأ من</span>
-              <strong id="packagePrice">25,000 ل.س</strong>
+              <strong id="packagePrice" class="service-text-loading service-text-loading-medium" aria-label="جاري التحميل"></strong>
             </div>
             <p id="packageDescription"></p>
             <ul id="packageFeatures"></ul>
             <div class="package-meta">
-              <span>◷ <b id="packageDelivery">4 أيام</b></span>
-              <span>↻ <b id="packageRevisions">تعديلان</b></span>
+              <span>◷ <b id="packageDelivery" class="service-text-loading service-text-loading-short" aria-label="جاري التحميل"></b></span>
+              <span>↻ <b id="packageRevisions" class="service-text-loading service-text-loading-short" aria-label="جاري التحميل"></b></span>
             </div>
             <button class="purchase-primary" id="orderService" type="button">شراء الخدمة</button>
             <a class="purchase-secondary" id="startConversation" href="login.html">ناقش الخدمة مع البائع</a>

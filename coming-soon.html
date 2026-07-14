@@ -21,6 +21,9 @@
       --danger: #ff6b8b;
       --success: #5ee0b8;
       --shadow: 0 28px 90px rgba(0, 0, 0, .36);
+      --piklance-footer-bg: #0f0b19;
+      --piklance-footer-muted: #cfc4df;
+      --piklance-footer-border: rgba(255, 255, 255, .14);
     }
 
     * { box-sizing: border-box; }
@@ -36,6 +39,12 @@
         var(--bg);
       font-family: "Cairo", sans-serif;
       overflow-x: hidden;
+    }
+
+    .piklance-global-footer {
+      background: var(--bg) !important;
+      color: var(--muted) !important;
+      border-top-color: var(--border) !important;
     }
 
     .launch-page {

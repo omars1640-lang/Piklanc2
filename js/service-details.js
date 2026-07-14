@@ -76,11 +76,21 @@ function updateContactLinks() {
 
 function renderGallery() {
   const imageUrl = service.imageUrl || "assets/service-placeholder.svg";
-  $("mainServiceImage").src = imageUrl;
-  $("mainServiceImage").alt = service.title;
+  const image = $("mainServiceImage");
+  const loader = $("mainServiceImageLoader");
+  const finishLoading = () => {
+    image.classList.remove("is-loading");
+    loader.hidden = true;
+  };
+  image.classList.add("is-loading");
+  loader.hidden = false;
+  image.addEventListener("load", finishLoading, { once: true });
+  image.addEventListener("error", finishLoading, { once: true });
+  image.src = imageUrl;
+  image.alt = service.title;
+  if (image.complete) requestAnimationFrame(finishLoading);
   $("galleryThumbs").replaceChildren();
   $("galleryThumbs").hidden = true;
-  $("popularBadge").hidden = true;
 }
 
 function renderPackage() {
@@ -144,6 +154,9 @@ function renderService() {
   $("serviceRating").textContent = reviewAverage.toFixed(1);
   $("reviewCount").textContent = `(${serviceReviews.length || Number(service.reviewsCount || 0)} تقييم)`;
   $("ordersCount").textContent = `${Number(service.completedOrders || 0)} طلب مكتمل`;
+  document.querySelectorAll(".service-text-loading").forEach(element => element.classList.remove("service-text-loading"));
+  $("serviceProofLoading").hidden = true;
+  document.querySelector(".service-proof-content").hidden = false;
 
   const description = document.createElement("p");
   description.textContent = service.description || "لم يضف المستقل وصفاً تفصيلياً بعد.";

@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" data-theme="light">
 <head>
+  <script>
+    (function () {
+      try {
+        var savedTheme = localStorage.getItem("theme") || "light";
+        document.documentElement.setAttribute("data-theme", savedTheme === "dark" ? "dark" : "light");
+        document.documentElement.style.colorScheme = savedTheme === "dark" ? "dark" : "light";
+      } catch (error) {}
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>الخدمات - PikLance</title>
@@ -340,6 +349,50 @@
       box-shadow: 0 25px 50px var(--shadow-lg-color);
     }
 
+    .service-card.service-card-skeleton {
+      pointer-events: none;
+      min-height: 390px;
+    }
+
+    .service-card-skeleton:hover {
+      transform: none;
+      box-shadow: 0 10px 30px var(--shadow-color);
+    }
+
+    .skeleton-block {
+      position: relative;
+      overflow: hidden;
+      background: var(--bg-tertiary);
+    }
+
+    .skeleton-block::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      transform: translateX(105%);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+      animation: services-skeleton-shimmer 1.35s ease-in-out infinite;
+    }
+
+    [data-theme="dark"] .skeleton-block::after {
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.08), transparent);
+    }
+
+    .service-card-skeleton .service-img { background: var(--bg-tertiary); }
+    .service-card-skeleton .service-body { display: grid; gap: 13px; }
+    .service-card-skeleton .skeleton-category { width: 32%; height: 24px; border-radius: 999px; }
+    .service-card-skeleton .skeleton-title { width: 88%; height: 22px; border-radius: 7px; }
+    .service-card-skeleton .skeleton-seller { width: 58%; height: 32px; border-radius: 8px; }
+    .service-card-skeleton .skeleton-footer { width: 100%; height: 24px; margin-top: 4px; border-radius: 7px; }
+
+    @keyframes services-skeleton-shimmer {
+      to { transform: translateX(-105%); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .skeleton-block::after { animation: none; }
+    }
+
     .service-img {
       height: 200px;
       background-size: cover;
@@ -584,7 +637,12 @@
   <!-- Services Grid -->
   <div class="container">
     <div class="services-grid" id="servicesContainer">
-      <!-- الخدمات ستضاف هنا ديناميكياً أو ستكون ثابتة -->
+      <article class="service-card service-card-skeleton" aria-hidden="true"><div class="service-img skeleton-block"></div><div class="service-body"><span class="skeleton-block skeleton-category"></span><span class="skeleton-block skeleton-title"></span><span class="skeleton-block skeleton-seller"></span><span class="skeleton-block skeleton-footer"></span></div></article>
+      <article class="service-card service-card-skeleton" aria-hidden="true"><div class="service-img skeleton-block"></div><div class="service-body"><span class="skeleton-block skeleton-category"></span><span class="skeleton-block skeleton-title"></span><span class="skeleton-block skeleton-seller"></span><span class="skeleton-block skeleton-footer"></span></div></article>
+      <article class="service-card service-card-skeleton" aria-hidden="true"><div class="service-img skeleton-block"></div><div class="service-body"><span class="skeleton-block skeleton-category"></span><span class="skeleton-block skeleton-title"></span><span class="skeleton-block skeleton-seller"></span><span class="skeleton-block skeleton-footer"></span></div></article>
+      <article class="service-card service-card-skeleton" aria-hidden="true"><div class="service-img skeleton-block"></div><div class="service-body"><span class="skeleton-block skeleton-category"></span><span class="skeleton-block skeleton-title"></span><span class="skeleton-block skeleton-seller"></span><span class="skeleton-block skeleton-footer"></span></div></article>
+      <article class="service-card service-card-skeleton" aria-hidden="true"><div class="service-img skeleton-block"></div><div class="service-body"><span class="skeleton-block skeleton-category"></span><span class="skeleton-block skeleton-title"></span><span class="skeleton-block skeleton-seller"></span><span class="skeleton-block skeleton-footer"></span></div></article>
+      <article class="service-card service-card-skeleton" aria-hidden="true"><div class="service-img skeleton-block"></div><div class="service-body"><span class="skeleton-block skeleton-category"></span><span class="skeleton-block skeleton-title"></span><span class="skeleton-block skeleton-seller"></span><span class="skeleton-block skeleton-footer"></span></div></article>
     </div>
 
     <!-- Pagination -->

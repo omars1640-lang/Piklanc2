@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" data-theme="light">
 <head>
+  <script>
+    (function () {
+      try {
+        var savedTheme = localStorage.getItem("theme") || "light";
+        document.documentElement.setAttribute("data-theme", savedTheme === "dark" ? "dark" : "light");
+        document.documentElement.style.colorScheme = savedTheme === "dark" ? "dark" : "light";
+      } catch (error) {}
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PikLance - منصة الخدمات الرقمية السورية</title>
