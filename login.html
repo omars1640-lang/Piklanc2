@@ -411,6 +411,14 @@
           return;
         }
 
+        const settingsSnapshot = await getDoc(doc(db, "platformSettings", "general"));
+        const prelaunchMode = !settingsSnapshot.exists() || settingsSnapshot.data().prelaunchMode !== false;
+        if (prelaunchMode && profile.role !== "admin" && profile.earlyAccess !== true) {
+          await signOut(auth);
+          showMessage(loginMessage, "المنصة حالياً بمرحلة الوصول المبكر. الدخول متاح لحسابات الإدارة والمستخدمين المسجلين بكود وصول مسبق.", "info");
+          return;
+        }
+
         location.href = loginDestination(profile);
       } catch (error) {
         console.error("Login failed", error);
