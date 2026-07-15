@@ -70,8 +70,8 @@ async function submitDeposit(event) {
   const transferReference = $("depositTransferReference").value.trim();
   const receipt = $("depositReceipt").files?.[0];
   const message = $("depositMessage");
-  if (!Number.isInteger(amount) || amount < 100 || amount > 10000) {
-    message.textContent = "المبلغ يجب أن يكون بين 100 و10,000 ل.س بدون كسور.";
+  if (!Number.isInteger(amount) || amount < 1 || amount > 100) {
+    message.textContent = "المبلغ يجب أن يكون بين 1 و100 ل.س بدون كسور.";
     return;
   }
   if (transferReference.length < 4) {
