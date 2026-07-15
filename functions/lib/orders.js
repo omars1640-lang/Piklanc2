@@ -1,8 +1,8 @@
 const { onCall } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const {
-  CURRENCY, FieldValue, HttpsError, REGION, Timestamp, cleanText, db, ledgerEntry,
-  notification, platformReference, requireAuth, requireProfile, walletData
+  CURRENCY, CURRENCY_VERSION, FieldValue, HttpsError, REGION, Timestamp, cleanText, db, ledgerEntry,
+  notification, platformReference, requireAuth, requireCurrencyReady, requireProfile, walletData
 } = require("./helpers");
 
 const REVIEW_DAYS = 15;
@@ -21,6 +21,7 @@ function activeBenefit(snapshot) {
 }
 
 async function releaseOrder(orderRef, expectedBuyerUid = "") {
+  await requireCurrencyReady();
   return db.runTransaction(async transaction => {
     const orderSnapshot = await transaction.get(orderRef);
     if (!orderSnapshot.exists) throw new HttpsError("not-found", "الطلب غير موجود.");
@@ -80,6 +81,7 @@ async function releaseOrder(orderRef, expectedBuyerUid = "") {
 
 exports.createWalletOrder = onCall({ region: REGION, enforceAppCheck: false }, async request => {
   const uid = requireAuth(request);
+  await requireCurrencyReady();
   const buyer = await requireProfile(uid, "buyer");
   const serviceId = cleanText(request.data?.serviceId, 100);
   if (!serviceId) throw new HttpsError("invalid-argument", "الخدمة غير محددة.");
@@ -165,6 +167,7 @@ exports.createWalletOrder = onCall({ region: REGION, enforceAppCheck: false }, a
         releaseScope: "single_order"
       },
       payment: { status: "wallet_confirmed", method: "wallet", mode: "live", walletUid: uid },
+      currencyVersion: CURRENCY_VERSION,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp()
     });
