@@ -9,6 +9,7 @@ const db = getFirestore();
 const bucket = getStorage().bucket();
 const REGION = "europe-west1";
 const CURRENCY = "SYP";
+const CURRENCY_VERSION = "SYP_NEW_2026";
 
 function requireAuth(request) {
   if (!request.auth?.uid) throw new HttpsError("unauthenticated", "يجب تسجيل الدخول أولاً.");
@@ -56,8 +57,16 @@ function walletData(data = {}) {
     lifetimeDeposits: Number(data.lifetimeDeposits || 0),
     lifetimeEarnings: Number(data.lifetimeEarnings || 0),
     lifetimeWithdrawals: Number(data.lifetimeWithdrawals || 0),
-    currency: CURRENCY
+    currency: CURRENCY,
+    currencyVersion: data.currencyVersion || (Object.keys(data).length ? "" : CURRENCY_VERSION)
   };
+}
+
+async function requireCurrencyReady() {
+  const snapshot = await db.doc(`platformMigrations/${CURRENCY_VERSION}`).get();
+  if (snapshot.data()?.status !== "completed") {
+    throw new HttpsError("unavailable", "النظام المالي متوقف دقائق قليلة لإتمام تحويل العملة.");
+  }
 }
 
 function platformReference(prefix, id, now = new Date()) {
@@ -91,6 +100,7 @@ function ledgerEntry(transaction, uid, data) {
   transaction.set(ref, {
     userUid: uid,
     currency: CURRENCY,
+    currencyVersion: CURRENCY_VERSION,
     createdAt: FieldValue.serverTimestamp(),
     ...data
   });
@@ -108,7 +118,7 @@ async function assertStorageObject(path, uid, root) {
 }
 
 module.exports = {
-  CURRENCY, FieldValue, HttpsError, REGION, Timestamp, assertStorageObject, bucket,
+  CURRENCY, CURRENCY_VERSION, FieldValue, HttpsError, REGION, Timestamp, assertStorageObject, bucket,
   cleanText, db, integerAmount, ledgerEntry, notification, platformReference,
-  queueEmail, requireAdmin, requireAuth, requireProfile, walletData
+  queueEmail, requireAdmin, requireAuth, requireCurrencyReady, requireProfile, walletData
 };
