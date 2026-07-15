@@ -22,7 +22,7 @@ const categoryLabels = {
 
 const PAGE_SIZE = 9;
 const requestedPage = Math.max(1, Number.parseInt(new URLSearchParams(location.search).get("page") || "1", 10) || 1);
-const state = { services: [], currentPage: requestedPage, filtered: [] };
+const state = { services: [], categories: [], currentPage: requestedPage, filtered: [] };
 const $ = id => document.getElementById(id);
 
 function categoryFilterValue(value) {
@@ -37,7 +37,7 @@ function categoryFilterValue(value) {
   if (raw.includes("تسويق")) return "market";
   if (raw.includes("صوت")) return "audio";
   if (raw.includes("فيديو") || raw.includes("أنيميشن") || raw.includes("مونتاج")) return "video";
-  return "other";
+  return normalized.replace(/[^a-z0-9\u0600-\u06ff]+/g, "-").replace(/^-|-$/g, "") || "other";
 }
 
 function normalizedCategory(value) {
@@ -163,9 +163,9 @@ function applyFilters({ resetPage = false } = {}) {
     const amount = Number(service.price || 0);
     if (term && !haystack.includes(term)) return false;
     if (category !== "all" && categoryFilterValue(service.category) !== category) return false;
-    if (price === "under10k" && amount >= 10000) return false;
-    if (price === "10k-50k" && (amount < 10000 || amount > 50000)) return false;
-    if (price === "over50k" && amount <= 50000) return false;
+    if (price === "under100" && amount >= 100) return false;
+    if (price === "100-500" && (amount < 100 || amount > 500)) return false;
+    if (price === "over500" && amount <= 500) return false;
     return true;
   });
   if (sort === "price-low") filtered.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
@@ -178,7 +178,18 @@ function applyFilters({ resetPage = false } = {}) {
 
 async function loadServices() {
   try {
-    const snapshot = await getDocs(query(collection(db, "services"), where("status", "==", "published")));
+    const [snapshot, categoriesSnapshot] = await Promise.all([
+      getDocs(query(collection(db, "services"), where("status", "==", "published"))),
+      getDocs(query(collection(db, "serviceCategories"), where("active", "==", true)))
+    ]);
+    state.categories = categoriesSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    const categorySelect = $("categoryFilter");
+    const options = new Map([...categorySelect.options].slice(1).map(option => [option.value, option.textContent]));
+    state.categories.forEach(item => {
+      const label = String(item.name || item.label || "").trim();
+      if (label) options.set(categoryFilterValue(item.slug || label), label);
+    });
+    categorySelect.replaceChildren(new Option("كل الفئات", "all"), ...[...options].map(([value, label]) => new Option(label, value)));
     const services = await Promise.all(snapshot.docs.map(async item => {
       const service = { id: item.id, ...item.data() };
       if (!service.imageUrl && service.imagePath) {
@@ -214,10 +225,12 @@ $("serviceSearchButton").addEventListener("click", () => applyFilters({ resetPag
 
 const searchParams = new URLSearchParams(location.search);
 const requestedCategory = (searchParams.get("cat") || searchParams.get("category") || "").trim().toLowerCase();
-const linkedCategory = categoryFilterValue(requestedCategory) === "other" ? requestedCategory : categoryFilterValue(requestedCategory);
-if (linkedCategory && [...$("categoryFilter").options].some(option => option.value === linkedCategory)) {
-  $("categoryFilter").value = linkedCategory;
-}
 const requestedSearch = new URLSearchParams(location.search).get("q");
 if (requestedSearch) $("searchInput").value = requestedSearch.slice(0, 100);
-loadServices();
+loadServices().then(() => {
+  const linkedCategory = categoryFilterValue(requestedCategory);
+  if (linkedCategory && [...$("categoryFilter").options].some(option => option.value === linkedCategory)) {
+    $("categoryFilter").value = linkedCategory;
+    applyFilters({ resetPage: true });
+  }
+});
