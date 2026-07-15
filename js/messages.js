@@ -243,6 +243,7 @@ async function ensureRequestedConversation() {
       lastMessage: "",
       lastMessageType: "text",
       lastSenderUid: "",
+      currencyVersion: "SYP_NEW_2026",
       createdAt: serverTimestamp(),
       lastUpdated: serverTimestamp(),
       ...(context ? { context } : {})

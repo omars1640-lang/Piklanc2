@@ -151,58 +151,6 @@ service cloud.firestore {
         && request.auth.uid in [data.buyerUid, data.freelancerUid];
     }
 
-    function currentPlatformFeePercent() {
-      return exists(/databases/$(database)/documents/platformSettings/general)
-        ? get(/databases/$(database)/documents/platformSettings/general).data.platformFeePercent
-        : 20;
-    }
-
-    function validOrderCreate() {
-      let listedService = get(
-        /databases/$(database)/documents/services/$(request.resource.data.serviceId)
-      ).data;
-      return isAccountType("buyer")
-        && request.resource.data.keys().hasOnly([
-          "buyerUid", "buyerName", "buyerEmail", "freelancerUid", "freelancerName",
-          "serviceId", "serviceTitle", "serviceCategory", "serviceImage",
-          "packageName", "packageDelivery", "packageRevisions", "total",
-          "platformFeePercent", "platformFeeAmount", "freelancerAmount",
-          "reviewDays", "status", "escrow", "payment", "createdAt", "updatedAt"
-        ])
-        && request.resource.data.buyerUid == request.auth.uid
-        && activeParticipant(request.resource.data.freelancerUid)
-        && request.resource.data.freelancerUid != request.auth.uid
-        && listedService.status == "published"
-        && listedService.ownerUid == request.resource.data.freelancerUid
-        && listedService.title == request.resource.data.serviceTitle
-        && listedService.price == request.resource.data.total
-        && request.resource.data.status == "funded"
-        && request.resource.data.total is number
-        && request.resource.data.total > 0
-        && request.resource.data.freelancerAmount is number
-        && request.resource.data.freelancerAmount >= 0
-        && request.resource.data.platformFeeAmount is number
-        && request.resource.data.platformFeeAmount >= 0
-        && request.resource.data.platformFeePercent is number
-        && request.resource.data.platformFeePercent == currentPlatformFeePercent()
-        && request.resource.data.platformFeeAmount
-          == request.resource.data.total * currentPlatformFeePercent() / 100
-        && request.resource.data.freelancerAmount
-          == request.resource.data.total - request.resource.data.platformFeeAmount
-        && request.resource.data.reviewDays == 15
-        && request.resource.data.escrow is map
-        && request.resource.data.escrow.status == "held"
-        && request.resource.data.escrow.amount == request.resource.data.total
-        && request.resource.data.escrow.freelancerAmount == request.resource.data.freelancerAmount
-        && request.resource.data.escrow.platformFeeAmount == request.resource.data.platformFeeAmount
-        && request.resource.data.escrow.releaseScope == "single_order"
-        && request.resource.data.payment.status == "sandbox_confirmed"
-        && request.resource.data.payment.method == "sandbox_test"
-        && request.resource.data.payment.mode == "sandbox"
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time;
-    }
-
     function validOrderDelivery() {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       return activeUser()
@@ -516,12 +464,12 @@ service cloud.firestore {
       allow create: if activeUser()
         && request.resource.data.keys().hasOnly([
           "participantUids", "participantNames", "participantTypes", "unreadCounts",
-          "lastMessage", "lastMessageType", "lastSenderUid", "context",
+          "lastMessage", "lastMessageType", "lastSenderUid", "context", "currencyVersion",
           "createdAt", "lastUpdated"
         ])
         && request.resource.data.keys().hasAll([
           "participantUids", "participantNames", "participantTypes", "unreadCounts",
-          "lastMessage", "lastMessageType", "lastSenderUid", "createdAt", "lastUpdated"
+          "lastMessage", "lastMessageType", "lastSenderUid", "currencyVersion", "createdAt", "lastUpdated"
         ])
         && request.resource.data.participantUids.size() == 2
         && request.resource.data.participantUids[0] != request.resource.data.participantUids[1]
@@ -553,6 +501,7 @@ service cloud.firestore {
         && request.resource.data.lastMessage.size() <= 140
         && request.resource.data.lastMessageType in ["text", "attachment", "mixed"]
         && request.resource.data.lastSenderUid == ""
+        && request.resource.data.currencyVersion == "SYP_NEW_2026"
         && request.resource.data.createdAt == request.time
         && request.resource.data.lastUpdated == request.time
         && validChatContext(request.resource.data);
@@ -614,7 +563,7 @@ service cloud.firestore {
       allow create: if isAccountType("freelancer")
         && request.resource.data.keys().hasOnly([
           "ownerUid", "ownerName", "title", "category", "description", "price",
-          "deliveryDays", "revisions", "keywords", "status", "createdAt", "updatedAt"
+          "deliveryDays", "revisions", "keywords", "status", "currencyVersion", "createdAt", "updatedAt"
         ])
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.ownerName is string
@@ -631,6 +580,7 @@ service cloud.firestore {
         && request.resource.data.description.size() <= 1000
         && request.resource.data.price is number
         && request.resource.data.price >= 1
+        && request.resource.data.currencyVersion == "SYP_NEW_2026"
         && request.resource.data.deliveryDays is int
         && request.resource.data.deliveryDays >= 1
         && request.resource.data.deliveryDays <= 90

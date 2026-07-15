@@ -190,6 +190,7 @@ function createHeroStackRotator(services, profiles) {
 
   const updatePositions = () => {
     const compact = window.matchMedia("(max-width: 520px)").matches;
+    const tablet = window.matchMedia("(min-width: 521px) and (max-width: 1100px)").matches;
     const desktopPositions = [
       { x: 0, y: 0, scale: 1 },
       { x: 155, y: 22, scale: .9 },
@@ -204,7 +205,14 @@ function createHeroStackRotator(services, profiles) {
       { x: -72, y: 24, scale: .92 },
       { x: -110, y: 40, scale: .86 }
     ];
-    const positions = compact ? compactPositions : desktopPositions;
+    const tabletPositions = [
+      { x: 0, y: 0, scale: 1 },
+      { x: 94, y: 23, scale: .91 },
+      { x: 138, y: 39, scale: .84 },
+      { x: -94, y: 23, scale: .91 },
+      { x: -138, y: 39, scale: .84 }
+    ];
+    const positions = compact ? compactPositions : tablet ? tabletPositions : desktopPositions;
     cards.forEach((card, index) => {
       const position = positions[index] || positions[positions.length - 1];
       card.style.setProperty("--stack-index", index);

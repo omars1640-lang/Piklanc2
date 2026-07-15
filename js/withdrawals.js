@@ -61,8 +61,8 @@ async function submit(event) {
   const walletNumber = $("withdrawWalletNumber").value.trim();
   const qrFile = $("withdrawQrFile").files?.[0];
   const message = $("withdrawMessage");
-  if (!Number.isInteger(amount) || amount < 100 || amount > 5000) {
-    message.textContent = "المبلغ يجب أن يكون بين 100 و5,000 ل.س بدون كسور.";
+  if (!Number.isInteger(amount) || amount < 1 || amount > 50) {
+    message.textContent = "المبلغ يجب أن يكون بين 1 و50 ل.س بدون كسور.";
     return;
   }
   if (amount > Number(state.wallet.available || 0)) {

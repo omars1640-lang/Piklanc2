@@ -1,15 +1,16 @@
 const { onCall } = require("firebase-functions/v2/https");
 const { createHash } = require("node:crypto");
 const {
-  CURRENCY, FieldValue, HttpsError, REGION, assertStorageObject, cleanText, db,
+  CURRENCY, CURRENCY_VERSION, FieldValue, HttpsError, REGION, assertStorageObject, cleanText, db,
   integerAmount, ledgerEntry, notification, platformReference, queueEmail,
-  requireAdmin, requireAuth, requireProfile, walletData
+  requireAdmin, requireAuth, requireCurrencyReady, requireProfile, walletData
 } = require("./helpers");
 
-const DEPOSIT_MIN = 100;
-const DEPOSIT_MAX = 10000;
-const WITHDRAWAL_MIN = 100;
-const WITHDRAWAL_MAX = 5000;
+// New Syrian lira: all monetary values are stored without the two removed zeros.
+const DEPOSIT_MIN = 1;
+const DEPOSIT_MAX = 100;
+const WITHDRAWAL_MIN = 1;
+const WITHDRAWAL_MAX = 50;
 
 exports.submitDepositRequest = onCall({ region: REGION, enforceAppCheck: false }, async request => {
   const uid = requireAuth(request);
@@ -49,6 +50,7 @@ exports.submitDepositRequest = onCall({ region: REGION, enforceAppCheck: false }
       userEmail: profile.email || request.auth.token.email || "",
       amount,
       currency: CURRENCY,
+      currencyVersion: CURRENCY_VERSION,
       providerId,
       providerMode: "manual",
       transferReference,
@@ -64,6 +66,7 @@ exports.submitDepositRequest = onCall({ region: REGION, enforceAppCheck: false }
 
 exports.reviewDepositRequest = onCall({ region: REGION, enforceAppCheck: false }, async request => {
   const admin = await requireAdmin(request);
+  await requireCurrencyReady();
   const requestId = cleanText(request.data?.requestId, 80);
   const decision = cleanText(request.data?.decision, 20);
   const reason = cleanText(request.data?.reason, 500);
@@ -158,6 +161,7 @@ exports.reviewDepositRequest = onCall({ region: REGION, enforceAppCheck: false }
 
 exports.requestWithdrawal = onCall({ region: REGION, enforceAppCheck: false }, async request => {
   const uid = requireAuth(request);
+  await requireCurrencyReady();
   const profile = await requireProfile(uid, "freelancer");
   const amount = integerAmount(request.data?.amount, WITHDRAWAL_MIN, WITHDRAWAL_MAX);
   const providerId = cleanText(request.data?.providerId, 40);
@@ -203,6 +207,7 @@ exports.requestWithdrawal = onCall({ region: REGION, enforceAppCheck: false }, a
       userEmail: profile.email || request.auth.token.email || "",
       amount,
       currency: CURRENCY,
+      currencyVersion: CURRENCY_VERSION,
       providerId,
       providerMode: "manual",
       payout: { holderName, walletNumber, qrPath },
@@ -230,6 +235,7 @@ exports.requestWithdrawal = onCall({ region: REGION, enforceAppCheck: false }, a
 
 exports.reviewWithdrawalRequest = onCall({ region: REGION, enforceAppCheck: false }, async request => {
   const admin = await requireAdmin(request);
+  await requireCurrencyReady();
   const requestId = cleanText(request.data?.requestId, 80);
   const action = cleanText(request.data?.action, 20);
   const reason = cleanText(request.data?.reason, 500);

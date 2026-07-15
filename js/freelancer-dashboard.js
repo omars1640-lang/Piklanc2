@@ -1,3 +1,4 @@
+import "./platform-guard.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, query,
@@ -518,7 +519,7 @@ async function handleServiceSubmit(event) {
       const oldPath = state.services.find(item => item.id === editingServiceId)?.imagePath;
       if (oldPath && data.imagePath && oldPath !== data.imagePath) await deleteObject(storageRef(storage, oldPath)).catch(() => {});
     } else {
-      serviceRef = await addDoc(collection(db, "services"), { ...data, createdAt: serverTimestamp() });
+      serviceRef = await addDoc(collection(db, "services"), { ...data, currencyVersion: "SYP_NEW_2026", createdAt: serverTimestamp() });
       const reviewUpdate = { status: "pending", updatedAt: serverTimestamp() };
       if (imageFile) {
         const extension = imageFile.type.split("/")[1].replace("jpeg", "jpg");
@@ -551,7 +552,7 @@ async function migrateLocalServices() {
     price: Number(service.price || 0), description: service.description || "",
     deliveryDays: Number(service.delivery || 2), revisions: Number(service.revisions || 1),
     keywords: String(service.keywords || "").split(",").map(value => value.trim()).filter(Boolean),
-    status: "draft", createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+    status: "draft", currencyVersion: "SYP_NEW_2026", createdAt: serverTimestamp(), updatedAt: serverTimestamp()
   })));
   localStorage.removeItem("myServices");
   showToast("تم نقل مسودات الخدمات القديمة إلى حسابك.");

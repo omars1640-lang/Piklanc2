@@ -1,5 +1,6 @@
 import "./cookie-consent.js";
 import "./footer-copy.js";
+import "./platform-guard.js";
 
 const header = document.querySelector(".site-header");
 const nav = document.getElementById("siteHeaderNav");

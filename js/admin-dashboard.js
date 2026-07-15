@@ -12,7 +12,8 @@ import {
   writeBatch
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { deleteObject, getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { auth, db, storage } from "./firebase.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+import { auth, db, functions, storage } from "./firebase.js";
 import { sendOfficialEmail } from "./email-client.js";
 import { seedDefaultBadges } from "./piklance-access.js";
 
@@ -1313,6 +1314,24 @@ async function saveSettings(event) {
   }
 }
 
+async function runCurrencyMigration() {
+  if (!confirm("سيتم تحويل كل المبالغ القديمة بقسمتها على 100 وحذف طلبات sandbox التجريبية فقط. هل تريد المتابعة؟")) return;
+  const button = document.getElementById("currencyMigrationButton");
+  button.disabled = true;
+  button.textContent = "جارٍ التحويل...";
+  try {
+    const result = await httpsCallable(functions, "migrateNewSyrianLira")({ confirmation: "CONVERT_SYP_2026" });
+    const total = Object.values(result.data?.converted || {}).reduce((sum, value) => sum + Number(value || 0), 0);
+    showToast(`اكتمل تحويل ${total.toLocaleString("en-US")} سجل وحذف ${Number(result.data?.deletedSandboxOrders || 0).toLocaleString("en-US")} طلب تجريبي.`);
+    button.textContent = "تم تحويل الليرة";
+  } catch (error) {
+    console.error("Currency migration failed", error);
+    showToast("تعذر إكمال تحويل العملة. لم يتم تكرار السجلات التي حُوّلت بنجاح.");
+    button.disabled = false;
+    button.textContent = "إعادة محاولة تحويل الليرة";
+  }
+}
+
 function exportUsers() {
   const headers = ["uid", "name", "email", "phone", "accountType", "status", "createdAt"];
   const escape = value => `"${String(value ?? "").replaceAll('"', '""')}"`;
@@ -1357,6 +1376,8 @@ function bindEvents() {
   ["auditSearch", "auditActionFilter"].forEach(id => document.getElementById(id).addEventListener("input", renderAudit));
   document.getElementById("exportUsers").addEventListener("click", exportUsers);
   document.getElementById("settingsForm").addEventListener("submit", saveSettings);
+  document.getElementById("maintenanceMode").addEventListener("change", () => document.getElementById("settingsForm").requestSubmit());
+  document.getElementById("currencyMigrationButton").addEventListener("click", runCurrencyMigration);
   document.getElementById("decisionForm").addEventListener("submit", executeDecision);
   document.querySelectorAll("[data-close-modal]").forEach(control => control.addEventListener("click", closeUserModal));
   document.querySelectorAll("[data-close-decision]").forEach(control => control.addEventListener("click", closeDecision));
