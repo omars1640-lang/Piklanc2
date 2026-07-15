@@ -1,6 +1,7 @@
 const wallet = require("./lib/wallet");
 const orders = require("./lib/orders");
 const email = require("./lib/email");
+const currencyMigration = require("./lib/currency-migration");
 
 exports.submitDepositRequest = wallet.submitDepositRequest;
 exports.reviewDepositRequest = wallet.reviewDepositRequest;
@@ -13,3 +14,4 @@ exports.sendQueuedEmail = email.sendQueuedEmail;
 exports.sendAdminOfficialEmail = email.sendAdminOfficialEmail;
 exports.sendOfficialEmail = email.sendOfficialEmail;
 exports.sendLaunchSubscriberWelcome = email.sendLaunchSubscriberWelcome;
+exports.migrateNewSyrianLira = currencyMigration.migrateNewSyrianLira;
