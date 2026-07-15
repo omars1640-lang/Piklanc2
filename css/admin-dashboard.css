@@ -131,6 +131,7 @@ button { cursor: pointer; }
 .promo-code-copy { display: inline-flex; align-items: center; gap: 8px; min-width: 0; direction: ltr; }
 .promo-code-copy code { min-width: 0; padding: 6px 10px; border: 1px dashed var(--primary); border-radius: 9px; color: var(--primary); background: var(--primary-soft); font: 800 12px/1.4 Consolas, "Courier New", monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .promo-copy-button { min-height: 31px; padding: 0 10px; font-size: 11.5px; }
+.settings-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rank-guide { margin-bottom: 14px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 .rank-guide article { padding: 13px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
 .rank-guide strong { display: block; color: var(--ink); font-size: 14.4px; }.rank-guide span { color: var(--muted); font-size: 10.8px; }
@@ -230,5 +231,12 @@ button { cursor: pointer; }
 .service-preview-section h3:not(:first-child) { margin-top: 14px; }
 .service-preview-section p { margin: 0; color: var(--muted); font-size: 13.2px; line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
 @media(max-width:900px){.content-admin-grid{grid-template-columns:1fr}.content-form-row{grid-template-columns:1fr}}
+@media (min-width: 701px) and (max-width: 1180px) {
+  #promotions-section .content-admin-grid { grid-template-columns: 1fr; }
+  #promotions-section .promo-tools { grid-template-columns: minmax(0,1fr) repeat(2,minmax(130px,.45fr)); }
+  #promotions-section .promo-tools .primary-button { grid-column: 1 / -1; justify-self: stretch; }
+  #promotions-section .promo-code-item { grid-template-columns: minmax(0,1fr) auto; }
+  #promotions-section .promo-code-item .promo-code-copy { grid-column: 1 / -1; }
+}
 @media(max-width:700px){.service-preview-summary{grid-template-columns:1fr 1fr}.service-preview-cover{min-height:190px}}
 @media(max-width:700px){.promo-tools,.promo-code-item{grid-template-columns:1fr}.promo-code-copy{width:100%}.promo-code-copy code{flex:1}}
