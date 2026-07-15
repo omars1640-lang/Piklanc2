@@ -1,9 +1,20 @@
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth, db } from "./firebase.js";
+import { ALWAYS_ALLOWED_PAGES, platformAccessDecision } from "./access-policy.js";
 
 const page = location.pathname.split("/").pop() || "index.html";
-const exemptPages = new Set(["maintenance.html", "login.html", "dashboard.html"]);
+
+function safeReturnUrl(fallback = "/index.html") {
+  const requested = new URLSearchParams(location.search).get("returnUrl") || "";
+  try {
+    const target = new URL(requested, location.origin);
+    if (target.origin !== location.origin || !target.pathname.endsWith(".html")) return fallback;
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch {
+    return fallback;
+  }
+}
 
 function currentUser() {
   return new Promise(resolve => {
@@ -15,27 +26,73 @@ function currentUser() {
 }
 
 export const platformReady = (async () => {
-  if (exemptPages.has(page)) return true;
+  if (ALWAYS_ALLOWED_PAGES.has(page)) return true;
   return new Promise(resolve => {
     let firstCheck = true;
     let redirecting = false;
     const finish = value => { if (firstCheck) { firstCheck = false; resolve(value); } };
     onSnapshot(doc(db, "platformSettings", "general"), async settings => {
-      if (!settings.exists() || settings.data().maintenanceMode !== true) return finish(true);
-      const user = await currentUser();
-      if (user) {
-        const profile = await getDoc(doc(db, "users", user.uid));
-        if (profile.exists() && profile.data().role === "admin") return finish(true);
+      const configuration = settings.exists() ? settings.data() : {};
+      const maintenanceMode = configuration.maintenanceMode === true;
+      const prelaunchMode = configuration.prelaunchMode !== false;
+
+      let profileData = null;
+      if (maintenanceMode || prelaunchMode) {
+        const user = await currentUser();
+        if (user) {
+          const profile = await getDoc(doc(db, "users", user.uid));
+          profileData = profile.exists() ? profile.data() : null;
+        }
       }
+
+      const decision = platformAccessDecision({
+        page,
+        maintenanceMode,
+        prelaunchMode,
+        role: profileData?.role,
+        earlyAccess: profileData?.earlyAccess
+      });
+
+      if (decision === "allow") return finish(true);
+
+      if (decision === "maintenance") {
+        if (!redirecting) {
+          redirecting = true;
+          const returnUrl = `${location.pathname}${location.search}${location.hash}`;
+          location.replace(`/maintenance.html?returnUrl=${encodeURIComponent(returnUrl)}`);
+        }
+        finish(false);
+        return;
+      }
+
+      if (decision === "coming-soon") {
+        if (!redirecting) {
+          redirecting = true;
+          const returnUrl = `${location.pathname}${location.search}${location.hash}`;
+          location.replace(`/coming-soon.html?returnUrl=${encodeURIComponent(returnUrl)}`);
+        }
+        finish(false);
+        return;
+      }
+
+      if (decision === "platform") {
+        if (!redirecting) {
+          redirecting = true;
+          location.replace(safeReturnUrl());
+        }
+        finish(false);
+        return;
+      }
+    }, error => {
+      console.warn("Platform access status could not be checked", error);
+      const fallbackDecision = platformAccessDecision({ page, maintenanceMode: false, prelaunchMode: true });
+      if (fallbackDecision === "allow") return finish(true);
       if (!redirecting) {
         redirecting = true;
         const returnUrl = `${location.pathname}${location.search}${location.hash}`;
-        location.replace(`/maintenance.html?returnUrl=${encodeURIComponent(returnUrl)}`);
+        location.replace(`/coming-soon.html?returnUrl=${encodeURIComponent(returnUrl)}`);
       }
       finish(false);
-    }, error => {
-      console.warn("Maintenance status could not be checked", error);
-      finish(true);
     });
   });
 })();

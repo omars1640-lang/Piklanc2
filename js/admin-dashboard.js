@@ -875,6 +875,7 @@ function renderAudit() {
 function renderSettings() {
   const settings = state.settings || {
     maintenanceMode: false,
+    prelaunchMode: true,
     registrationsEnabled: true,
     freelancerApplicationsEnabled: true,
     platformFeePercent: 20,
@@ -882,6 +883,7 @@ function renderSettings() {
     platformName: "PikLance"
   };
   document.getElementById("maintenanceMode").checked = Boolean(settings.maintenanceMode);
+  document.getElementById("prelaunchMode").checked = settings.prelaunchMode !== false;
   document.getElementById("registrationsEnabled").checked = settings.registrationsEnabled !== false;
   document.getElementById("freelancerApplicationsEnabled").checked = settings.freelancerApplicationsEnabled !== false;
   document.getElementById("platformFeePercent").value = Number(settings.platformFeePercent ?? 20);
@@ -1293,6 +1295,7 @@ async function saveSettings(event) {
   event.preventDefault();
   const settings = {
     maintenanceMode: document.getElementById("maintenanceMode").checked,
+    prelaunchMode: document.getElementById("prelaunchMode").checked,
     registrationsEnabled: document.getElementById("registrationsEnabled").checked,
     freelancerApplicationsEnabled: document.getElementById("freelancerApplicationsEnabled").checked,
     platformFeePercent: Number(document.getElementById("platformFeePercent").value || 0),
@@ -1359,6 +1362,7 @@ function bindEvents() {
   document.getElementById("exportUsers").addEventListener("click", exportUsers);
   document.getElementById("settingsForm").addEventListener("submit", saveSettings);
   document.getElementById("maintenanceMode").addEventListener("change", () => document.getElementById("settingsForm").requestSubmit());
+  document.getElementById("prelaunchMode").addEventListener("change", () => document.getElementById("settingsForm").requestSubmit());
   document.getElementById("decisionForm").addEventListener("submit", executeDecision);
   document.querySelectorAll("[data-close-modal]").forEach(control => control.addEventListener("click", closeUserModal));
   document.querySelectorAll("[data-close-decision]").forEach(control => control.addEventListener("click", closeDecision));

@@ -312,6 +312,21 @@
 
     .launch-date strong { color: #fff; }
 
+    .access-login {
+      margin: 14px 0 0;
+      color: #d9d5ec;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .access-login a {
+      color: #fff;
+      font-weight: 800;
+      text-decoration: underline;
+      text-decoration-color: rgba(255,255,255,.4);
+      text-underline-offset: 4px;
+    }
+
     @media (max-width: 920px) {
       .launch-shell {
         min-height: auto;
@@ -416,6 +431,7 @@
               </div>
               <p class="form-message" id="earlyAccessMessage" role="status"></p>
             </form>
+            <p class="access-login">مسجل مسبقاً أو من فريق الإدارة؟ <a id="existingAccessLogin" href="login.html?returnUrl=index.html">تسجيل الدخول</a></p>
           </div>
         </div>
 
@@ -445,12 +461,18 @@
     const earlyAccessCode = document.getElementById("earlyAccessCode");
     const earlyAccessButton = document.getElementById("earlyAccessButton");
     const earlyAccessMessage = document.getElementById("earlyAccessMessage");
+    const existingAccessLogin = document.getElementById("existingAccessLogin");
     const countdown = {
       days: document.getElementById("days"),
       hours: document.getElementById("hours"),
       minutes: document.getElementById("minutes"),
       seconds: document.getElementById("seconds")
     };
+
+    const requestedReturnUrl = new URLSearchParams(location.search).get("returnUrl");
+    if (requestedReturnUrl) {
+      existingAccessLogin.href = `login.html?returnUrl=${encodeURIComponent(requestedReturnUrl)}`;
+    }
 
     function twoDigits(value) {
       return String(Math.max(0, value)).padStart(2, "0");
@@ -460,7 +482,6 @@
       const remaining = launchAt - Date.now();
       if (remaining <= 0) {
         Object.values(countdown).forEach(target => { target.textContent = "00"; });
-        window.location.href = "index.html";
         return;
       }
 
