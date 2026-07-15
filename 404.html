@@ -1,11 +1,37 @@
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-theme="light">
 <head>
+  <style id="theme-bootstrap">html{background:#f8f9fd}html[data-theme="dark"]{background:#121218}</style>
+  <script>
+    (function () {
+      try {
+        var savedTheme = localStorage.getItem("theme") || "light";
+        document.documentElement.setAttribute("data-theme", savedTheme === "dark" ? "dark" : "light");
+        document.documentElement.style.colorScheme = savedTheme === "dark" ? "dark" : "light";
+      } catch (error) {}
+    })();
+  </script>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>الصفحة غير موجودة | PikLance</title><meta name="robots" content="noindex">
   <link rel="icon" href="/assets/brand/logo-icon.svg">
-  <style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;font-family:"Cairo",Tahoma,sans-serif;color:#26213b;background:radial-gradient(circle at 75% 15%,#ded8ff,transparent 30%),linear-gradient(145deg,#f8f7ff,#eefaf8)}main{width:min(100%,720px);text-align:center}.logo{width:150px;margin-bottom:24px}.number{position:relative;margin:0;font:bold clamp(110px,25vw,220px)/.9 Arial;color:#7057dc;letter-spacing:-14px;text-shadow:0 16px 0 rgba(112,87,220,.1)}.number i{display:inline-block;font-style:normal;animation:bob 3s ease-in-out infinite}.number i:nth-child(2){color:#26bba1;animation-delay:-1s}h1{margin:26px 0 10px;font-size:clamp(26px,5vw,42px)}p{margin:0 auto 26px;max-width:520px;color:#6d6781;font-size:17px;line-height:1.9}.actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}.actions a{padding:12px 20px;border-radius:12px;color:#6250c5;text-decoration:none;border:1px solid #cfc7f3;background:#fff;box-shadow:0 8px 24px rgba(75,59,139,.1)}.actions a:first-child{color:#fff;border-color:#7057dc;background:#7057dc}.actions a:hover{transform:translateY(-2px)}@keyframes bob{50%{transform:translateY(-12px) rotate(2deg)}}@media(prefers-color-scheme:dark){body{color:#f7f5ff;background:radial-gradient(circle at 75% 15%,#30265f,transparent 30%),#100d25}p{color:#bbb4d0}.actions a{background:#1d1738;border-color:#493e71;color:#cfc5ff}}
-  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/brand.css">
+  <link rel="stylesheet" href="/css/system-pages.css">
 </head>
-<body><main><img class="logo" src="/assets/brand/logo-dark.svg" alt="PikLance"><div class="number" aria-label="404"><i>4</i><i>0</i><i>4</i></div><h1>يبدو أن هذه الصفحة غادرت المكان</h1><p>قد يكون الرابط محذوفاً أو تغيّر عنوانه. يمكنك العودة للرئيسية أو البحث بين الخدمات المتاحة.</p><div class="actions"><a href="/index.html">العودة للرئيسية</a><a href="/services.html">تصفح الخدمات</a></div></main><script src="/js/latin-digits.js"></script><script type="module" src="/js/platform-guard.js"></script></body>
+<body class="system-page error-page">
+  <div class="system-scene" aria-hidden="true"><i class="system-orb one"></i><i class="system-orb two"></i></div>
+  <main class="system-card">
+    <div class="system-logo">
+      <img class="piklance-brand-logo light-logo" src="/assets/brand/logo-light.svg" alt="PikLance">
+      <img class="piklance-brand-logo dark-logo" src="/assets/brand/logo-dark.svg" alt="PikLance">
+    </div>
+    <div class="error-number" aria-label="404"><i>4</i><i>0</i><i>4</i></div>
+    <h1 class="system-title">يبدو أن هذه الصفحة غادرت المكان</h1>
+    <p class="system-copy">قد يكون الرابط محذوفاً أو تغيّر عنوانه. يمكنك العودة للرئيسية أو البحث بين الخدمات المتاحة.</p>
+    <div class="system-actions"><a class="system-action primary" href="/index.html">العودة للرئيسية</a><a class="system-action" href="/services.html">تصفح الخدمات</a></div>
+  </main>
+  <script src="/js/latin-digits.js"></script><script type="module" src="/js/platform-guard.js"></script>
+</body>
 </html>
