@@ -29,7 +29,8 @@ for (const file of htmlFiles) {
     if (!isLocalReference(rawReference)) continue;
     const reference = cleanReference(rawReference);
     if (!reference || reference.endsWith("/")) continue;
-    const target = resolve(root, decodeURIComponent(reference));
+    const projectReference = reference.startsWith("/") ? reference.slice(1) : reference;
+    const target = resolve(root, decodeURIComponent(projectReference));
     if (!existsSync(target)) errors.push(`${file}: missing local reference: ${rawReference}`);
   }
 }
