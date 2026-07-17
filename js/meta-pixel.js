@@ -49,4 +49,3 @@ export function trackMetaEvent(eventName, parameters = {}) {
   if (!initialized || document.documentElement.dataset.cookieConsent !== "all") return;
   window.fbq?.("track", eventName, parameters);
 }
-
