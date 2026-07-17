@@ -1,3 +1,5 @@
+import { applyMetaPixelConsent } from "./meta-pixel.js";
+
 const STORAGE_KEY = "piklance_cookie_consent";
 
 function savePreference(value) {
@@ -6,6 +8,7 @@ function savePreference(value) {
     updatedAt: new Date().toISOString()
   }));
   document.documentElement.dataset.cookieConsent = value;
+  applyMetaPixelConsent(value);
 }
 
 function getPreference() {
@@ -62,6 +65,7 @@ function initializeConsent() {
   const preference = getPreference();
   if (preference) {
     document.documentElement.dataset.cookieConsent = preference;
+    applyMetaPixelConsent(preference);
   } else {
     openPanel(panel);
   }

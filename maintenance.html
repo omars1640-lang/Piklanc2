@@ -30,5 +30,6 @@
     async function check(){try{const snap=await getDoc(doc(db,"platformSettings","general"));if(!snap.exists()||snap.data().maintenanceMode!==true)location.replace(target);}catch{document.getElementById("maintenanceStatus").textContent="نعمل على استعادة المنصة";}}
     check();setInterval(check,30000);
   </script>
+  <script type="module" src="js/cookie-consent.js"></script>
 </body>
 </html>
