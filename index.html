@@ -33,6 +33,7 @@
       --card-bg: #FFFFFF;
       --navbar-bg: rgba(255,255,255,0.95);
       --hero-bg: linear-gradient(135deg, #F8F9FD 0%, #EEF0FF 50%, #FDF2F8 100%);
+      --hero-ether-opacity: .42;
       --footer-bg: #1E1E2D;
       --footer-text: rgba(255,255,255,0.7);
       --btn-ghost-border: #E2E8F0;
@@ -58,6 +59,7 @@
       --card-bg: #1E1E2D;
       --navbar-bg: rgba(18, 18, 24, 0.95);
       --hero-bg: linear-gradient(135deg, #121218 0%, #1A1A2E 50%, #1E1E2D 100%);
+      --hero-ether-opacity: .68;
       --footer-bg: #0F0F1A;
       --footer-text: rgba(255,255,255,0.5);
       --btn-ghost-border: #2D2D3F;
@@ -260,6 +262,43 @@
       position: relative;
       overflow: hidden;
       background: var(--hero-bg);
+      isolation: isolate;
+    }
+
+    .hero-liquid-ether {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .7s ease;
+      contain: strict;
+    }
+
+    .hero-liquid-ether.is-ready {
+      opacity: var(--hero-ether-opacity);
+    }
+
+    .hero-liquid-ether canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .hero-liquid-ether.is-static {
+      opacity: var(--hero-ether-opacity);
+      background:
+        radial-gradient(ellipse at 22% 30%, rgba(112,102,216,.24), transparent 42%),
+        radial-gradient(ellipse at 76% 24%, rgba(169,102,208,.2), transparent 40%),
+        radial-gradient(ellipse at 58% 82%, rgba(230,142,150,.16), transparent 44%);
+    }
+
+    [data-theme="dark"] .hero-liquid-ether.is-static {
+      background:
+        radial-gradient(ellipse at 22% 30%, rgba(59,59,148,.48), transparent 42%),
+        radial-gradient(ellipse at 76% 24%, rgba(123,65,184,.42), transparent 40%),
+        radial-gradient(ellipse at 58% 82%, rgba(192,98,98,.34), transparent 44%);
     }
 
     .hero::before {
@@ -272,6 +311,7 @@
       background: radial-gradient(circle, rgba(108, 92, 231, 0.1) 0%, transparent 70%);
       border-radius: 50%;
       animation: float 8s ease-in-out infinite;
+      z-index: 1;
     }
 
     .hero::after {
@@ -284,6 +324,7 @@
       background: radial-gradient(circle, rgba(255, 107, 107, 0.08) 0%, transparent 70%);
       border-radius: 50%;
       animation: float 6s ease-in-out infinite reverse;
+      z-index: 1;
     }
 
     @keyframes float {
@@ -1371,6 +1412,7 @@
 
   <!-- Hero Section -->
   <section class="hero">
+    <div class="hero-liquid-ether" id="heroLiquidEther" aria-hidden="true"></div>
     <div class="container">
       <div class="hero-content">
         <div class="hero-text">
@@ -1650,6 +1692,7 @@
     }
   </script>
   <script type="module" src="js/site-header.js"></script>
+  <script type="module" src="js/hero-liquid-ether.js"></script>
   <script type="module" src="js/home-marketplace.js"></script>
 </body>
 </html>
