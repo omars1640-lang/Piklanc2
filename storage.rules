@@ -10,6 +10,24 @@ service firebase.storage {
         && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == "admin";
     }
 
+    function isSuperAdmin() {
+      let admin = firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+      return isAdmin()
+        && (admin.get("adminAccessLevel", "") == "super_admin" || !admin.keys().hasAny(["adminRoleId"]));
+    }
+
+    function hasAdminPermission(permission) {
+      let admin = firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+      return isAdmin() && (
+        isSuperAdmin()
+        || (
+          admin.adminRoleId is string
+          && firestore.exists(/databases/(default)/documents/adminRoles/$(admin.adminRoleId))
+          && permission in firestore.get(/databases/(default)/documents/adminRoles/$(admin.adminRoleId)).data.get("permissions", [])
+        )
+      );
+    }
+
     function activeUser() {
       return signedIn()
         && request.auth.token.email_verified == true
@@ -37,8 +55,8 @@ service firebase.storage {
         && fileName in ["front", "back"]
         && request.resource.size <= 5 * 1024 * 1024
         && request.resource.contentType.matches("image/.*");
-      allow delete: if signedIn() && (request.auth.uid == userId || isAdmin());
-      allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
+      allow delete: if signedIn() && (request.auth.uid == userId || hasAdminPermission("verifications.manage"));
+      allow read: if signedIn() && (request.auth.uid == userId || hasAdminPermission("verifications.view"));
     }
 
     match /chat-attachments/{chatId}/{messageId}/{fileName} {
@@ -55,11 +73,11 @@ service firebase.storage {
 
     match /article-covers/{articleId}/{fileName} {
       allow read: if true;
-      allow create, update: if isAdmin()
+      allow create, update: if hasAdminPermission("content.manage")
         && request.resource.size > 0
         && request.resource.size <= 5 * 1024 * 1024
         && request.resource.contentType.matches("image/(jpeg|png|webp)");
-      allow delete: if isAdmin();
+      allow delete: if hasAdminPermission("content.manage");
     }
 
     match /service-images/{userId}/{serviceId}/{fileName} {
@@ -70,7 +88,7 @@ service firebase.storage {
         && request.resource.size > 0
         && request.resource.size <= 5 * 1024 * 1024
         && request.resource.contentType.matches("image/(jpeg|png|webp)");
-      allow delete: if isAdmin() || (activeUser() && request.auth.uid == userId);
+      allow delete: if hasAdminPermission("services.moderate") || (activeUser() && request.auth.uid == userId);
     }
 
     match /profile-images/{userId}/{fileName} {
@@ -99,7 +117,7 @@ service firebase.storage {
             && request.resource.contentType.matches("video/(mp4|webm|quicktime)")
           )
         );
-      allow delete: if isAdmin() || activePortfolioOwner(userId);
+      allow delete: if hasAdminPermission("services.moderate") || activePortfolioOwner(userId);
     }
 
     match /portfolio-media/{userId}/{itemId}/{fileName} {
@@ -117,7 +135,7 @@ service firebase.storage {
             && request.resource.contentType.matches("video/(mp4|webm|quicktime)")
           )
         );
-      allow delete: if isAdmin() || activePortfolioOwner(userId);
+      allow delete: if hasAdminPermission("services.moderate") || activePortfolioOwner(userId);
     }
 
     match /portfolio-images/{userId}/{itemId}/{fileName} {
@@ -127,11 +145,11 @@ service firebase.storage {
         && request.resource.size > 0
         && request.resource.size <= 5 * 1024 * 1024
         && request.resource.contentType.matches("image/(jpeg|png|webp)");
-      allow delete: if isAdmin() || activePortfolioOwner(userId);
+      allow delete: if hasAdminPermission("services.moderate") || activePortfolioOwner(userId);
     }
 
     match /payment-receipts/{userId}/{requestId}/{fileName} {
-      allow read: if isAdmin() || (activeUser() && request.auth.uid == userId);
+      allow read: if hasAdminPermission("finance.view") || (activeUser() && request.auth.uid == userId);
       allow create: if activeUser()
         && request.auth.uid == userId
         && fileName.matches("receipt\\.(jpg|png|webp)")
@@ -139,18 +157,18 @@ service firebase.storage {
         && request.resource.size <= 5 * 1024 * 1024
         && request.resource.contentType.matches("image/(jpeg|png|webp)");
       allow update: if false;
-      allow delete: if isAdmin() || (activeUser() && request.auth.uid == userId);
+      allow delete: if hasAdminPermission("finance.manage") || (activeUser() && request.auth.uid == userId);
     }
 
     match /payout-qr/{userId}/sham_cash/{fileName} {
-      allow read: if isAdmin() || (activeUser() && request.auth.uid == userId);
+      allow read: if hasAdminPermission("finance.view") || (activeUser() && request.auth.uid == userId);
       allow create, update: if activeUser()
         && request.auth.uid == userId
         && fileName.matches("qr\\.(jpg|png|webp)")
         && request.resource.size > 0
         && request.resource.size <= 5 * 1024 * 1024
         && request.resource.contentType.matches("image/(jpeg|png|webp)");
-      allow delete: if isAdmin() || (activeUser() && request.auth.uid == userId);
+      allow delete: if hasAdminPermission("finance.manage") || (activeUser() && request.auth.uid == userId);
     }
 
     match /{allPaths=**} {

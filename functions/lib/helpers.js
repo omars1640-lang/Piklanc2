@@ -28,13 +28,37 @@ async function requireProfile(uid, type = "") {
   return { id: uid, ...profile };
 }
 
-async function requireAdmin(request) {
-  const uid = requireAuth(request);
+async function adminAccess(uid) {
   const snapshot = await db.doc(`users/${uid}`).get();
-  if (!snapshot.exists || snapshot.data().role !== "admin") {
-    throw new HttpsError("permission-denied", "هذا الإجراء متاح للإدارة فقط.");
+  if (!snapshot.exists || snapshot.data().role !== "admin") return null;
+  const profile = { id: uid, ...snapshot.data() };
+  if (profile.adminAccessLevel === "super_admin" || !profile.adminRoleId) {
+    return { profile, isSuperAdmin: true, permissions: ["*"] };
   }
-  return { id: uid, ...snapshot.data() };
+  const roleSnapshot = await db.doc(`adminRoles/${profile.adminRoleId}`).get();
+  if (!roleSnapshot.exists || roleSnapshot.data().active === false) {
+    return { profile, isSuperAdmin: false, permissions: [] };
+  }
+  return { profile, isSuperAdmin: false, permissions: roleSnapshot.data().permissions || [] };
+}
+
+async function requireAdmin(request, permission = "") {
+  const uid = requireAuth(request);
+  const access = await adminAccess(uid);
+  const requested = Array.isArray(permission) ? permission : (permission ? [permission] : []);
+  if (!access || (requested.length && !access.isSuperAdmin && !requested.some(item => access.permissions.includes(item)))) {
+    throw new HttpsError("permission-denied", "لا تملك الصلاحية المطلوبة لتنفيذ هذا الإجراء.");
+  }
+  return access.profile;
+}
+
+async function requireSuperAdmin(request) {
+  const uid = requireAuth(request);
+  const access = await adminAccess(uid);
+  if (!access?.isSuperAdmin) {
+    throw new HttpsError("permission-denied", "إدارة الفريق والأدوار متاحة للإدارة الكاملة فقط.");
+  }
+  return access.profile;
 }
 
 function integerAmount(value, min, max, label = "المبلغ") {
@@ -120,5 +144,5 @@ async function assertStorageObject(path, uid, root) {
 module.exports = {
   CURRENCY, CURRENCY_VERSION, FieldValue, HttpsError, REGION, Timestamp, assertStorageObject, bucket,
   cleanText, db, integerAmount, ledgerEntry, notification, platformReference,
-  queueEmail, requireAdmin, requireAuth, requireCurrencyReady, requireProfile, walletData
+  queueEmail, requireAdmin, requireAuth, requireCurrencyReady, requireProfile, requireSuperAdmin, walletData
 };

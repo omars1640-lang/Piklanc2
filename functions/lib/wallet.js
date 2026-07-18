@@ -65,7 +65,7 @@ exports.submitDepositRequest = onCall({ region: REGION, enforceAppCheck: false }
 });
 
 exports.reviewDepositRequest = onCall({ region: REGION, enforceAppCheck: false }, async request => {
-  const admin = await requireAdmin(request);
+  const admin = await requireAdmin(request, "finance.manage");
   await requireCurrencyReady();
   const requestId = cleanText(request.data?.requestId, 80);
   const decision = cleanText(request.data?.decision, 20);
@@ -234,7 +234,7 @@ exports.requestWithdrawal = onCall({ region: REGION, enforceAppCheck: false }, a
 });
 
 exports.reviewWithdrawalRequest = onCall({ region: REGION, enforceAppCheck: false }, async request => {
-  const admin = await requireAdmin(request);
+  const admin = await requireAdmin(request, "finance.manage");
   await requireCurrencyReady();
   const requestId = cleanText(request.data?.requestId, 80);
   const action = cleanText(request.data?.action, 20);

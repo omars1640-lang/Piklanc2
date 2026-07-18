@@ -39,7 +39,7 @@ async function queueMailOnce(id, mail) {
 }
 
 exports.sendAdminOfficialEmail = onCall({ region: REGION, enforceAppCheck: false }, async request => {
-  const admin = await requireAdmin(request);
+  const admin = await requireAdmin(request, ["support.reply", "verifications.manage", "services.moderate"]);
   const to = String(request.data?.to || "").trim().toLowerCase();
   const subject = String(request.data?.subject || "").trim().slice(0, 180);
   const message = String(request.data?.message || "").trim().slice(0, 5000);

@@ -6,7 +6,7 @@
     "node": "22"
   },
   "scripts": {
-    "check": "node --check index.js && node --check lib/helpers.js && node --check lib/wallet.js && node --check lib/orders.js && node --check lib/email.js && node --check lib/currency-migration.js"
+    "check": "node --check index.js && node --check lib/helpers.js && node --check lib/wallet.js && node --check lib/orders.js && node --check lib/email.js && node --check lib/currency-migration.js && node --check lib/team.js && node --check lib/admin-users.js"
   },
   "dependencies": {
     "firebase-admin": "^13.4.0",
