@@ -1,6 +1,6 @@
 const { onCall } = require("firebase-functions/v2/https");
 const {
-  FieldValue, HttpsError, REGION, bucket, cleanText, db, notification, requireAdmin
+  FieldValue, HttpsError, REGION, cleanText, db, notification, requireAdmin, storageBucket
 } = require("./helpers");
 
 function referralCode(user, uid) {
@@ -83,7 +83,7 @@ exports.reviewFreelancerApplication = onCall({ region: REGION, enforceAppCheck: 
   });
   await batch.commit();
   if (action === "reject") {
-    await Promise.allSettled([user.idFrontPath, user.idBackPath].filter(Boolean).map(path => bucket.file(path).delete()));
+    await Promise.allSettled([user.idFrontPath, user.idBackPath].filter(Boolean).map(path => storageBucket().file(path).delete()));
   }
   return { ok: true };
 });

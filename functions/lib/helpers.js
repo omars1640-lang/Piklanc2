@@ -6,7 +6,7 @@ const { HttpsError } = require("firebase-functions/v2/https");
 if (!getApps().length) initializeApp();
 
 const db = getFirestore();
-const bucket = getStorage().bucket();
+const storageBucket = () => getStorage().bucket("piklance-c2651.firebasestorage.app");
 const REGION = "europe-west1";
 const CURRENCY = "SYP";
 const CURRENCY_VERSION = "SYP_NEW_2026";
@@ -136,13 +136,13 @@ async function assertStorageObject(path, uid, root) {
   if (!normalized.startsWith(`${root}/${uid}/`)) {
     throw new HttpsError("invalid-argument", "مسار الملف غير صالح.");
   }
-  const [exists] = await bucket.file(normalized).exists();
+  const [exists] = await storageBucket().file(normalized).exists();
   if (!exists) throw new HttpsError("failed-precondition", "الملف المرفوع غير موجود.");
   return normalized;
 }
 
 module.exports = {
-  CURRENCY, CURRENCY_VERSION, FieldValue, HttpsError, REGION, Timestamp, assertStorageObject, bucket,
+  CURRENCY, CURRENCY_VERSION, FieldValue, HttpsError, REGION, Timestamp, assertStorageObject, storageBucket,
   cleanText, db, integerAmount, ledgerEntry, notification, platformReference,
   queueEmail, requireAdmin, requireAuth, requireCurrencyReady, requireProfile, requireSuperAdmin, walletData
 };
