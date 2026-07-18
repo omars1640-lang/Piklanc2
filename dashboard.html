@@ -62,6 +62,7 @@
 
       <p class="nav-label">النظام</p>
       <button class="nav-link" type="button" data-section="audit"><span>≡</span><b>سجل الإدارة</b></button>
+      <button class="nav-link" type="button" data-section="team"><span>♙</span><b>الفريق والصلاحيات</b></button>
       <button class="nav-link" type="button" data-section="settings"><span>⚙</span><b>إعدادات المنصة</b></button>
     </nav>
     <div class="sidebar-footer">
@@ -319,6 +320,37 @@
       </div>
     </section>
 
+    <section class="admin-section" id="team-section">
+      <div class="section-heading">
+        <div><p>إدارة الوصول</p><h2>الفريق والصلاحيات</h2><span>أضف موظفي الإدارة وحدد بدقة الأقسام والإجراءات المتاحة لكل دور.</span></div>
+        <div class="heading-stat"><strong id="teamMembersCount">0</strong><small>عضو إدارة</small></div>
+      </div>
+      <div class="team-layout">
+        <section class="data-panel team-members-panel">
+          <div class="panel-head"><div><p>حسابات الإدارة</p><h3>أعضاء الفريق</h3></div></div>
+          <form class="team-invite-form" id="teamMemberForm">
+            <label><span>بريد الحساب المسجل</span><input id="teamMemberEmail" type="email" required placeholder="name@example.com"></label>
+            <label><span>الدور</span><select id="teamMemberRole" required><option value="">اختر الدور</option></select></label>
+            <button class="primary-button" type="submit">إضافة إلى الفريق</button>
+          </form>
+          <p class="team-form-note">يجب أن يملك الموظف حساباً مسجلاً مسبقاً في PikLance. لن يتم إنشاء أو إرسال كلمات مرور من لوحة الإدارة.</p>
+          <div class="team-list" id="teamMembersList"></div>
+        </section>
+        <section class="data-panel roles-panel">
+          <div class="panel-head"><div><p>سياسة الوصول</p><h3>الأدوار</h3></div><button class="secondary-button" id="newRoleButton" type="button">دور جديد</button></div>
+          <div class="role-presets" id="rolePresets"></div>
+          <div class="roles-list" id="adminRolesList"></div>
+        </section>
+      </div>
+      <form class="data-panel role-editor" id="roleForm" hidden>
+        <div class="panel-head"><div><p>تخصيص الدور</p><h3 id="roleFormTitle">إضافة دور جديد</h3></div><button class="secondary-button" id="cancelRoleButton" type="button">إلغاء</button></div>
+        <input id="roleId" type="hidden">
+        <div class="content-form-row"><label>اسم الدور<input id="roleName" type="text" maxlength="80" required></label><label>وصف مختصر<input id="roleDescription" type="text" maxlength="240"></label></div>
+        <div class="permission-grid" id="permissionsGrid"></div>
+        <div class="settings-actions"><button class="primary-button" type="submit">حفظ الدور</button></div>
+      </form>
+    </section>
+
     <section class="admin-section" id="settings-section">
       <div class="section-heading">
         <div><p>تهيئة المنصة</p><h2>الإعدادات العامة</h2><span>تحفظ هذه القيم في Firebase، وسيتم ربطها بالأنظمة الجديدة عند تنفيذها.</span></div>
@@ -424,6 +456,7 @@
   <script type="module" src="js/admin-dashboard.js"></script>
   <script type="module" src="js/admin-operations.js"></script>
   <script type="module" src="js/admin-payments.js"></script>
+  <script type="module" src="js/admin-team.js"></script>
   <script type="module" src="js/footer-copy.js"></script>
   <script type="module" src="js/cookie-consent.js"></script>
 </body>

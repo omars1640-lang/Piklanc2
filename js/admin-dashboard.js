@@ -16,6 +16,7 @@ import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { auth, db, functions, storage } from "./firebase.js";
 import { sendOfficialEmail } from "./email-client.js";
 import { seedDefaultBadges } from "./piklance-access.js";
+import { applyAdminAccess, canAccessSection, firstAllowedSection, hasPermission, initializeAdminAccess } from "./admin-access.js";
 
 const sectionMeta = {
   overview: ["مركز العمليات", "نظرة عامة"],
@@ -30,6 +31,7 @@ const sectionMeta = {
   content: ["إدارة الموقع", "المحتوى والتصنيفات"],
   audit: ["الحوكمة", "سجل الإدارة"],
   settings: ["تهيئة النظام", "إعدادات المنصة"]
+  ,team: ["إدارة الوصول", "الفريق والصلاحيات"]
 };
 
 const futureModules = {
@@ -570,6 +572,8 @@ async function createPlatformBadge(event) {
 }
 
 function showSection(sectionName) {
+  if (!canAccessSection(sectionName)) sectionName = firstAllowedSection();
+  if (!sectionName) return;
   document.querySelectorAll(".admin-section").forEach(section => section.classList.toggle("active", section.id === `${sectionName}-section`));
   document.querySelectorAll(".nav-link").forEach(link => link.classList.toggle("active", link.dataset.section === sectionName));
   const [eyebrow, title] = sectionMeta[sectionName];
@@ -685,8 +689,8 @@ function renderVerifications() {
     identity.append(badge(user.idFrontPath && user.idBackPath ? "مرفوعة" : "ناقصة", `status-badge ${user.idFrontPath && user.idBackPath ? "status-active" : "status-rejected"}`));
     const actions = document.createElement("td");
     actions.className = "table-actions";
-    actions.append(
-      button("عرض", "table-button", () => openUserModal(user.id)),
+    actions.append(button("عرض", "table-button", () => openUserModal(user.id)));
+    if (hasPermission("verifications.manage")) actions.append(
       button("قبول", "table-button approve", () => openDecision(user.id, "approve_user")),
       button("رفض", "table-button reject", () => openDecision(user.id, "reject_user"))
     );
@@ -732,8 +736,8 @@ function renderUsers() {
     const actions = document.createElement("div");
     actions.className = "table-actions";
     actions.appendChild(button("تفاصيل", "table-button", () => openUserModal(user.id)));
-    if (user.status === "active" && user.id !== state.admin.id) actions.appendChild(button("إيقاف", "table-button reject", () => openDecision(user.id, "suspend_user")));
-    if (["suspended", "rejected"].includes(user.status)) actions.appendChild(button("تفعيل", "table-button approve", () => openDecision(user.id, "activate_user")));
+    if (hasPermission("users.manage") && user.status === "active" && user.id !== state.admin.id) actions.appendChild(button("إيقاف", "table-button reject", () => openDecision(user.id, "suspend_user")));
+    if (hasPermission("users.manage") && ["suspended", "rejected"].includes(user.status)) actions.appendChild(button("تفعيل", "table-button approve", () => openDecision(user.id, "activate_user")));
     const values = [
       userCell(user),
       badge(accountTypeLabel(user.accountType), "type-badge"),
@@ -917,17 +921,19 @@ async function syncAutomaticRanks() {
 async function loadData() {
   document.getElementById("refreshData").disabled = true;
   try {
-    await seedDefaultBadges().catch(error => console.warn("Unable to seed default badges", error));
+    if (hasPermission("promotions.manage")) await seedDefaultBadges().catch(error => console.warn("Unable to seed default badges", error));
+    const empty = { docs: [] };
+    const needsUsers = hasPermission("overview.view") || hasPermission("users.view") || hasPermission("verifications.view") || hasPermission("ranks.manage") || hasPermission("promotions.manage");
     const [usersSnapshot, ordersSnapshot, chatsSnapshot, auditSnapshot, settingsSnapshot, promoCodesSnapshot, badgesSnapshot, referralsSnapshot, benefitsSnapshot] = await Promise.all([
-      getDocs(collection(db, "users")),
-      getDocs(collection(db, "orders")),
-      getDocs(collection(db, "chats")),
-      getDocs(query(collection(db, "adminAuditLogs"), orderBy("createdAt", "desc"), limit(100))),
+      needsUsers ? getDocs(collection(db, "users")) : empty,
+      (hasPermission("overview.view") || hasPermission("finance.view") || hasPermission("services.view")) ? getDocs(collection(db, "orders")) : empty,
+      (hasPermission("overview.view") || hasPermission("conversations.view")) ? getDocs(collection(db, "chats")) : empty,
+      (hasPermission("overview.view") || hasPermission("audit.view")) ? getDocs(query(collection(db, "adminAuditLogs"), orderBy("createdAt", "desc"), limit(100))) : empty,
       getDoc(doc(db, "platformSettings", "general")),
-      getDocs(collection(db, "promoCodes")),
-      getDocs(collection(db, "badges")),
-      getDocs(collection(db, "referrals")),
-      getDocs(collection(db, "userBenefits"))
+      hasPermission("promotions.manage") ? getDocs(collection(db, "promoCodes")) : empty,
+      hasPermission("promotions.manage") ? getDocs(collection(db, "badges")) : empty,
+      hasPermission("promotions.manage") ? getDocs(collection(db, "referrals")) : empty,
+      hasPermission("promotions.manage") ? getDocs(collection(db, "userBenefits")) : empty
     ]);
     state.users = usersSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.orders = ordersSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
@@ -938,7 +944,7 @@ async function loadData() {
     state.referrals = referralsSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.benefits = benefitsSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.settings = settingsSnapshot.exists() ? settingsSnapshot.data() : null;
-    await syncAutomaticRanks();
+    if (hasPermission("ranks.manage")) await syncAutomaticRanks();
     renderAll();
     document.getElementById("lastRefresh").textContent = `آخر تحديث: ${new Date().toLocaleTimeString("ar-SY", { hour: "2-digit", minute: "2-digit" })}`;
   } catch (error) {
@@ -963,6 +969,7 @@ function renderAll() {
   renderChats();
   renderAudit();
   renderSettings();
+  applyAdminAccess();
 }
 
 function detailField(label, value) {
@@ -1069,14 +1076,14 @@ function openUserModal(userId) {
     button("حفظ الطلب PDF", "secondary-button", () => exportUserPdf(user)),
     button("إغلاق", "secondary-button", closeUserModal)
   );
-  if (user.status === "pending") {
+  if (user.status === "pending" && hasPermission("verifications.manage")) {
     elements.modalActions.append(
       button("رفض الطلب", "danger-button", () => { closeUserModal(); openDecision(user.id, "reject_user"); }),
       button("قبول وتفعيل", "primary-button", () => { closeUserModal(); openDecision(user.id, "approve_user"); })
     );
-  } else if (user.status === "active" && user.id !== state.admin.id) {
+  } else if (hasPermission("users.manage") && user.status === "active" && user.id !== state.admin.id) {
     elements.modalActions.appendChild(button("إيقاف الحساب", "danger-button", () => { closeUserModal(); openDecision(user.id, "suspend_user"); }));
-  } else if (["suspended", "rejected"].includes(user.status)) {
+  } else if (hasPermission("users.manage") && ["suspended", "rejected"].includes(user.status)) {
     elements.modalActions.appendChild(button("إعادة التفعيل", "primary-button", () => { closeUserModal(); openDecision(user.id, "activate_user"); }));
   }
   elements.userModal.classList.add("open");
@@ -1090,6 +1097,8 @@ function closeUserModal() {
 }
 
 function openDecision(userId, action) {
+  const permission = ["approve_user", "reject_user"].includes(action) ? "verifications.manage" : "users.manage";
+  if (!hasPermission(permission)) return showToast("لا تملك صلاحية تنفيذ هذا الإجراء.");
   const user = state.users.find(item => item.id === userId);
   if (!user) return;
   state.pendingDecision = { user, action };
@@ -1259,11 +1268,21 @@ async function executeDecision(event) {
   }[decision.action];
   document.getElementById("decisionConfirm").disabled = true;
   try {
-    const batch = writeBatch(db);
-    if (["approve_user", "activate_user"].includes(decision.action)) {
-      addReferralActivation(batch, decision.user, updates);
-      addReferralRewardIfNeeded(batch, decision.user);
+    if (["approve_user", "reject_user"].includes(decision.action)) {
+      await httpsCallable(functions, "reviewFreelancerApplication")({
+        userId: decision.user.id,
+        action: decision.action === "approve_user" ? "approve" : "reject",
+        reason
+      });
+      if (decision.action === "reject_user") await sendFreelancerRejectionEmail(decision.user, reason);
+      closeDecision();
+      showToast(decision.action === "reject_user"
+        ? "تم رفض الطلب وتنظيف بيانات الهوية وإرسال رسالة لصاحب الطلب."
+        : "تم قبول الطلب وتسجيل القرار بنجاح.");
+      await loadData();
+      return;
     }
+    const batch = writeBatch(db);
     batch.update(doc(db, "users", decision.user.id), updates);
     batch.set(doc(db, "publicProfiles", decision.user.id), {
       name: decision.user.name || "مستخدم PikLance",
@@ -1401,13 +1420,15 @@ onAuthStateChanged(auth, async user => {
       return;
     }
     state.admin = { id: user.uid, email: user.email, ...profileSnapshot.data() };
+    await initializeAdminAccess(state.admin);
     localStorage.setItem("piklanceEarlyAccess", "true");
     localStorage.setItem("piklanceAdminAccess", "true");
     document.getElementById("adminName").textContent = state.admin.name || user.email;
     document.getElementById("adminAvatar").textContent = initials(state.admin.name || user.email);
     document.getElementById("welcomeName").textContent = state.admin.name || "مدير المنصة";
     const requestedSection = location.hash.slice(1);
-    showSection(sectionMeta[requestedSection] ? requestedSection : "overview");
+    applyAdminAccess();
+    showSection(sectionMeta[requestedSection] && canAccessSection(requestedSection) ? requestedSection : firstAllowedSection());
     await loadData();
   } catch (error) {
     console.error("Admin initialization failed", error);

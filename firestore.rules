@@ -19,6 +19,25 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
     }
 
+    function isSuperAdmin() {
+      let admin = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return isAdmin()
+        && (admin.get("adminAccessLevel", "") == "super_admin" || !admin.keys().hasAny(["adminRoleId"]));
+    }
+
+    function hasAdminPermission(permission) {
+      let admin = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return isAdmin() && (
+        isSuperAdmin()
+        || (
+          admin.adminRoleId is string
+          && exists(/databases/$(database)/documents/adminRoles/$(admin.adminRoleId))
+          && get(/databases/$(database)/documents/adminRoles/$(admin.adminRoleId)).data.get("active", true) != false
+          && permission in get(/databases/$(database)/documents/adminRoles/$(admin.adminRoleId)).data.get("permissions", [])
+        )
+      );
+    }
+
     function isAccountType(type) {
       return activeUser()
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.accountType == type;
@@ -311,6 +330,21 @@ service cloud.firestore {
           && request.resource.data.updatedAt == request.time;
       }
 
+      function validAdminStatusUpdate() {
+        return hasAdminPermission("users.manage")
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "status", "suspensionReason", "suspendedAt", "suspendedBy",
+            "reactivatedAt", "reactivatedBy"
+          ]);
+      }
+
+      function validAdminRankUpdate() {
+        return hasAdminPermission("ranks.manage")
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "rank", "manualRank", "updatedAt"
+          ]);
+      }
+
       allow create: if signedIn()
         && request.auth.uid == userId
         && request.resource.data.email == request.auth.token.email
@@ -334,10 +368,19 @@ service cloud.firestore {
           || (request.resource.data.accountType == "freelancer" && request.resource.data.status == "pending")
         );
 
-      allow get: if signedIn() && (request.auth.uid == userId || isAdmin());
-      allow list: if isAdmin();
+      allow get: if signedIn() && (request.auth.uid == userId
+        || hasAdminPermission("users.view") || hasAdminPermission("verifications.view")
+        || hasAdminPermission("services.moderate") || isSuperAdmin());
+      allow list: if hasAdminPermission("users.view")
+        || hasAdminPermission("verifications.view")
+        || hasAdminPermission("ranks.manage")
+        || hasAdminPermission("promotions.manage")
+        || hasAdminPermission("overview.view")
+        || isSuperAdmin();
 
-      allow update: if isAdmin()
+      allow update: if isSuperAdmin()
+        || validAdminStatusUpdate()
+        || validAdminRankUpdate()
         || validFreelancerResubmission()
         || (
           signedIn() && request.auth.uid == userId
@@ -370,7 +413,7 @@ service cloud.firestore {
 
     match /publicProfiles/{userId} {
       allow read: if true;
-      allow create: if isAdmin()
+      allow create: if isSuperAdmin() || hasAdminPermission("users.manage")
         || (
           signedIn()
           && request.auth.uid == userId
@@ -410,7 +453,13 @@ service cloud.firestore {
             || (request.resource.data.careerItems is list && request.resource.data.careerItems.size() <= 8)
           )
         );
-      allow update: if isAdmin()
+      allow update: if isSuperAdmin()
+        || (hasAdminPermission("users.manage")
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"]))
+        || (hasAdminPermission("ranks.manage")
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["rank"]))
+        || (hasAdminPermission("promotions.manage")
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["badges", "badgeSummary"]))
         || (
           signedIn() && request.auth.uid == userId
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["badges", "badgeSummary"])
@@ -506,7 +555,7 @@ service cloud.firestore {
         && request.resource.data.lastUpdated == request.time
         && validChatContext(request.resource.data);
 
-      allow read: if isAdmin()
+      allow read: if hasAdminPermission("conversations.view")
         || (activeUser() && request.auth.uid in resource.data.participantUids);
       allow update: if activeUser()
         && request.auth.uid in resource.data.participantUids
@@ -557,7 +606,7 @@ service cloud.firestore {
     }
 
     match /services/{serviceId} {
-      allow read: if isAdmin()
+      allow read: if hasAdminPermission("services.view") || hasAdminPermission("services.moderate")
         || resource.data.status == "published"
         || (activeUser() && resource.data.ownerUid == request.auth.uid);
       allow create: if isAccountType("freelancer")
@@ -592,7 +641,10 @@ service cloud.firestore {
         && request.resource.data.status == "draft"
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
-      allow update: if isAdmin()
+      allow update: if (hasAdminPermission("services.moderate")
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "status", "moderationReason", "reviewedAt", "reviewedBy", "updatedAt"
+          ]))
         || (
           isAccountType("freelancer")
           && resource.data.ownerUid == request.auth.uid
@@ -646,7 +698,7 @@ service cloud.firestore {
           )
           && request.resource.data.updatedAt == request.time
         );
-      allow delete: if isAdmin()
+      allow delete: if hasAdminPermission("services.moderate")
         || (
           isAccountType("freelancer")
           && resource.data.ownerUid == request.auth.uid
@@ -655,7 +707,7 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      allow read: if isAdmin()
+      allow read: if hasAdminPermission("finance.view") || hasAdminPermission("services.view")
         || (
           activeUser()
           && (
@@ -664,17 +716,17 @@ service cloud.firestore {
           )
         );
       allow create: if false;
-      allow update: if isAdmin()
+      allow update: if hasAdminPermission("finance.manage")
         || validOrderDelivery()
         || validOrderDispute();
       allow delete: if false;
     }
 
     match /reviews/{reviewId} {
-      allow read: if resource.data.status == "published" || isAdmin()
+      allow read: if resource.data.status == "published" || hasAdminPermission("services.view") || hasAdminPermission("services.moderate")
         || (activeUser() && request.auth.uid in [resource.data.reviewerUid, resource.data.targetUid]);
       allow create: if validReviewCreate(reviewId);
-      allow update, delete: if isAdmin();
+      allow update, delete: if hasAdminPermission("services.moderate");
     }
 
     match /favorites/{userId}/services/{serviceId} {
@@ -693,18 +745,19 @@ service cloud.firestore {
         && request.resource.data.source == "coming-soon-page"
         && request.resource.data.launchDate == "2026-08-01"
         && request.resource.data.createdAt == request.time;
-      allow read, update, delete: if isAdmin();
+      allow read, update, delete: if hasAdminPermission("content.manage");
     }
 
     match /promoCodeGroups/{groupId} {
-      allow read, create, update, delete: if isAdmin();
+      allow read, create, update, delete: if hasAdminPermission("promotions.manage");
     }
 
     match /promoCodes/{codeId} {
       allow get: if true;
-      allow list: if isAdmin();
-      allow create, delete: if isAdmin();
-      allow update: if isAdmin() || (
+      allow list: if hasAdminPermission("promotions.manage");
+      allow create: if hasAdminPermission("promotions.manage");
+      allow delete: if hasAdminPermission("promotions.manage");
+      allow update: if hasAdminPermission("promotions.manage") || (
         signedIn() && resource.data.status == "active" && resource.data.usedCount < resource.data.maxUses
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["usedCount", "status", "lastUsedAt", "lastUsedBy", "usedBy"])
         && request.resource.data.usedCount == resource.data.usedCount + 1
@@ -718,12 +771,12 @@ service cloud.firestore {
 
     match /badges/{badgeId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if hasAdminPermission("promotions.manage");
     }
 
     match /userBadges/{badgeDocId} {
-      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
-      allow create: if isAdmin() || (
+      allow read: if hasAdminPermission("promotions.manage") || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if hasAdminPermission("promotions.manage") || (
         signedIn() && request.resource.data.uid == request.auth.uid
         && request.resource.data.badgeId == "friends" && request.resource.data.source == "early_access_code"
         && request.resource.data.code is string
@@ -731,12 +784,12 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code)).data.type == "early_access"
         && getAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code)).data.lastUsedBy == request.auth.uid
       );
-      allow update, delete: if isAdmin();
+      allow update, delete: if hasAdminPermission("promotions.manage");
     }
 
     match /referrals/{referralId} {
-      allow read: if isAdmin() || (signedIn() && request.auth.uid in [resource.data.inviterUid, resource.data.invitedUid]);
-      allow create, update: if isAdmin() || (
+      allow read: if hasAdminPermission("promotions.manage") || (signedIn() && request.auth.uid in [resource.data.inviterUid, resource.data.invitedUid]);
+      allow create, update: if hasAdminPermission("promotions.manage") || (
         signedIn() && request.resource.data.invitedUid == request.auth.uid && request.resource.data.status == "pending"
         && request.resource.data.code is string
         && existsAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code))
@@ -744,12 +797,13 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code)).data.lastUsedBy == request.auth.uid
         && request.resource.data.inviterUid == getAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code)).data.ownerUid
       );
-      allow delete: if isAdmin();
+      allow delete: if hasAdminPermission("promotions.manage");
     }
 
     match /userBenefits/{benefitId} {
-      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
-      allow create, update, delete: if isAdmin();
+      allow read: if hasAdminPermission("promotions.manage") || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create, update: if hasAdminPermission("promotions.manage");
+      allow delete: if hasAdminPermission("promotions.manage");
     }
 
     match /supportTickets/{ticketId} {
@@ -810,9 +864,12 @@ service cloud.firestore {
         && request.resource.data.message.size() <= 3000
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
-      allow read: if isAdmin()
+      allow read: if hasAdminPermission("support.view") || hasAdminPermission("support.reply")
         || (activeUser() && resource.data.requesterUid == request.auth.uid);
-      allow update: if isAdmin();
+      allow update: if hasAdminPermission("support.reply")
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status", "priority", "assignedAdminUid", "updatedAt"
+        ]);
       allow delete: if false;
 
       match /replies/{replyId} {
@@ -820,10 +877,10 @@ service cloud.firestore {
           return get(/databases/$(database)/documents/supportTickets/$(ticketId)).data;
         }
 
-        allow read: if isAdmin()
+        allow read: if hasAdminPermission("support.view") || hasAdminPermission("support.reply")
           || (activeUser() && ticket().requesterUid == request.auth.uid);
         allow create: if (
-            isAdmin()
+            hasAdminPermission("support.reply")
             || (activeUser() && ticket().requesterUid == request.auth.uid)
           )
           && request.resource.data.keys().hasOnly([
@@ -834,7 +891,7 @@ service cloud.firestore {
           ])
           && request.resource.data.authorUid == request.auth.uid
           && (
-            (isAdmin() && request.resource.data.authorRole == "admin")
+            (hasAdminPermission("support.reply") && request.resource.data.authorRole == "admin")
             || (
               activeUser()
               && ticket().requesterUid == request.auth.uid
@@ -854,7 +911,9 @@ service cloud.firestore {
 
     match /notifications/{userId}/items/{notificationId} {
       allow read: if activeUser() && request.auth.uid == userId;
-      allow create: if isAdmin()
+      allow create: if hasAdminPermission("verifications.manage")
+        || hasAdminPermission("services.moderate")
+        || hasAdminPermission("support.reply")
         || (
           activeUser()
           && request.resource.data.relatedOrderId is string
@@ -893,9 +952,9 @@ service cloud.firestore {
     }
 
     match /articles/{articleId} {
-      allow read: if isAdmin() || resource.data.status == "published";
-      allow create, delete: if isAdmin();
-      allow update: if isAdmin()
+      allow read: if hasAdminPermission("content.view") || hasAdminPermission("content.manage") || resource.data.status == "published";
+      allow create, delete: if hasAdminPermission("content.manage");
+      allow update: if hasAdminPermission("content.manage")
         || (
           activeUser()
           && resource.data.status == "published"
@@ -911,12 +970,12 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(["userUid", "createdAt"])
           && request.resource.data.userUid == request.auth.uid
           && request.resource.data.createdAt == request.time;
-        allow delete: if isAdmin() || (activeUser() && userId == request.auth.uid);
+        allow delete: if hasAdminPermission("content.manage") || (activeUser() && userId == request.auth.uid);
         allow update: if false;
       }
 
       match /comments/{commentId} {
-        allow read: if isAdmin()
+        allow read: if hasAdminPermission("content.view") || hasAdminPermission("content.manage")
           || (
             get(/databases/$(database)/documents/articles/$(articleId)).data.status == "published"
             && resource.data.status == "published"
@@ -935,19 +994,19 @@ service cloud.firestore {
           && request.resource.data.text.size() <= 1500
           && request.resource.data.status == "published"
           && request.resource.data.createdAt == request.time;
-        allow delete: if isAdmin() || (activeUser() && resource.data.authorUid == request.auth.uid);
-        allow update: if isAdmin()
+        allow delete: if hasAdminPermission("content.manage") || (activeUser() && resource.data.authorUid == request.auth.uid);
+        allow update: if hasAdminPermission("content.manage")
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"]);
       }
     }
 
     match /faqItems/{itemId} {
-      allow read: if isAdmin() || resource.data.published == true;
-      allow create, update, delete: if isAdmin();
+      allow read: if hasAdminPermission("content.view") || hasAdminPermission("content.manage") || resource.data.published == true;
+      allow create, update, delete: if hasAdminPermission("content.manage");
     }
 
     match /freelancerPortfolio/{itemId} {
-      allow read: if isAdmin()
+      allow read: if hasAdminPermission("services.view") || hasAdminPermission("services.moderate")
         || resource.data.published == true
         || (signedIn() && resource.data.ownerUid == request.auth.uid);
       allow create: if signedIn()
@@ -964,7 +1023,7 @@ service cloud.firestore {
         && request.resource.data.mediaPath is string
         && request.resource.data.mediaPath.size() <= 3000
         && request.resource.data.published is bool;
-      allow update: if isAdmin()
+      allow update: if hasAdminPermission("services.moderate")
         || (
           signedIn()
           && resource.data.ownerUid == request.auth.uid
@@ -982,12 +1041,12 @@ service cloud.firestore {
           && request.resource.data.mediaPath.size() <= 3000
           && request.resource.data.published is bool
         );
-      allow delete: if isAdmin()
+      allow delete: if hasAdminPermission("services.moderate")
         || (signedIn() && resource.data.ownerUid == request.auth.uid);
     }
 
     match /portfolioItems/{itemId} {
-      allow read: if isAdmin()
+      allow read: if hasAdminPermission("services.view") || hasAdminPermission("services.moderate")
         || resource.data.published == true
         || (signedIn() && resource.data.ownerUid == request.auth.uid);
       allow create: if signedIn()
@@ -1004,7 +1063,7 @@ service cloud.firestore {
         && request.resource.data.mediaPath is string
         && request.resource.data.mediaPath.size() <= 3000
         && request.resource.data.published is bool;
-      allow update: if isAdmin()
+      allow update: if hasAdminPermission("services.moderate")
         || (
           signedIn()
           && resource.data.ownerUid == request.auth.uid
@@ -1022,17 +1081,17 @@ service cloud.firestore {
           && request.resource.data.mediaPath.size() <= 3000
           && request.resource.data.published is bool
         );
-      allow delete: if isAdmin()
+      allow delete: if hasAdminPermission("services.moderate")
         || (signedIn() && resource.data.ownerUid == request.auth.uid);
     }
 
     match /serviceCategories/{categoryId} {
-      allow read: if isAdmin() || resource.data.active == true;
-      allow create, update, delete: if isAdmin();
+      allow read: if hasAdminPermission("content.view") || hasAdminPermission("content.manage") || resource.data.active == true;
+      allow create, update, delete: if hasAdminPermission("content.manage");
     }
 
     match /adminAuditLogs/{logId} {
-      allow read: if isAdmin();
+      allow read: if hasAdminPermission("audit.view");
       allow create: if isAdmin()
         && request.resource.data.keys().hasOnly([
           "action", "actorUid", "actorName", "actorEmail",
@@ -1058,33 +1117,34 @@ service cloud.firestore {
     }
 
     match /wallets/{userId} {
-      allow read: if isAdmin() || (activeUser() && request.auth.uid == userId);
+      allow read: if hasAdminPermission("finance.view") || (activeUser() && request.auth.uid == userId);
       allow create, update, delete: if false;
     }
 
     match /walletLedger/{entryId} {
-      allow read: if isAdmin() || (activeUser() && resource.data.userUid == request.auth.uid);
+      allow read: if hasAdminPermission("finance.view") || (activeUser() && resource.data.userUid == request.auth.uid);
       allow create, update, delete: if false;
     }
 
     match /depositRequests/{requestId} {
-      allow read: if isAdmin() || (activeUser() && resource.data.userUid == request.auth.uid);
+      allow read: if hasAdminPermission("finance.view") || (activeUser() && resource.data.userUid == request.auth.uid);
       allow create, update, delete: if false;
     }
 
     match /withdrawalRequests/{requestId} {
-      allow read: if isAdmin() || (activeUser() && resource.data.userUid == request.auth.uid);
+      allow read: if hasAdminPermission("finance.view") || (activeUser() && resource.data.userUid == request.auth.uid);
       allow create, update, delete: if false;
     }
 
     match /payoutMethods/{userId}/items/{methodId} {
-      allow read: if isAdmin() || (activeUser() && request.auth.uid == userId);
+      allow read: if hasAdminPermission("finance.view") || (activeUser() && request.auth.uid == userId);
       allow create, update, delete: if false;
     }
 
     match /accountBenefits/{userId} {
-      allow read: if isAdmin() || (activeUser() && request.auth.uid == userId);
-      allow create, update, delete: if isAdmin();
+      allow read: if hasAdminPermission("promotions.manage") || (activeUser() && request.auth.uid == userId);
+      allow create, update: if hasAdminPermission("promotions.manage");
+      allow delete: if hasAdminPermission("promotions.manage");
     }
 
     match /paymentProviderReferences/{referenceId} {
@@ -1092,13 +1152,13 @@ service cloud.firestore {
     }
 
     match /mailQueue/{mailId} {
-      allow read: if isAdmin();
+      allow read: if hasAdminPermission("support.reply") || hasAdminPermission("finance.manage");
       allow create, update, delete: if false;
     }
 
     match /platformSettings/{settingId} {
       allow read: if true;
-      allow create, update: if isAdmin()
+      allow create, update: if hasAdminPermission("settings.manage")
         && settingId == "general"
         && request.resource.data.keys().hasOnly([
           "maintenanceMode", "prelaunchMode", "registrationsEnabled",
@@ -1120,6 +1180,12 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.uid;
       allow delete: if false;
+    }
+
+    match /adminRoles/{roleId} {
+      allow read: if isSuperAdmin()
+        || (isAdmin() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.adminRoleId == roleId);
+      allow write: if false;
     }
 
     match /{document=**} {

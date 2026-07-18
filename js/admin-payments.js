@@ -3,6 +3,7 @@ import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getDownloadURL, ref as storageRef } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { auth, db, functions, storage } from "./firebase.js";
+import { hasPermission, initializeAdminAccess } from "./admin-access.js";
 
 const state = { deposits: [], withdrawals: [], selected: null, kind: "" };
 let stopDeposits = null;
@@ -93,6 +94,11 @@ async function openReview(kind, item) {
   $("paymentApproveButton").textContent = kind === "deposit" ? "موافقة وإضافة الرصيد" : item.status === "processing" ? "تأكيد التحويل" : "بدء التحويل";
   $("paymentRejectButton").hidden = !["pending", "processing"].includes(item.status);
   $("paymentApproveButton").hidden = kind === "deposit" ? item.status !== "pending" : !["pending", "processing"].includes(item.status);
+  if (!hasPermission("finance.manage")) {
+    $("paymentRejectButton").hidden = true;
+    $("paymentApproveButton").hidden = true;
+    $("paymentReviewReason").disabled = true;
+  }
   $("paymentReviewModal").classList.add("open");
 }
 
@@ -134,5 +140,8 @@ onAuthStateChanged(auth, async user => {
     return;
   }
   const profile = await getDoc(doc(db, "users", user.uid));
-  if (profile.exists() && profile.data().role === "admin") listenForPaymentRequests();
+  if (profile.exists() && profile.data().role === "admin") {
+    await initializeAdminAccess({ id: user.uid, email: user.email, ...profile.data() });
+    if (hasPermission("finance.view")) listenForPaymentRequests();
+  }
 });

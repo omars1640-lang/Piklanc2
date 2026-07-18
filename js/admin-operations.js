@@ -8,6 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { auth, db, storage } from "./firebase.js";
 import { sendOfficialEmail } from "./email-client.js";
+import { applyAdminAccess, hasPermission, initializeAdminAccess } from "./admin-access.js";
 
 const state = { admin: null, services: [], tickets: [], orders: [], articles: [], faqs: [], categories: [], selectedTicket: null, replies: [], verificationCount: 0, pendingServiceReview: null, pendingConfirmAction: null };
 const $ = id => document.getElementById(id);
@@ -264,7 +265,7 @@ function openServicePreview(id) {
 
   const actions = $("servicePreviewActions");
   actions.replaceChildren(actionButton("إغلاق", "secondary-button", closeServicePreview));
-  if (service.status === "pending") {
+  if (service.status === "pending" && hasPermission("services.moderate")) {
     actions.append(
       actionButton("رفض الخدمة", "danger-button", () => {
         closeServicePreview();
@@ -276,7 +277,7 @@ function openServicePreview(id) {
       })
     );
   }
-  actions.appendChild(actionButton("حذف الخدمة", "danger-button", () => deleteServiceAdmin(service)));
+  if (hasPermission("services.moderate")) actions.appendChild(actionButton("حذف الخدمة", "danger-button", () => deleteServiceAdmin(service)));
 
   $("servicePreviewModal").classList.add("open");
   $("servicePreviewModal").setAttribute("aria-hidden", "false");
@@ -295,13 +296,13 @@ function renderServices() {
     const actions = document.createElement("div");
     actions.className = "table-actions";
     actions.append(actionButton("عرض الخدمة", "table-button", () => openServicePreview(service.id)));
-    if (service.status === "pending") {
+    if (service.status === "pending" && hasPermission("services.moderate")) {
       actions.append(
         actionButton("نشر", "table-button approve", () => reviewService(service.id, true)),
         actionButton("رفض", "table-button reject", () => openServiceReviewModal(service))
       );
     }
-    actions.append(actionButton("حذف", "table-button reject", () => deleteServiceAdmin(service)));
+    if (hasPermission("services.moderate")) actions.append(actionButton("حذف", "table-button reject", () => deleteServiceAdmin(service)));
     [service.title || "خدمة", service.ownerName || "-", `${Number(service.price || 0).toLocaleString("en-US")} ل.س`, serviceLabels[service.status] || service.status, formatDate(service.updatedAt), actions].forEach(value => {
       const cell = document.createElement("td");
       cell.append(value instanceof Node ? value : document.createTextNode(value));
@@ -331,6 +332,7 @@ function closeServiceReviewModal() {
 }
 
 async function reviewService(id, approved, reason = "") {
+  if (!hasPermission("services.moderate")) return toast("لا تملك صلاحية مراجعة الخدمات.");
   const service = state.services.find(item => item.id === id);
   if (!service) return;
   const moderationReason = approved ? "" : reason.trim();
@@ -395,6 +397,7 @@ async function handleServiceReviewSubmit(event) {
 }
 
 async function deleteServiceAdmin(service) {
+  if (!hasPermission("services.moderate")) return toast("لا تملك صلاحية حذف الخدمات.");
   openAdminConfirm({
     title: "حذف خدمة نهائياً",
     message: `هل تريد حذف خدمة "${service.title || "بدون عنوان"}"؟ لا يمكن التراجع عن هذا الإجراء.`,
@@ -509,6 +512,7 @@ function closeTicket() {
 
 async function saveTicket(event) {
   event.preventDefault();
+  if (!hasPermission("support.reply")) return toast("لديك صلاحية الاطلاع فقط ولا يمكنك تعديل التذكرة.");
   const ticket = state.selectedTicket;
   if (!ticket) return;
   const status = $("ticketAdminStatus").value;
@@ -563,8 +567,10 @@ function contentItem(title, meta, onToggle, toggleLabel, onDelete, onEdit = null
   copy.append(strong, small);
   const actions = document.createElement("div");
   actions.className = "table-actions";
-  if (onEdit) actions.append(actionButton("تعديل", "table-button", onEdit));
-  actions.append(actionButton(toggleLabel, "table-button", onToggle), actionButton("حذف", "table-button reject", onDelete));
+  if (hasPermission("content.manage")) {
+    if (onEdit) actions.append(actionButton("تعديل", "table-button", onEdit));
+    actions.append(actionButton(toggleLabel, "table-button", onToggle), actionButton("حذف", "table-button reject", onDelete));
+  }
   item.append(copy, actions);
   return item;
 }
@@ -595,6 +601,7 @@ function renderContent() {
 }
 
 async function toggleArticleStatus(article) {
+  if (!hasPermission("content.manage")) return toast("لديك صلاحية الاطلاع فقط.");
   const status = article.status === "published" ? "draft" : "published";
   const updates = {
     status,
@@ -609,6 +616,7 @@ async function toggleArticleStatus(article) {
 }
 
 async function toggleContent(collectionName, item, field, value, action) {
+  if (!hasPermission("content.manage")) return toast("لديك صلاحية الاطلاع فقط.");
   await updateDoc(doc(db, collectionName, item.id), { [field]: value, updatedAt: serverTimestamp(), updatedBy: state.admin.id });
   await addDoc(collection(db, "adminAuditLogs"), auditData(action, item, `${field}: ${value}`));
   toast("تم تحديث حالة المحتوى.");
@@ -712,6 +720,7 @@ async function uploadArticleCover(articleId, file) {
 
 async function saveArticle(event) {
   event.preventDefault();
+  if (!hasPermission("content.manage")) return toast("لا تملك صلاحية تعديل المحتوى.");
   const existingId = $("articleId").value;
   const existing = state.articles.find(article => article.id === existingId);
   const articleRef = existingId ? doc(db, "articles", existingId) : doc(collection(db, "articles"));
@@ -766,6 +775,7 @@ async function saveArticle(event) {
 
 async function addFaq(event) {
   event.preventDefault();
+  if (!hasPermission("content.manage")) return toast("لا تملك صلاحية تعديل المحتوى.");
   await addDoc(collection(db, "faqItems"), {
     question: $("faqQuestion").value.trim(), answer: $("faqAnswer").value.trim(),
     category: $("faqCategory").value.trim() || "عام", published: $("faqPublished").checked,
@@ -780,6 +790,7 @@ async function addFaq(event) {
 
 async function addCategory(event) {
   event.preventDefault();
+  if (!hasPermission("content.manage")) return toast("لا تملك صلاحية تعديل المحتوى.");
   const name = $("categoryName").value.trim();
   await addDoc(collection(db, "serviceCategories"), {
     name, slug: name.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\u0600-\u06ff\w-]/g, ""),
@@ -794,13 +805,14 @@ async function addCategory(event) {
 }
 
 async function loadOperations() {
+  const empty = { docs: [] };
   const [services, tickets, orders, articles, faqs, categories] = await Promise.all([
-    getDocs(collection(db, "services")),
-    getDocs(collection(db, "supportTickets")),
-    getDocs(collection(db, "orders")),
-    getDocs(collection(db, "articles")),
-    getDocs(collection(db, "faqItems")),
-    getDocs(collection(db, "serviceCategories"))
+    (hasPermission("services.view") || hasPermission("services.moderate")) ? getDocs(collection(db, "services")) : empty,
+    (hasPermission("support.view") || hasPermission("support.reply")) ? getDocs(collection(db, "supportTickets")) : empty,
+    (hasPermission("finance.view") || hasPermission("services.view")) ? getDocs(collection(db, "orders")) : empty,
+    (hasPermission("content.view") || hasPermission("content.manage")) ? getDocs(collection(db, "articles")) : empty,
+    (hasPermission("content.view") || hasPermission("content.manage")) ? getDocs(collection(db, "faqItems")) : empty,
+    (hasPermission("content.view") || hasPermission("content.manage")) ? getDocs(collection(db, "serviceCategories")) : empty
   ]);
   state.services = sortNewest(services.docs.map(item => ({ id: item.id, ...item.data() })));
   state.tickets = sortNewest(tickets.docs.map(item => ({ id: item.id, ...item.data() })));
@@ -813,6 +825,7 @@ async function loadOperations() {
   renderFinance();
   renderContent();
   renderAdminNotifications();
+  applyAdminAccess();
 }
 
 ["marketplace", "finance", "support", "content"].forEach(section => document.querySelector(`.nav-link[data-section="${section}"] i`)?.remove());
@@ -867,6 +880,12 @@ onAuthStateChanged(auth, async user => {
     const snapshot = await getDoc(doc(db, "users", user.uid));
     if (!snapshot.exists() || snapshot.data().role !== "admin") return;
     state.admin = { id: user.uid, email: user.email, ...snapshot.data() };
+    await initializeAdminAccess(state.admin);
+    if (!hasPermission("content.manage")) ["articleForm", "faqForm", "categoryForm"].forEach(id => { if ($(id)) $(id).hidden = true; });
+    if (!hasPermission("support.reply")) {
+      ["ticketAdminStatus", "ticketAdminPriority", "ticketAdminReply"].forEach(id => { if ($(id)) $(id).disabled = true; });
+      $("ticketAdminForm")?.querySelector('button[type="submit"]')?.setAttribute("hidden", "");
+    }
     resetArticleForm();
     await loadOperations();
   } catch (error) {
