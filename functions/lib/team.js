@@ -1,4 +1,5 @@
 const { onCall } = require("firebase-functions/v2/https");
+const crypto = require("crypto");
 const { FieldValue, HttpsError, REGION, cleanText, db, requireSuperAdmin } = require("./helpers");
 
 const PERMISSIONS = new Set([
@@ -27,10 +28,12 @@ exports.saveAdminRole = onCall({ region: REGION, enforceAppCheck: false }, async
   if (name.length < 2 || !permissions.length) {
     throw new HttpsError("invalid-argument", "أدخل اسم الدور وحدد صلاحية واحدة على الأقل.");
   }
-  const reference = roleId ? db.doc(`adminRoles/${roleId}`) : db.collection("adminRoles").doc();
+  const nameKey = name.toLocaleLowerCase("ar").replace(/\s+/g, " ");
+  const generatedId = `role-${crypto.createHash("sha256").update(nameKey).digest("hex").slice(0, 24)}`;
+  const reference = roleId ? db.doc(`adminRoles/${roleId}`) : db.doc(`adminRoles/${generatedId}`);
   const current = await reference.get();
   await reference.set({
-    name, description, permissions, active: true,
+    name, nameKey, description, permissions, active: true,
     createdAt: current.data()?.createdAt || FieldValue.serverTimestamp(),
     createdBy: current.data()?.createdBy || admin.id,
     updatedAt: FieldValue.serverTimestamp(), updatedBy: admin.id
@@ -42,9 +45,16 @@ exports.deleteAdminRole = onCall({ region: REGION, enforceAppCheck: false }, asy
   await requireSuperAdmin(request);
   const roleId = cleanText(request.data?.roleId, 80);
   if (!roleId) throw new HttpsError("invalid-argument", "الدور غير صالح.");
-  const assigned = await db.collection("users").where("adminRoleId", "==", roleId).limit(1).get();
-  if (!assigned.empty) throw new HttpsError("failed-precondition", "لا يمكن حذف دور مرتبط بأحد أعضاء الفريق.");
-  await db.doc(`adminRoles/${roleId}`).delete();
+  const roleRef = db.doc(`adminRoles/${roleId}`);
+  await db.runTransaction(async transaction => {
+    const [role, assigned] = await Promise.all([
+      transaction.get(roleRef),
+      transaction.get(db.collection("users").where("adminRoleId", "==", roleId).limit(1))
+    ]);
+    if (!role.exists) return;
+    if (!assigned.empty) throw new HttpsError("failed-precondition", "لا يمكن حذف دور مرتبط بأحد أعضاء الفريق.");
+    transaction.delete(roleRef);
+  });
   return { ok: true };
 });
 
@@ -66,9 +76,15 @@ exports.assignAdminRole = onCall({ region: REGION, enforceAppCheck: false }, asy
     throw new HttpsError("failed-precondition", "هذا الحساب يملك إدارة كاملة بالفعل ولا يمكن تحويله إلى دور موظف من هنا.");
   }
   const previousRole = data.role === "admin" ? (data.teamPreviousRole || data.accountType || "buyer") : (data.role || data.accountType || "buyer");
-  await member.ref.update({
-    role: "admin", adminAccessLevel: "staff", adminRoleId: roleId,
-    teamPreviousRole: previousRole, teamAssignedAt: FieldValue.serverTimestamp(), teamAssignedBy: admin.id
+  await db.runTransaction(async transaction => {
+    const currentRole = await transaction.get(roleSnapshot.ref);
+    if (!currentRole.exists || currentRole.data().active === false) {
+      throw new HttpsError("failed-precondition", "تم حذف الدور أو إيقافه قبل اكتمال العملية.");
+    }
+    transaction.update(member.ref, {
+      role: "admin", adminAccessLevel: "staff", adminRoleId: roleId,
+      teamPreviousRole: previousRole, teamAssignedAt: FieldValue.serverTimestamp(), teamAssignedBy: admin.id
+    });
   });
   return { ok: true, userId: member.id };
 });

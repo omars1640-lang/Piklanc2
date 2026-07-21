@@ -6,7 +6,8 @@
     "node": "22"
   },
   "scripts": {
-    "check": "node --check index.js && node --check lib/helpers.js && node --check lib/wallet.js && node --check lib/orders.js && node --check lib/email.js && node --check lib/currency-migration.js && node --check lib/team.js && node --check lib/admin-users.js"
+    "check": "node --check index.js && node --check lib/helpers.js && node --check lib/wallet.js && node --check lib/orders.js && node --check lib/email.js && node --check lib/currency-migration.js && node --check lib/team.js && node --check lib/admin-users.js && node --check lib/articles.js && node --check lib/article-counters.js",
+    "test": "node --test test/articles.test.js && node ../scripts/test-content-architecture.mjs"
   },
   "dependencies": {
     "firebase-admin": "^13.4.0",

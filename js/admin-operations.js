@@ -1,16 +1,22 @@
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
-  addDoc, collection, doc, getDoc, getDocs,
-  serverTimestamp, updateDoc, writeBatch
+  addDoc, collection, doc, getAggregateFromServer, getCountFromServer, getDoc, getDocs, limit, orderBy, query,
+  serverTimestamp, startAfter, sum, updateDoc, where, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
   deleteObject, getDownloadURL, ref as storageRef, uploadBytes
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { auth, db, storage } from "./firebase.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+import { auth, db, functions, storage } from "./firebase.js";
 import { sendOfficialEmail } from "./email-client.js";
 import { applyAdminAccess, hasPermission, initializeAdminAccess } from "./admin-access.js";
 
-const state = { admin: null, services: [], tickets: [], orders: [], articles: [], faqs: [], categories: [], selectedTicket: null, replies: [], verificationCount: 0, pendingServiceReview: null, pendingConfirmAction: null };
+const state = {
+  admin: null, services: [], tickets: [], orders: [], articles: [], faqs: [], categories: [],
+  selectedTicket: null, replies: [], verificationCount: 0, pendingServiceReview: null, pendingConfirmAction: null,
+  articleCursor: null, articleHasMore: false, articleTotal: 0, articleLoading: false,
+  articleSaving: false, articleOperationId: "", loadedSections: new Set(), counts: {}, financeMetrics: null
+};
 const $ = id => document.getElementById(id);
 const toDate = value => value?.toDate?.() || (value ? new Date(value) : null);
 const sortNewest = (items, field = "updatedAt") => items.sort((a, b) => (toDate(b[field])?.getTime() || 0) - (toDate(a[field])?.getTime() || 0));
@@ -19,6 +25,17 @@ const serviceLabels = { draft: "مسودة", pending: "قيد المراجعة",
 const ticketLabels = { open: "مفتوحة", in_progress: "قيد المعالجة", waiting_user: "بانتظار المستخدم", resolved: "محلولة", closed: "مغلقة" };
 const orderLabels = { funded: "محجوز", active: "قيد التنفيذ", delivered: "قيد المراجعة", completed: "محرر", disputed: "نزاع", cancelled: "ملغي" };
 const categoryLabels = { technical: "تقنية", account: "الحساب", payment: "الدفع", dispute: "نزاع", report: "بلاغ", general: "عام" };
+const ADMIN_PAGE_SIZE = 20;
+
+function operationId(prefix) {
+  const random = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}-${random}`;
+}
+
+async function callArticleFunction(name, data) {
+  const result = await httpsCallable(functions, name)(data);
+  return result.data;
+}
 
 function toast(message) {
   const element = $("adminToast");
@@ -92,7 +109,18 @@ function actionButton(label, className, handler) {
   button.type = "button";
   button.className = className;
   button.textContent = label;
-  button.addEventListener("click", handler);
+  button.addEventListener("click", async () => {
+    if (button.disabled) return;
+    button.disabled = true;
+    try {
+      await handler();
+    } catch (error) {
+      console.error(`Admin action failed: ${label}`, error);
+      toast("تعذر تنفيذ الإجراء حالياً. حاول مرة أخرى.");
+    } finally {
+      button.disabled = false;
+    }
+  });
   return button;
 }
 
@@ -149,20 +177,24 @@ function buildAdminNotifications() {
   const disputes = state.tickets.filter(ticket => ticket.category === "dispute" && !["resolved", "closed"].includes(ticket.status));
   const financeOrders = state.orders.filter(order => ["funded", "active", "delivered", "disputed"].includes(order.status));
   const draftArticles = state.articles.filter(article => article.status === "draft");
+  const pendingServicesCount = state.counts.pendingServices ?? pendingServices.length;
+  const activeTicketsCount = state.counts.activeTickets ?? activeTickets.length;
+  const financeOrdersCount = state.counts.financeOrders ?? financeOrders.length;
+  const draftArticlesCount = state.counts.draftArticles ?? draftArticles.length;
 
   updateNavBadge("verifications", state.verificationCount);
-  updateNavBadge("marketplace", pendingServices.length);
-  updateNavBadge("finance", financeOrders.length);
-  updateNavBadge("support", activeTickets.length);
-  updateNavBadge("content", draftArticles.length);
+  updateNavBadge("marketplace", pendingServicesCount);
+  updateNavBadge("finance", financeOrdersCount);
+  updateNavBadge("support", activeTicketsCount);
+  updateNavBadge("content", draftArticlesCount);
 
   return [
     state.verificationCount ? adminNotification("✓", "طلبات توثيق معلقة", `${state.verificationCount} طلب حساب يحتاج مراجعة بيانات المستخدم قبل الموافقة.`, "verifications", state.verificationCount) : null,
-    pendingServices.length ? adminNotification("▦", "خدمات بانتظار المراجعة", `${pendingServices.length} خدمة تحتاج عرض التفاصيل قبل النشر أو الرفض.`, "marketplace", pendingServices.length) : null,
-    financeOrders.length ? adminNotification("◈", "مدفوعات وطلبات تحتاج متابعة", `${financeOrders.length} طلب مرتبط بالحجز أو التسليم أو النزاع.`, "finance", financeOrders.length) : null,
-    activeTickets.length ? adminNotification("?", "تذاكر دعم نشطة", `${activeTickets.length} تذكرة مفتوحة أو قيد المعالجة.`, "support", activeTickets.length) : null,
+    pendingServicesCount ? adminNotification("▦", "خدمات بانتظار المراجعة", `${pendingServicesCount} خدمة تحتاج عرض التفاصيل قبل النشر أو الرفض.`, "marketplace", pendingServicesCount) : null,
+    financeOrdersCount ? adminNotification("◈", "مدفوعات وطلبات تحتاج متابعة", `${financeOrdersCount} طلب مرتبط بالحجز أو التسليم أو النزاع.`, "finance", financeOrdersCount) : null,
+    activeTicketsCount ? adminNotification("?", "تذاكر دعم نشطة", `${activeTicketsCount} تذكرة مفتوحة أو قيد المعالجة.`, "support", activeTicketsCount) : null,
     disputes.length ? adminNotification("⚖", "نزاعات مفتوحة", `${disputes.length} نزاع يحتاج قرار أو متابعة من الإدارة.`, "support", disputes.length) : null,
-    draftArticles.length ? adminNotification("▤", "محتوى غير منشور", `${draftArticles.length} مقال ما زال كمسودة.`, "content", draftArticles.length) : null
+    draftArticlesCount ? adminNotification("▤", "محتوى غير منشور", `${draftArticlesCount} مقال ما زال كمسودة.`, "content", draftArticlesCount) : null
   ].filter(Boolean);
 }
 
@@ -452,10 +484,10 @@ function renderFinance() {
   });
   const held = state.orders.filter(order => ["funded", "active", "delivered", "disputed"].includes(order.status));
   const completed = state.orders.filter(order => order.status === "completed");
-  $("financeOrdersTotal").textContent = state.orders.length;
-  $("financeHeldTotal").textContent = `${held.reduce((sum, order) => sum + Number(order.total || 0), 0).toLocaleString("en-US")} ل.س`;
-  $("financeFeeTotal").textContent = `${completed.reduce((sum, order) => sum + Number(order.platformFeeAmount || 0), 0).toLocaleString("en-US")} ل.س`;
-  $("financeReleasedTotal").textContent = `${completed.reduce((sum, order) => sum + Number(order.freelancerAmount || 0), 0).toLocaleString("en-US")} ل.س`;
+  $("financeOrdersTotal").textContent = state.financeMetrics?.ordersTotal ?? state.orders.length;
+  $("financeHeldTotal").textContent = `${Number(state.financeMetrics?.heldTotal ?? held.reduce((total, order) => total + Number(order.total || 0), 0)).toLocaleString("en-US")} ل.س`;
+  $("financeFeeTotal").textContent = `${Number(state.financeMetrics?.feeTotal ?? completed.reduce((total, order) => total + Number(order.platformFeeAmount || 0), 0)).toLocaleString("en-US")} ل.س`;
+  $("financeReleasedTotal").textContent = `${Number(state.financeMetrics?.releasedTotal ?? completed.reduce((total, order) => total + Number(order.freelancerAmount || 0), 0)).toLocaleString("en-US")} ل.س`;
   const rows = orders.map(order => {
     const row = document.createElement("tr");
     const values = [
@@ -491,7 +523,7 @@ async function openTicket(id) {
   const ticket = state.tickets.find(item => item.id === id);
   if (!ticket) return;
   state.selectedTicket = ticket;
-  const snapshot = await getDocs(collection(db, "supportTickets", id, "replies"));
+  const snapshot = await getDocs(query(collection(db, "supportTickets", id, "replies"), orderBy("createdAt", "desc"), limit(100)));
   state.replies = sortNewest(snapshot.docs.map(item => ({ id: item.id, ...item.data() })), "createdAt").reverse();
   $("ticketAdminTitle").textContent = ticket.subject;
   $("ticketAdminMeta").textContent = `${ticket.requesterName || ticket.requesterEmail} · ${categoryLabels[ticket.category] || ticket.category} · #${ticket.id.slice(0, 8)}`;
@@ -576,16 +608,37 @@ function contentItem(title, meta, onToggle, toggleLabel, onDelete, onEdit = null
 }
 
 function renderContent() {
-  $("articlesCount").textContent = state.articles.length;
+  $("articlesCount").textContent = state.articleTotal || state.articles.length;
   $("faqsCount").textContent = state.faqs.length;
   $("categoriesCount").textContent = state.categories.length;
-  $("articlesList").replaceChildren(...state.articles.map(article => contentItem(
-    article.title, `${article.category || "عام"} · ${article.status === "published" ? "منشور" : "مسودة"}${article.featured ? " · مميز" : ""}`,
-    () => toggleArticleStatus(article),
-    article.status === "published" ? "إلغاء النشر" : "نشر",
-    () => removeArticle(article),
-    () => editArticle(article)
-  )));
+  const articleItems = state.articles.map(article => {
+    if (article.status !== "trash") {
+      return contentItem(
+        article.title,
+        `${article.category || "عام"} · ${article.status === "published" ? "منشور" : "مسودة"}${article.featured ? " · مميز" : ""}`,
+        () => toggleArticleStatus(article),
+        article.status === "published" ? "إلغاء النشر" : "نشر",
+        () => removeArticle(article),
+        () => editArticle(article)
+      );
+    }
+    const item = contentItem(article.title, `${article.category || "عام"} · في المحذوفات`, () => {}, "", () => {});
+    const actions = item.querySelector(".table-actions");
+    actions?.replaceChildren(
+      actionButton("استعادة", "table-button", () => restoreArticle(article)),
+      actionButton("حذف نهائي", "table-button reject", () => permanentlyRemoveArticle(article))
+    );
+    return item;
+  });
+  if (!articleItems.length) {
+    const empty = document.createElement("div");
+    empty.className = "admin-list-empty";
+    empty.textContent = "لا توجد مقالات في هذه الصفحة.";
+    articleItems.push(empty);
+  }
+  $("articlesList").replaceChildren(...articleItems);
+  $("articlesLoadMore").hidden = !state.articleHasMore;
+  $("articlesLoadMore").disabled = state.articleLoading;
   $("faqsList").replaceChildren(...state.faqs.map(item => contentItem(
     item.question, `${item.category || "عام"} · ${item.published ? "منشور" : "مخفي"}`,
     () => toggleContent("faqItems", item, "published", !item.published, "manage_faq"),
@@ -603,16 +656,9 @@ function renderContent() {
 async function toggleArticleStatus(article) {
   if (!hasPermission("content.manage")) return toast("لديك صلاحية الاطلاع فقط.");
   const status = article.status === "published" ? "draft" : "published";
-  const updates = {
-    status,
-    updatedAt: serverTimestamp(),
-    updatedBy: state.admin.id
-  };
-  if (status === "published" && !article.publishedAt) updates.publishedAt = serverTimestamp();
-  await updateDoc(doc(db, "articles", article.id), updates);
-  await addDoc(collection(db, "adminAuditLogs"), auditData("update_article", article, `status: ${status}`));
+  await callArticleFunction("updateArticleStatus", { articleId: article.id, status, operationId: operationId("article-status") });
   toast(status === "published" ? "تم نشر المقال." : "تم تحويل المقال إلى مسودة.");
-  await loadOperations();
+  await loadArticlesPage(true);
 }
 
 async function toggleContent(collectionName, item, field, value, action) {
@@ -643,35 +689,37 @@ async function removeContentConfirmed(collectionName, item, action) {
 
 async function removeArticle(article) {
   openAdminConfirm({
-    title: "حذف مقال نهائياً",
-    message: `هل تريد حذف "${article.title}" مع تعليقاته وإعجاباته نهائياً؟`,
-    actionLabel: "حذف المقال",
+    title: "نقل المقال إلى المحذوفات",
+    message: `سيختفي "${article.title}" من المنصة ويمكن استعادته لاحقاً قبل الحذف النهائي.`,
+    actionLabel: "نقل إلى المحذوفات",
     onConfirm: () => removeArticleConfirmed(article)
   });
 }
 
 async function removeArticleConfirmed(article) {
-  const [likes, comments] = await Promise.all([
-    getDocs(collection(db, "articles", article.id, "likes")),
-    getDocs(collection(db, "articles", article.id, "comments"))
-  ]);
-  const references = [...likes.docs, ...comments.docs].map(item => item.ref);
-  while (references.length) {
-    const batch = writeBatch(db);
-    references.splice(0, 400).forEach(reference => batch.delete(reference));
-    await batch.commit();
-  }
-  const batch = writeBatch(db);
-  batch.delete(doc(db, "articles", article.id));
-  batch.set(doc(collection(db, "adminAuditLogs")), auditData("delete_article", article, "delete"));
-  await batch.commit();
+  await callArticleFunction("archiveArticle", { articleId: article.id, operationId: operationId("article-archive") });
   if ($("articleId").value === article.id) resetArticleForm();
-  toast("تم حذف المقال وتفاعلاته.");
-  await loadOperations();
+  toast("تم نقل المقال إلى المحذوفات.");
+  await loadArticlesPage(true);
 }
 
-function slugify(value) {
-  return value.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\u0600-\u06ff\w-]/g, "");
+async function restoreArticle(article) {
+  await callArticleFunction("restoreArticle", { articleId: article.id, operationId: operationId("article-restore") });
+  toast("تمت استعادة المقال كمسودة.");
+  await loadArticlesPage(true);
+}
+
+function permanentlyRemoveArticle(article) {
+  openAdminConfirm({
+    title: "حذف المقال نهائياً",
+    message: `سيتم حذف "${article.title}" مع التعليقات والإعجابات والصور ولن يمكن استعادته.`,
+    actionLabel: "حذف نهائي",
+    onConfirm: async () => {
+      await callArticleFunction("deleteArticlePermanently", { articleId: article.id, operationId: operationId("article-delete") });
+      toast("تم حذف المقال وملفاته نهائياً.");
+      await loadArticlesPage(true);
+    }
+  });
 }
 
 function updateCoverPreview(url = "") {
@@ -683,6 +731,7 @@ function updateCoverPreview(url = "") {
 function resetArticleForm() {
   $("articleForm").reset();
   $("articleId").value = "";
+  state.articleOperationId = "";
   $("articleFormTitle").textContent = "مقال جديد";
   $("articleSubmitButton").textContent = "حفظ المقال";
   $("articleCancelEdit").hidden = true;
@@ -690,7 +739,17 @@ function resetArticleForm() {
   updateCoverPreview();
 }
 
-function editArticle(article) {
+async function editArticle(article) {
+  if (state.articleSaving) return;
+  let body = article.body || "";
+  try {
+    const bodySnapshot = await getDoc(doc(db, "articleBodies", article.id));
+    if (bodySnapshot.exists()) body = bodySnapshot.data().body || body;
+  } catch (error) {
+    console.error("Unable to load article body", error);
+    toast("تعذر تحميل محتوى المقال للتعديل.");
+    return;
+  }
   $("articleId").value = article.id;
   $("articleTitle").value = article.title || "";
   $("articleCategory").value = article.category || "";
@@ -699,7 +758,7 @@ function editArticle(article) {
   $("articleTags").value = Array.isArray(article.tags) ? article.tags.join("، ") : "";
   $("articleCoverUrl").value = article.coverUrl || "";
   $("articleExcerpt").value = article.excerpt || "";
-  $("articleBody").value = article.body || "";
+  $("articleBody").value = body;
   $("articleFeatured").checked = Boolean(article.featured);
   $("articleCoverFile").value = "";
   $("articleFormTitle").textContent = "تعديل المقال";
@@ -710,67 +769,70 @@ function editArticle(article) {
 }
 
 async function uploadArticleCover(articleId, file) {
-  if (!file) return "";
+  if (!file) return null;
   if (file.size > 5 * 1024 * 1024) throw new Error("cover_too_large");
   const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const target = storageRef(storage, `article-covers/${articleId}/cover-${Date.now()}.${extension}`);
+  const path = `article-covers/${articleId}/cover-${Date.now()}.${extension}`;
+  const target = storageRef(storage, path);
   await uploadBytes(target, file, { contentType: file.type });
-  return getDownloadURL(target);
+  return { url: await getDownloadURL(target), path };
 }
 
 async function saveArticle(event) {
   event.preventDefault();
   if (!hasPermission("content.manage")) return toast("لا تملك صلاحية تعديل المحتوى.");
-  const existingId = $("articleId").value;
+  if (state.articleSaving) return;
+  state.articleSaving = true;
+  const submitButton = $("articleSubmitButton");
+  const originalLabel = submitButton.textContent;
+  submitButton.disabled = true;
+  submitButton.textContent = "جاري الحفظ...";
+  let existingId = $("articleId").value;
+  if (!existingId) {
+    existingId = doc(collection(db, "articles")).id;
+    $("articleId").value = existingId;
+  }
   const existing = state.articles.find(article => article.id === existingId);
-  const articleRef = existingId ? doc(db, "articles", existingId) : doc(collection(db, "articles"));
   const status = $("articleStatus").value;
   const title = $("articleTitle").value.trim();
   const file = $("articleCoverFile").files[0];
-  let coverUrl = $("articleCoverUrl").value.trim() || existing?.coverUrl || "";
+  const enteredCoverUrl = $("articleCoverUrl").value.trim();
+  let coverUrl = enteredCoverUrl || existing?.coverUrl || "";
+  let coverPath = existing?.coverPath || "";
+  if (enteredCoverUrl && enteredCoverUrl !== existing?.coverUrl) coverPath = "";
   try {
-    if (file) coverUrl = await uploadArticleCover(articleRef.id, file);
-  } catch (error) {
-    if (error.message === "cover_too_large") {
-      toast("حجم صورة الغلاف يجب ألا يتجاوز 5 ميغابايت.");
-      return;
+    if (file) {
+      const uploaded = await uploadArticleCover(existingId, file);
+      coverUrl = uploaded.url;
+      coverPath = uploaded.path;
     }
-    throw error;
-  }
-  const tags = $("articleTags").value.split(/[،,]/).map(tag => tag.trim()).filter(Boolean).slice(0, 12);
-  const data = {
-    title,
-    slug: slugify(title),
-    category: $("articleCategory").value.trim() || "عام",
-    tags,
-    coverUrl,
-    excerpt: $("articleExcerpt").value.trim(),
-    body: $("articleBody").value.trim(),
-    status,
-    featured: $("articleFeatured").checked,
-    authorUid: state.admin.id,
-    authorName: $("articleAuthor").value.trim() || state.admin.name || state.admin.email,
-    updatedAt: serverTimestamp(),
-    updatedBy: state.admin.id,
-    publishedAt: status === "published" ? (existing?.publishedAt || serverTimestamp()) : (existing?.publishedAt || null)
-  };
-  if (!existing) {
-    data.createdAt = serverTimestamp();
-    data.views = 0;
-  }
-  const batch = writeBatch(db);
-  if (data.featured) {
-    state.articles.filter(article => article.id !== articleRef.id && article.featured).forEach(article => {
-      batch.update(doc(db, "articles", article.id), { featured: false, updatedAt: serverTimestamp(), updatedBy: state.admin.id });
+    const tags = $("articleTags").value.split(/[،,]/).map(tag => tag.trim()).filter(Boolean).slice(0, 12);
+    state.articleOperationId ||= operationId("article-save");
+    const result = await callArticleFunction("saveArticle", {
+      articleId: existingId,
+      operationId: state.articleOperationId,
+      title,
+      category: $("articleCategory").value.trim() || "عام",
+      tags,
+      coverUrl,
+      coverPath,
+      excerpt: $("articleExcerpt").value.trim(),
+      body: $("articleBody").value.trim(),
+      status,
+      featured: $("articleFeatured").checked,
+      authorName: $("articleAuthor").value.trim() || state.admin.name || state.admin.email
     });
+    resetArticleForm();
+    toast(result.created ? "تم حفظ المقال." : "تم تحديث المقال.");
+    await loadArticlesPage(true);
+  } catch (error) {
+    if (error.message === "cover_too_large") toast("حجم صورة الغلاف يجب ألا يتجاوز 5 ميغابايت.");
+    else throw error;
+  } finally {
+    state.articleSaving = false;
+    submitButton.disabled = false;
+    if ($("articleId").value) submitButton.textContent = originalLabel;
   }
-  if (existing) batch.update(articleRef, data);
-  else batch.set(articleRef, data);
-  batch.set(doc(collection(db, "adminAuditLogs")), auditData(existing ? "update_article" : "create_article", { id: articleRef.id, title }, status));
-  await batch.commit();
-  resetArticleForm();
-  toast(existing ? "تم تحديث المقال." : "تم حفظ المقال.");
-  await loadOperations();
 }
 
 async function addFaq(event) {
@@ -779,7 +841,7 @@ async function addFaq(event) {
   await addDoc(collection(db, "faqItems"), {
     question: $("faqQuestion").value.trim(), answer: $("faqAnswer").value.trim(),
     category: $("faqCategory").value.trim() || "عام", published: $("faqPublished").checked,
-    order: state.faqs.length + 1, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), updatedBy: state.admin.id
+    order: Date.now(), createdAt: serverTimestamp(), updatedAt: serverTimestamp(), updatedBy: state.admin.id
   });
   await addDoc(collection(db, "adminAuditLogs"), auditData("manage_faq", {}, "create"));
   event.currentTarget.reset();
@@ -795,7 +857,7 @@ async function addCategory(event) {
   await addDoc(collection(db, "serviceCategories"), {
     name, slug: name.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\u0600-\u06ff\w-]/g, ""),
     description: $("categoryDescription").value.trim(), active: $("categoryActive").checked,
-    order: state.categories.length + 1, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), updatedBy: state.admin.id
+    order: Date.now(), createdAt: serverTimestamp(), updatedAt: serverTimestamp(), updatedBy: state.admin.id
   });
   await addDoc(collection(db, "adminAuditLogs"), auditData("manage_category", { title: name }, "create"));
   event.currentTarget.reset();
@@ -804,27 +866,140 @@ async function addCategory(event) {
   await loadOperations();
 }
 
-async function loadOperations() {
-  const empty = { docs: [] };
-  const [services, tickets, orders, articles, faqs, categories] = await Promise.all([
-    (hasPermission("services.view") || hasPermission("services.moderate")) ? getDocs(collection(db, "services")) : empty,
-    (hasPermission("support.view") || hasPermission("support.reply")) ? getDocs(collection(db, "supportTickets")) : empty,
-    (hasPermission("finance.view") || hasPermission("services.view")) ? getDocs(collection(db, "orders")) : empty,
-    (hasPermission("content.view") || hasPermission("content.manage")) ? getDocs(collection(db, "articles")) : empty,
-    (hasPermission("content.view") || hasPermission("content.manage")) ? getDocs(collection(db, "faqItems")) : empty,
-    (hasPermission("content.view") || hasPermission("content.manage")) ? getDocs(collection(db, "serviceCategories")) : empty
-  ]);
-  state.services = sortNewest(services.docs.map(item => ({ id: item.id, ...item.data() })));
-  state.tickets = sortNewest(tickets.docs.map(item => ({ id: item.id, ...item.data() })));
-  state.orders = sortNewest(orders.docs.map(item => ({ id: item.id, ...item.data() })));
-  state.articles = sortNewest(articles.docs.map(item => ({ id: item.id, ...item.data() })));
-  state.faqs = faqs.docs.map(item => ({ id: item.id, ...item.data() })).sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
-  state.categories = categories.docs.map(item => ({ id: item.id, ...item.data() })).sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
-  renderServices();
-  renderTickets();
-  renderFinance();
-  renderContent();
+async function loadArticlesPage(reset = false) {
+  if (!(hasPermission("content.view") || hasPermission("content.manage")) || state.articleLoading) return;
+  state.articleLoading = true;
+  if (reset) {
+    state.articles = [];
+    state.articleCursor = null;
+    state.articleHasMore = false;
+  }
+  $("articlesLoadMore").disabled = true;
+  $("articlesLoadMore").textContent = "جاري التحميل...";
+  try {
+    const constraints = [orderBy("updatedAt", "desc"), limit(ADMIN_PAGE_SIZE + 1)];
+    if (state.articleCursor) constraints.splice(1, 0, startAfter(state.articleCursor));
+    const pageQuery = query(collection(db, "articles"), ...constraints);
+    const requests = [getDocs(pageQuery)];
+    if (reset) requests.push(getCountFromServer(collection(db, "articles")));
+    const [snapshot, total] = await Promise.all(requests);
+    const visibleDocs = snapshot.docs.slice(0, ADMIN_PAGE_SIZE);
+    const page = visibleDocs.map(item => ({ id: item.id, ...item.data() }));
+    state.articles = reset ? page : [...state.articles, ...page];
+    state.articleCursor = visibleDocs.at(-1) || state.articleCursor;
+    state.articleHasMore = snapshot.docs.length > ADMIN_PAGE_SIZE;
+    if (total) state.articleTotal = total.data().count;
+  } catch (error) {
+    console.error("Unable to load article page", error);
+    toast("تعذر تحميل صفحة المقالات. حاول مرة أخرى.");
+  } finally {
+    state.articleLoading = false;
+    $("articlesLoadMore").disabled = false;
+    $("articlesLoadMore").textContent = "تحميل المزيد";
+    renderContent();
+  }
+}
+
+async function safeSnapshot(label, request) {
+  try {
+    return await request;
+  } catch (error) {
+    console.error(`Unable to load ${label}`, error);
+    toast(`تعذر تحميل قسم ${label}، بينما ستبقى بقية الأقسام متاحة.`);
+    return { docs: [] };
+  }
+}
+
+async function loadOperationCounts() {
+  const requests = {};
+  if (hasPermission("services.view") || hasPermission("services.moderate")) {
+    requests.pendingServices = getCountFromServer(query(collection(db, "services"), where("status", "==", "pending")));
+  }
+  if (hasPermission("support.view") || hasPermission("support.reply")) {
+    requests.activeTickets = getCountFromServer(query(collection(db, "supportTickets"), where("status", "in", ["open", "in_progress", "waiting_user"])));
+  }
+  if (hasPermission("finance.view") || hasPermission("services.view")) {
+    requests.financeOrders = getCountFromServer(query(collection(db, "orders"), where("status", "in", ["funded", "active", "delivered", "disputed"])));
+  }
+  if (hasPermission("content.view") || hasPermission("content.manage")) {
+    requests.draftArticles = getCountFromServer(query(collection(db, "articles"), where("status", "==", "draft")));
+  }
+  const values = await Promise.all(Object.entries(requests).map(async ([key, request]) => {
+    try { return [key, (await request).data().count]; }
+    catch (error) { console.warn(`Unable to load operation count ${key}`, error); return [key, null]; }
+  }));
+  state.counts = Object.fromEntries(values.filter(([, value]) => value != null));
   renderAdminNotifications();
+}
+
+async function loadFinanceMetrics() {
+  if (!(hasPermission("finance.view") || hasPermission("services.view"))) return;
+  try {
+    const completed = query(collection(db, "orders"), where("status", "==", "completed"));
+    const held = query(collection(db, "orders"), where("status", "in", ["funded", "active", "delivered", "disputed"]));
+    const [orders, heldAmounts, completedAmounts] = await Promise.all([
+      getCountFromServer(collection(db, "orders")),
+      getAggregateFromServer(held, { total: sum("total") }),
+      getAggregateFromServer(completed, { fees: sum("platformFeeAmount"), released: sum("freelancerAmount") })
+    ]);
+    state.financeMetrics = {
+      ordersTotal: orders.data().count,
+      heldTotal: Number(heldAmounts.data().total || 0),
+      feeTotal: Number(completedAmounts.data().fees || 0),
+      releasedTotal: Number(completedAmounts.data().released || 0)
+    };
+  } catch (error) {
+    console.warn("Unable to load finance aggregates", error);
+  }
+}
+
+function bindAsyncForm(id, handler, errorMessage) {
+  $(id).addEventListener("submit", async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (form.dataset.submitting === "true") return;
+    const button = form.querySelector('button[type="submit"]');
+    form.dataset.submitting = "true";
+    if (button) button.disabled = true;
+    try {
+      await handler(event);
+    } catch (error) {
+      console.error(`Unable to submit ${id}`, error);
+      toast(errorMessage);
+    } finally {
+      delete form.dataset.submitting;
+      if (button) button.disabled = false;
+    }
+  });
+}
+
+async function loadOperations(section = document.querySelector(".nav-link.active")?.dataset.section || "all") {
+  const empty = { docs: [] };
+  const wants = name => section === "all" || section === name;
+  const [services, tickets, orders, faqs, categories] = await Promise.all([
+    wants("marketplace") && (hasPermission("services.view") || hasPermission("services.moderate")) ? safeSnapshot("الخدمات", getDocs(query(collection(db, "services"), orderBy("updatedAt", "desc"), limit(50)))) : empty,
+    wants("support") && (hasPermission("support.view") || hasPermission("support.reply")) ? safeSnapshot("الدعم", getDocs(query(collection(db, "supportTickets"), orderBy("updatedAt", "desc"), limit(50)))) : empty,
+    wants("finance") && (hasPermission("finance.view") || hasPermission("services.view")) ? safeSnapshot("الطلبات", getDocs(query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(50)))) : empty,
+    wants("content") && (hasPermission("content.view") || hasPermission("content.manage")) ? safeSnapshot("الأسئلة الشائعة", getDocs(query(collection(db, "faqItems"), orderBy("order"), limit(50)))) : empty,
+    wants("content") && (hasPermission("content.view") || hasPermission("content.manage")) ? safeSnapshot("التصنيفات", getDocs(query(collection(db, "serviceCategories"), orderBy("order"), limit(50)))) : empty
+  ]);
+  if (wants("marketplace")) { state.services = sortNewest(services.docs.map(item => ({ id: item.id, ...item.data() }))); renderServices(); }
+  if (wants("support")) { state.tickets = sortNewest(tickets.docs.map(item => ({ id: item.id, ...item.data() }))); renderTickets(); }
+  if (wants("finance")) {
+    state.orders = sortNewest(orders.docs.map(item => ({ id: item.id, ...item.data() })));
+    await loadFinanceMetrics();
+    renderFinance();
+  }
+  if (wants("content")) {
+    if (hasPermission("content.manage")) {
+      await callArticleFunction("migrateArticlesForScale", {}).catch(error => console.warn("Unable to migrate legacy articles", error));
+    }
+    state.faqs = faqs.docs.map(item => ({ id: item.id, ...item.data() })).sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+    state.categories = categories.docs.map(item => ({ id: item.id, ...item.data() })).sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+    await loadArticlesPage(true);
+    renderContent();
+  }
+  await loadOperationCounts();
   applyAdminAccess();
 }
 
@@ -835,7 +1010,7 @@ $("ticketAdminSearch").addEventListener("input", renderTickets);
 $("ticketAdminFilter").addEventListener("change", renderTickets);
 $("financeSearch").addEventListener("input", renderFinance);
 $("financeFilter").addEventListener("change", renderFinance);
-$("ticketAdminForm").addEventListener("submit", saveTicket);
+bindAsyncForm("ticketAdminForm", saveTicket, "تعذر حفظ تحديث التذكرة.");
 document.querySelectorAll("[data-close-ticket-admin]").forEach(control => control.addEventListener("click", closeTicket));
 $("ticketAdminModal").addEventListener("click", event => { if (event.target === $("ticketAdminModal")) closeTicket(); });
 document.querySelectorAll("[data-close-service-preview]").forEach(control => control.addEventListener("click", closeServicePreview));
@@ -853,13 +1028,14 @@ $("articleForm").addEventListener("submit", event => {
   });
 });
 $("articleCancelEdit").addEventListener("click", resetArticleForm);
+$("articlesLoadMore").addEventListener("click", () => loadArticlesPage(false));
 $("articleCoverUrl").addEventListener("input", event => updateCoverPreview(event.target.value.trim()));
 $("articleCoverFile").addEventListener("change", event => {
   const file = event.target.files[0];
   if (file) updateCoverPreview(URL.createObjectURL(file));
 });
-$("faqForm").addEventListener("submit", addFaq);
-$("categoryForm").addEventListener("submit", addCategory);
+bindAsyncForm("faqForm", addFaq, "تعذر إضافة السؤال الشائع.");
+bindAsyncForm("categoryForm", addCategory, "تعذر إضافة التصنيف.");
 $("adminNotificationsButton").addEventListener("click", () => toggleAdminNotifications());
 $("adminNotificationsClose").addEventListener("click", () => toggleAdminNotifications(false));
 document.addEventListener("click", event => {
@@ -872,6 +1048,18 @@ document.addEventListener("click", event => {
 window.addEventListener("admin:verification-count", event => {
   state.verificationCount = Number(event.detail?.count || 0);
   renderAdminNotifications();
+});
+window.addEventListener("admin:section-change", event => {
+  if (!["marketplace", "finance", "support", "content"].includes(event.detail?.section) || !state.admin || state.loadedSections.has(event.detail.section)) return;
+  loadOperations(event.detail.section).then(() => { state.loadedSections.add(event.detail.section); }).catch(error => {
+    console.error("Unable to lazy-load operation modules", error);
+  });
+});
+window.addEventListener("admin:refresh", event => {
+  if (!["marketplace", "finance", "support", "content"].includes(event.detail?.section) || !state.admin) return;
+  loadOperations(event.detail.section).then(() => { state.loadedSections.add(event.detail.section); }).catch(error => {
+    console.error("Unable to refresh operation modules", error);
+  });
 });
 
 onAuthStateChanged(auth, async user => {
@@ -887,7 +1075,12 @@ onAuthStateChanged(auth, async user => {
       $("ticketAdminForm")?.querySelector('button[type="submit"]')?.setAttribute("hidden", "");
     }
     resetArticleForm();
-    await loadOperations();
+    await loadOperationCounts();
+    const activeSection = document.querySelector(".nav-link.active")?.dataset.section;
+    if (["marketplace", "finance", "support", "content"].includes(activeSection)) {
+      await loadOperations(activeSection);
+      state.loadedSections.add(activeSection);
+    }
   } catch (error) {
     console.error("Unable to load operation modules", error);
     toast("تعذر تحميل بيانات الخدمات أو الدعم أو المحتوى.");

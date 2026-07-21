@@ -1,5 +1,5 @@
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { collection, doc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, doc, getDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 import { auth, db, functions } from "./firebase.js";
 import { getAdminAccess, initializeAdminAccess } from "./admin-access.js";
@@ -136,7 +136,7 @@ function closeRoleEditor() { $("roleForm").hidden = true; $("roleForm").reset();
 
 async function loadTeam() {
   const [rolesSnapshot, usersSnapshot] = await Promise.all([
-    getDocs(collection(db, "adminRoles")), getDocs(collection(db, "users"))
+    getDocs(collection(db, "adminRoles")), getDocs(query(collection(db, "users"), where("role", "==", "admin")))
   ]);
   state.roles = rolesSnapshot.docs.map(item => ({ id: item.id, ...item.data() })).filter(item => item.active !== false).sort((a, b) => (a.name || "").localeCompare(b.name || "", "ar"));
   state.members = usersSnapshot.docs.map(item => ({ id: item.id, ...item.data() })).filter(item => item.role === "admin");
@@ -148,7 +148,8 @@ async function assignMember(email, roleId) {
     await httpsCallable(functions, "assignAdminRole")({ email, roleId });
     toast("تم حفظ دور عضو الفريق.");
     await loadTeam();
-  } catch (error) { toast(error.message || "تعذر إضافة عضو الفريق."); }
+    return true;
+  } catch (error) { toast(error.message || "تعذر إضافة عضو الفريق."); return false; }
 }
 
 async function removeMember(member) {
@@ -179,17 +180,25 @@ $("rolePresets").replaceChildren(...presets.map(preset => {
 }));
 $("newRoleButton").addEventListener("click", () => openRoleEditor());
 $("cancelRoleButton").addEventListener("click", closeRoleEditor);
-$("teamMemberForm").addEventListener("submit", event => {
+$("teamMemberForm").addEventListener("submit", async event => {
   event.preventDefault();
-  assignMember($("teamMemberEmail").value.trim().toLowerCase(), $("teamMemberRole").value).then(() => event.target.reset());
+  const button = event.currentTarget.querySelector('button[type="submit"]');
+  button.disabled = true;
+  try {
+    if (await assignMember($("teamMemberEmail").value.trim().toLowerCase(), $("teamMemberRole").value)) event.target.reset();
+  } finally { button.disabled = false; }
 });
 $("roleForm").addEventListener("submit", async event => {
   event.preventDefault();
+  const button = event.currentTarget.querySelector('button[type="submit"]');
+  if (button.disabled) return;
+  button.disabled = true;
   const permissions = [...document.querySelectorAll('#permissionsGrid input[name="permission"]:checked')].map(input => input.value);
   try {
     await httpsCallable(functions, "saveAdminRole")({ roleId: $("roleId").value, name: $("roleName").value, description: $("roleDescription").value, permissions });
     toast("تم حفظ الدور والصلاحيات."); closeRoleEditor(); await loadTeam();
   } catch (error) { toast(error.message || "تعذر حفظ الدور."); }
+  finally { button.disabled = false; }
 });
 
 onAuthStateChanged(auth, async user => {
