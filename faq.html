@@ -155,7 +155,7 @@
     .category-btn:hover, .category-btn.active { background:var(--primary); color:#fff; }
 
     /* FAQ Sections */
-    .faq-section {
+    .faq-section, .faq-category {
       background:var(--faq-bg); border-radius:20px; padding:2rem;
       box-shadow:0 10px 30px var(--shadow-color); border:1px solid var(--border-color); margin-bottom:2rem;
     }
@@ -174,7 +174,7 @@
     .faq-question {
       background:var(--faq-question-bg); padding:1.2rem; cursor:pointer;
       display:flex; justify-content:space-between; align-items:center; font-weight:700;
-      color:var(--text-heading); transition:var(--transition);
+      width:100%; border:0; color:var(--text-heading); font:inherit; text-align:right; transition:var(--transition);
     }
     .faq-question:hover { background:var(--bg-tertiary); }
     .faq-question.active { background:var(--primary); color:#fff; }
@@ -262,7 +262,7 @@
   </div>
 
   <div class="container">
-    <div class="faq-categories">
+    <div class="faq-categories" id="faqCategories">
       <button class="category-btn active" onclick="filterCategory('all', this)">الكل</button>
       <button class="category-btn" onclick="filterCategory('buyer', this)">للمشترين</button>
       <button class="category-btn" onclick="filterCategory('freelancer', this)">للمستقلين</button>
@@ -365,6 +365,7 @@
       });
       answer.classList.toggle('active');
       element.classList.toggle('active');
+      element.setAttribute('aria-expanded', element.classList.contains('active') ? 'true' : 'false');
     }
 
     function filterCategory(category, button) {
@@ -377,10 +378,8 @@
 
     function searchFAQ() {
       const term = document.getElementById('faqSearch').value.toLowerCase();
-      const questions = document.querySelectorAll('.faq-question');
-      questions.forEach(q => {
-        const text = q.textContent.toLowerCase();
-        const item = q.closest('.faq-item');
+      document.querySelectorAll('.faq-item').forEach(item => {
+        const text = item.textContent.toLowerCase();
         item.style.display = text.includes(term) ? 'block' : 'none';
       });
     }

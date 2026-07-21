@@ -80,13 +80,17 @@
     label { display: block; font-size: 15.6px; font-weight: 700; }
     input {
       width: 100%;
+      min-height: 48px;
       padding: 13px 14px;
       border: 1px solid #ddd9e7;
       border-radius: 11px;
       background: #fbfafd;
+      color: #1e1e2d;
       font-size: 16.8px;
       transition: .2s;
     }
+    input[type="email"], input[type="password"] { direction: ltr; text-align: left; }
+    input::placeholder { color: #9a96a5; opacity: 1; }
     input:focus {
       outline: none;
       border-color: #6c5ce7;
@@ -176,6 +180,16 @@
     }
     .reset-actions { display: flex; gap: 10px; margin-top: 17px; }
     .piklance-global-footer { flex: 0 0 auto; }
+    html[data-theme="dark"] body { color: #f4f1fb; background: radial-gradient(circle at 15% 15%, rgba(139,124,246,.18), transparent 34%), #121218; }
+    html[data-theme="dark"] .login-box,
+    html[data-theme="dark"] .reset-dialog { border-color: #343142; background: #1e1e2d; box-shadow: 0 18px 55px rgba(0,0,0,.28); }
+    html[data-theme="dark"] .intro,
+    html[data-theme="dark"] .back-link,
+    html[data-theme="dark"] .reset-dialog header p,
+    html[data-theme="dark"] .modal-close { color: #aaa5b8; }
+    html[data-theme="dark"] input { border-color: #3b3749; background: #272534; color: #f7f5fb; }
+    html[data-theme="dark"] input::placeholder { color: #817c8e; }
+    html[data-theme="dark"] .secondary-button { border-color: #3b3749; background: #272534; color: #eeeaf5; }
     @media (max-width: 520px) {
       body { padding: 16px; }
       .login-box { padding: 30px 20px; }
@@ -190,7 +204,8 @@
 <body>
   <main class="login-box">
     <a class="logo" href="index.html">
-      <img class="piklance-brand-logo force-light" src="assets/brand/logo-light.svg" alt="PikLance" width="150" height="41">
+      <img class="piklance-brand-logo light-logo" src="assets/brand/logo-light.svg" alt="PikLance" width="150" height="41">
+      <img class="piklance-brand-logo dark-logo" src="assets/brand/logo-dark.svg" alt="PikLance" width="150" height="41">
     </a>
     <h1>تسجيل الدخول</h1>
     <p class="intro">أدخل بيانات حسابك للعودة إلى مساحة عملك.</p>

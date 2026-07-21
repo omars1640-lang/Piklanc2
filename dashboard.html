@@ -217,13 +217,26 @@
     </section>
     <section class="admin-section" id="finance-section">
       <div class="section-heading">
-        <div><p>الإدارة المالية</p><h2>المدفوعات والعمولات</h2><span>كل مبلغ معزول حسب الطلب وحالته في نظام الحجز.</span></div>
+        <div><p>الإدارة المالية</p><h2>التقارير المالية والمدفوعات</h2><span>مؤشرات موحّدة للشحن والمحافظ والسحب والمبيعات وأرباح المنصة.</span></div>
       </div>
+      <form class="finance-report-toolbar" id="financeReportForm">
+        <label>الفترة<select id="financePeriodMode"><option value="month">شهر</option><option value="year">سنة</option><option value="all">كل المدة</option><option value="custom">فترة مخصصة</option></select></label>
+        <label data-finance-period="month">الشهر<input id="financeReportMonth" type="month"></label>
+        <label data-finance-period="year" hidden>السنة<input id="financeReportYear" type="number" min="2024" max="2100" step="1"></label>
+        <label data-finance-period="custom" hidden>من<input id="financeReportStart" type="date"></label>
+        <label data-finance-period="custom" hidden>إلى<input id="financeReportEnd" type="date"></label>
+        <button class="primary-button" id="financeReportSubmit" type="submit">تحديث التقرير</button>
+        <span class="finance-report-period" id="financeReportPeriod">الشهر الحالي</span>
+      </form>
       <div class="metrics-grid finance-admin-metrics">
-        <article class="metric-card blue"><span class="metric-icon">◈</span><div><small>إجمالي الطلبات</small><strong id="financeOrdersTotal">0</strong></div></article>
-        <article class="metric-card orange"><span class="metric-icon">⌛</span><div><small>الرصيد المحجوز</small><strong id="financeHeldTotal">0</strong></div></article>
-        <article class="metric-card green"><span class="metric-icon">%</span><div><small>عمولة المنصة</small><strong id="financeFeeTotal">0</strong></div></article>
-        <article class="metric-card purple"><span class="metric-icon">✓</span><div><small>المحرر للمستقلين</small><strong id="financeReleasedTotal">0</strong></div></article>
+        <article class="metric-card blue"><span class="metric-icon">↑</span><div><small>مدفوعات العملاء المعتمدة</small><strong id="financeDepositsApproved">0 ل.س</strong><p id="financeDepositsCount">0 عملية</p></div></article>
+        <article class="metric-card purple"><span class="metric-icon">◈</span><div><small>المبلغ الموجود بالمنصة الآن</small><strong id="financePlatformFunds">0 ل.س</strong><p>متاح + محجوز + قيد السحب</p></div></article>
+        <article class="metric-card orange"><span class="metric-icon">↓</span><div><small>المبلغ المسحوب</small><strong id="financeWithdrawnTotal">0 ل.س</strong><p id="financeWithdrawalsCount">0 عملية</p></div></article>
+        <article class="metric-card green"><span class="metric-icon">%</span><div><small>إجمالي أرباح المنصة</small><strong id="financeFeeTotal">0 ل.س</strong><p>عمولات الطلبات المكتملة</p></div></article>
+        <article class="metric-card blue"><span class="metric-icon">▦</span><div><small>قيمة الطلبات خلال الفترة</small><strong id="financeGrossTotal">0 ل.س</strong><p id="financeOrdersTotal">0 طلب</p></div></article>
+        <article class="metric-card green"><span class="metric-icon">✓</span><div><small>المحرر للمستقلين</small><strong id="financeReleasedTotal">0 ل.س</strong><p id="financeCompletedOrders">0 طلب مكتمل</p></div></article>
+        <article class="metric-card orange"><span class="metric-icon">⌛</span><div><small>الرصيد المحجوز حالياً</small><strong id="financeHeldTotal">0 ل.س</strong><p>طلبات قيد التنفيذ والمراجعة</p></div></article>
+        <article class="metric-card purple"><span class="metric-icon">◎</span><div><small>تفصيل أرصدة المحافظ</small><strong id="financeWalletAvailable">0 ل.س</strong><p id="financeWalletBreakdown">متاح للمستخدمين</p></div></article>
       </div>
       <div class="metrics-grid compact">
         <article class="metric-card orange"><span class="metric-icon">↑</span><div><small>طلبات شحن معلقة</small><strong id="pendingDepositsTotal">0</strong></div></article>
@@ -240,6 +253,7 @@
         <div class="empty-state" id="withdrawalRequestsEmpty"><span>↓</span><strong>لا توجد طلبات سحب</strong></div>
       </div>
       <div class="data-panel">
+        <div class="panel-head"><div><p>آخر العمليات</p><h3>أحدث 50 طلباً</h3></div><small>يُطبّق البحث والحالة محلياً، بينما الملخص أعلاه يشمل كامل الفترة.</small></div>
         <div class="data-toolbar">
           <label class="search-field"><span>⌕</span><input id="financeSearch" type="search" placeholder="بحث بالطلب أو العميل أو المستقل"></label>
           <select id="financeFilter"><option value="all">كل الحالات</option><option value="funded">محجوز</option><option value="active">قيد التنفيذ</option><option value="delivered">قيد المراجعة</option><option value="completed">محرر</option><option value="disputed">نزاع</option></select>
@@ -291,7 +305,7 @@
           <header><div><small>مركز المساعدة</small><h3>سؤال شائع جديد</h3></div></header>
           <label>السؤال<input id="faqQuestion" type="text" maxlength="200" required></label>
           <label>الإجابة<textarea id="faqAnswer" rows="4" maxlength="2000" required></textarea></label>
-          <div class="content-form-row"><label>التصنيف<input id="faqCategory" type="text" maxlength="60"></label><label class="content-check"><input id="faqPublished" type="checkbox" checked> منشور</label></div>
+          <div class="content-form-row"><label>القسم الذي سيظهر فيه<select id="faqCategory" required><option value="buyer">للمشترين</option><option value="freelancer">للمستقلين</option><option value="payment">الدفع والسحب</option><option value="technical">أسئلة تقنية</option><option value="general">أسئلة عامة</option></select></label><label class="content-check"><input id="faqPublished" type="checkbox" checked> منشور</label></div>
           <button class="primary-button" type="submit">إضافة السؤال</button>
         </form>
         <div class="content-list-panel"><div class="panel-head"><div><p>قاعدة المعرفة</p><h3>الأسئلة الشائعة</h3></div><b id="faqsCount">0</b></div><div class="admin-content-list" id="faqsList"></div></div>

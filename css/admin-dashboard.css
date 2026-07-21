@@ -131,6 +131,19 @@ button { cursor: pointer; }
 .promo-code-copy { display: inline-flex; align-items: center; gap: 8px; min-width: 0; direction: ltr; }
 .promo-code-copy code { min-width: 0; padding: 6px 10px; border: 1px dashed var(--primary); border-radius: 9px; color: var(--primary); background: var(--primary-soft); font: 800 12px/1.4 Consolas, "Courier New", monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .promo-copy-button { min-height: 31px; padding: 0 10px; font-size: 11.5px; }
+.form-help { margin: -3px 0 4px; color: var(--muted); font-size: 11.8px; line-height: 1.8; }
+.badge-choice-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(155px,1fr)); gap: 9px; }
+.badge-choice { min-height: 46px; padding: 8px 10px; display: flex !important; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-alt); cursor: pointer; }
+.badge-choice input { width: auto !important; margin: 0; accent-color: var(--primary); }
+.badge-choice .profile-extra-badge { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.finance-report-toolbar { margin-bottom: 15px; padding: 14px; display: grid; grid-template-columns: repeat(4,minmax(130px,1fr)) auto; align-items: end; gap: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
+.finance-report-toolbar label { display: grid; gap: 6px; color: var(--muted); font-size: 11.5px; font-weight: 800; }
+.finance-report-toolbar input,.finance-report-toolbar select { min-height: 40px; padding: 0 10px; border: 1px solid var(--border); border-radius: 9px; color: var(--ink); background: var(--surface-alt); font: inherit; outline: 0; }
+.finance-report-toolbar input:focus,.finance-report-toolbar select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.finance-report-toolbar .primary-button { min-height: 40px; white-space: nowrap; }
+.finance-report-period { grid-column: 1 / -1; color: var(--muted); font-size: 11.5px; }
+.finance-admin-metrics { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.finance-admin-metrics .metric-card strong { font-size: clamp(18px,2vw,27px); }
 .settings-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rank-guide { margin-bottom: 14px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 .rank-guide article { padding: 13px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
@@ -231,6 +244,7 @@ button { cursor: pointer; }
 .service-preview-section h3:not(:first-child) { margin-top: 14px; }
 .service-preview-section p { margin: 0; color: var(--muted); font-size: 13.2px; line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
 @media(max-width:900px){.content-admin-grid{grid-template-columns:1fr}.content-form-row{grid-template-columns:1fr}}
+@media(max-width:1100px){.finance-report-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}.finance-report-toolbar .primary-button{grid-column:1/-1}.finance-admin-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (min-width: 701px) and (max-width: 1180px) {
   #promotions-section .content-admin-grid { grid-template-columns: 1fr; }
   #promotions-section .promo-tools { grid-template-columns: minmax(0,1fr) repeat(2,minmax(130px,.45fr)); }
@@ -240,5 +254,6 @@ button { cursor: pointer; }
 }
 @media(max-width:700px){.service-preview-summary{grid-template-columns:1fr 1fr}.service-preview-cover{min-height:190px}}
 @media(max-width:700px){.promo-tools,.promo-code-item{grid-template-columns:1fr}.promo-code-copy{width:100%}.promo-code-copy code{flex:1}}
+@media(max-width:620px){.finance-report-toolbar,.finance-admin-metrics{grid-template-columns:1fr}.finance-report-toolbar .primary-button{grid-column:auto}}
 .team-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(340px,.85fr);gap:22px;align-items:start}.team-invite-form{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(180px,.75fr) auto;gap:12px;align-items:end;margin:18px 0 8px}.team-invite-form label,.role-editor label{display:grid;gap:7px;font-size:13px;font-weight:700;color:var(--muted)}.team-invite-form input,.team-invite-form select,.role-editor input,.team-member-actions select{width:100%;min-height:44px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--ink);padding:0 12px;font:inherit}.team-form-note{margin:0 0 18px;color:var(--muted);font-size:12px}.team-list,.roles-list{display:grid;gap:10px}.team-member-card,.role-card{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid var(--border);border-radius:16px;background:var(--surface)}.team-member-card>div:nth-child(2),.role-card>div:first-child{display:grid;gap:3px;min-width:0;flex:1}.team-member-card small,.role-card p,.role-card small{margin:0;color:var(--muted);font-size:12px}.team-member-card b{width:max-content;margin-top:4px;padding:4px 9px;border-radius:999px;background:rgba(108,92,231,.1);color:var(--primary);font-size:11px}.team-member-actions{display:flex;align-items:center;gap:8px}.team-member-actions select{min-width:155px}.role-presets{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.role-preset{border:1px dashed var(--primary);border-radius:999px;background:rgba(108,92,231,.06);color:var(--primary);padding:7px 11px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}.role-card{align-items:flex-start}.role-editor{margin-top:22px}.permission-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}.permission-grid fieldset{display:grid;align-content:start;gap:8px;border:1px solid var(--border);border-radius:15px;padding:13px}.permission-grid legend{padding:0 7px;color:var(--ink);font-size:13px;font-weight:800}.permission-option{display:flex!important;grid-template-columns:none!important;align-items:flex-start;gap:8px!important;color:var(--ink)!important;font-weight:500!important}.permission-option input{width:17px!important;min-height:auto!important;height:17px;margin-top:2px;accent-color:var(--primary)}@media(max-width:1100px){.team-layout{grid-template-columns:1fr}.permission-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:720px){.team-invite-form{grid-template-columns:1fr}.permission-grid{grid-template-columns:1fr}.team-member-card,.role-card{align-items:flex-start;flex-wrap:wrap}.team-member-actions{width:100%}.team-member-actions select{flex:1}}
 .content-list-footer{display:flex;justify-content:center;padding:14px 0 2px}.admin-list-empty{padding:22px;text-align:center;color:var(--muted-color,#777)}

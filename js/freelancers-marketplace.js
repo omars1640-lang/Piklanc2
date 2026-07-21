@@ -8,11 +8,70 @@ const specialtyLabels = {
   design: "تصميم", web: "برمجة وتطوير", writing: "كتابة وترجمة",
   marketing: "تسويق رقمي", audio: "صوتيات", video: "فيديو"
 };
-const filterAliases = { web: "code", writing: "write", marketing: "market" };
+const defaultCategories = [
+  { id: "design", name: "تصميم", aliases: ["design"] },
+  { id: "web", name: "برمجة وتطوير", aliases: ["web", "code", "برمجة"] },
+  { id: "writing", name: "كتابة وترجمة", aliases: ["writing", "write", "كتابة"] },
+  { id: "marketing", name: "تسويق رقمي", aliases: ["marketing", "market", "تسويق"] },
+  { id: "audio", name: "صوتيات", aliases: ["audio", "صوت"] },
+  { id: "video", name: "فيديو وأنيميشن", aliases: ["video", "فيديو"] }
+];
 const $ = id => document.getElementById(id);
 const PAGE_SIZE = 9;
 const requestedPage = Math.max(1, Number.parseInt(new URLSearchParams(location.search).get("page") || "1", 10) || 1);
-const state = { freelancers: [], filtered: [], currentPage: requestedPage };
+const state = { freelancers: [], filtered: [], categories: new Map(), currentPage: requestedPage };
+
+function normalized(value) {
+  return String(value || "").trim().toLowerCase().replace(/[ـًٌٍَُِّْ]/g, "").replace(/[_-]+/g, " ").replace(/\s+/g, " ");
+}
+
+function textList(value) {
+  if (Array.isArray(value)) return value.flatMap(textList);
+  if (value && typeof value === "object") return Object.values(value).flatMap(textList);
+  return value == null ? [] : [String(value)];
+}
+
+function profileText(profile) {
+  return normalized([
+    profile.name, profile.headline, profile.about, profile.specialty, specialtyLabels[profile.specialty],
+    ...textList(profile.skills), ...textList(profile.keywords), ...textList(profile.careerItems),
+    ...textList(profile.serviceCategories), ...textList(profile.serviceTitles)
+  ].filter(Boolean).join(" "));
+}
+
+function categoryMatches(profile, categoryId) {
+  if (categoryId === "all") return true;
+  const category = state.categories.get(categoryId);
+  if (!category) return false;
+  const values = [
+    profile.specialty, specialtyLabels[profile.specialty], ...textList(profile.skills),
+    ...textList(profile.keywords), ...textList(profile.serviceCategories)
+  ].map(normalized).filter(Boolean);
+  return category.terms.some(term => values.some(value => value === term || value.includes(term) || term.includes(value)));
+}
+
+function populateCategoryFilter(items) {
+  const definitions = [...defaultCategories, ...items.map(item => ({
+    id: item.id,
+    name: item.name || item.slug || item.id,
+    aliases: [item.slug, item.id]
+  }))];
+  state.categories.clear();
+  const options = [new Option("كل التخصصات", "all")];
+  const usedNames = new Set();
+  definitions.forEach(item => {
+    const nameKey = normalized(item.name);
+    if (!nameKey || usedNames.has(nameKey)) return;
+    usedNames.add(nameKey);
+    const id = String(item.id || nameKey);
+    state.categories.set(id, { ...item, terms: [...new Set([item.name, ...(item.aliases || [])].map(normalized).filter(Boolean))] });
+    options.push(new Option(item.name, id));
+  });
+  const select = $("categoryFilter");
+  const current = select.value;
+  select.replaceChildren(...options);
+  if (state.categories.has(current)) select.value = current;
+}
 
 function initial(name) {
   return (name || "م").trim().charAt(0).toUpperCase();
@@ -114,10 +173,9 @@ function applyFilters({ resetPage = false } = {}) {
   const category = $("categoryFilter").value;
   const minimumRating = Number($("ratingFilter").value === "all" ? 0 : $("ratingFilter").value);
   state.filtered = state.freelancers.filter(profile => {
-    const haystack = `${profile.name || ""} ${profile.headline || ""} ${(profile.skills || []).join(" ")}`.toLowerCase();
-    const profileCategory = filterAliases[profile.specialty] || profile.specialty;
-    return (!term || haystack.includes(term))
-      && (category === "all" || profileCategory === category)
+    const haystack = profileText(profile);
+    return (!term || haystack.includes(normalized(term)))
+      && categoryMatches(profile, category)
       && Number(profile.rating || 0) >= minimumRating;
   });
   render(state.filtered);
@@ -125,16 +183,26 @@ function applyFilters({ resetPage = false } = {}) {
 
 async function loadFreelancers() {
   try {
-    const [snapshot, servicesSnapshot] = await Promise.all([
+    const [snapshot, servicesSnapshot, categoriesSnapshot] = await Promise.all([
       getDocs(query(collection(db, "publicProfiles"), where("accountType", "==", "freelancer"))),
-      getDocs(query(collection(db, "services"), where("status", "==", "published")))
+      getDocs(query(collection(db, "services"), where("status", "==", "published"))),
+      getDocs(query(collection(db, "serviceCategories"), where("active", "==", true)))
     ]);
-    const publishedOwners = new Set(servicesSnapshot.docs.map(item => item.data().ownerUid));
+    const ownerServices = new Map();
+    servicesSnapshot.docs.forEach(item => {
+      const service = item.data();
+      if (!ownerServices.has(service.ownerUid)) ownerServices.set(service.ownerUid, []);
+      ownerServices.get(service.ownerUid).push(service);
+    });
+    const publishedOwners = new Set(ownerServices.keys());
+    populateCategoryFilter(categoriesSnapshot.docs.map(item => ({ id: item.id, ...item.data() })).filter(item => item.active !== false));
     const freelancers = snapshot.docs
       .map(item => ({ id: item.id, ...item.data() }))
       .filter(profile => profile.status === "active" || publishedOwners.has(profile.id));
     state.freelancers = await Promise.all(freelancers.map(async profile => ({
       ...profile,
+      serviceCategories: (ownerServices.get(profile.id) || []).map(service => service.category).filter(Boolean),
+      serviceTitles: (ownerServices.get(profile.id) || []).map(service => service.title).filter(Boolean),
       avatar: await resolveProfileAvatar(profile.id, profile)
     })));
     applyFilters();

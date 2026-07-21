@@ -66,6 +66,7 @@
     label { display: block; margin-bottom: .35rem; font-weight: 800; font-size: .88rem; }
     input, select {
       width: 100%;
+      min-height: 48px;
       padding: .78rem .85rem;
       border: 1px solid #ddd9e7;
       border-radius: 11px;
@@ -73,6 +74,8 @@
       color: #202437;
       font-size: .96rem;
     }
+    input[type="email"], input[type="password"], #fPhone { direction: ltr; text-align: left; }
+    input::placeholder { color: #9a96a5; opacity: 1; }
     input:focus, select:focus { outline: none; border-color: #6c5ce7; box-shadow: 0 0 0 3px rgba(108,92,231,.1); }
     .btn {
       width: 100%;
@@ -174,6 +177,23 @@
     .id-upload img { max-width: 100%; max-height: 170px; margin: .7rem auto 0; display: none; border-radius: 10px; }
     .actions-row { display: flex; gap: 1rem; }
     #summary { margin-top: 1rem; display: grid; gap: .45rem; color: #514b60; }
+    html[data-theme="dark"] body { color: #f4f1fb; background: radial-gradient(circle at 12% 10%, rgba(139,124,246,.18), transparent 34%), #121218; }
+    html[data-theme="dark"] .register-box { border-color: #343142; background: #1e1e2d; box-shadow: 0 18px 55px rgba(0,0,0,.28); }
+    html[data-theme="dark"] .subtitle,
+    html[data-theme="dark"] .back-link,
+    html[data-theme="dark"] .password-rules,
+    html[data-theme="dark"] #summary { color: #aaa5b8; }
+    html[data-theme="dark"] input,
+    html[data-theme="dark"] select,
+    html[data-theme="dark"] .type-btn,
+    html[data-theme="dark"] .btn-outline { border-color: #3b3749; background: #272534; color: #f7f5fb; }
+    html[data-theme="dark"] .type-btn.active,
+    html[data-theme="dark"] .type-btn:hover { border-color: #8b7cf6; background: rgba(108,92,231,.15); color: #bdb4ff; }
+    html[data-theme="dark"] .access-code-card,
+    html[data-theme="dark"] .security-note,
+    html[data-theme="dark"] .check-row,
+    html[data-theme="dark"] .id-upload { border-color: #3b3749; background: #242230; color: #b9b4c5; }
+    html[data-theme="dark"] .alert { color: #d7d1e5; background: rgba(108,92,231,.14); }
     @media (max-width: 680px) {
       body { padding: 1rem; align-items: flex-start; }
       .register-box { padding: 1.35rem; }
@@ -187,7 +207,7 @@
 </head>
 <body>
   <div class="register-box">
-    <a class="logo" href="index.html"><img class="piklance-brand-logo force-light" src="assets/brand/logo-light.svg" alt="PikLance" width="150" height="41"></a>
+    <a class="logo" href="index.html"><img class="piklance-brand-logo light-logo" src="assets/brand/logo-light.svg" alt="PikLance" width="150" height="41"><img class="piklance-brand-logo dark-logo" src="assets/brand/logo-dark.svg" alt="PikLance" width="150" height="41"></a>
     <h2>إنشاء حساب جديد</h2>
     <p class="subtitle">اختر نوع الحساب وأكمل البيانات. الدخول للمنصة يتطلب تفعيل البريد الإلكتروني أولاً.</p>
 
@@ -235,7 +255,7 @@
           <div class="form-group full"><label for="fName">الاسم الكامل</label><input type="text" id="fName" autocomplete="name"></div>
           <div class="form-group full"><label for="fEmail">البريد الإلكتروني</label><input type="email" id="fEmail" autocomplete="email"></div>
           <div class="form-group"><label for="fPhone">رقم الهاتف</label><input type="text" id="fPhone" autocomplete="tel"></div>
-          <div class="form-group"><label for="fSpecialty">التخصص</label><select id="fSpecialty"><option value="">اختر</option><option value="design">تصميم</option><option value="web">برمجة</option><option value="writing">كتابة</option><option value="marketing">تسويق</option></select></div>
+          <div class="form-group"><label for="fSpecialty">التخصص</label><select id="fSpecialty"><option value="">جارٍ تحميل التخصصات...</option><option value="design">تصميم</option><option value="web">برمجة وتطوير</option><option value="writing">كتابة وترجمة</option><option value="marketing">تسويق رقمي</option><option value="audio">صوتيات</option><option value="video">فيديو وأنيميشن</option></select></div>
           <div class="form-group"><label for="fPassword">كلمة المرور</label><input type="password" id="fPassword" autocomplete="new-password"><p class="password-rules">8 أحرف على الأقل، وتتضمن حرفاً ورقماً.</p></div>
           <div class="form-group"><label for="fPasswordConfirm">تأكيد كلمة المرور</label><input type="password" id="fPasswordConfirm" autocomplete="new-password"></div>
         </div>
@@ -310,10 +330,14 @@
       signOut
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import {
+      collection,
       doc,
       getDoc,
+      getDocs,
+      query,
       serverTimestamp,
       updateDoc,
+      where,
       writeBatch
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { deleteObject, ref, uploadBytes } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
@@ -339,6 +363,46 @@
       document.getElementById("registrationCode").value = incomingRegistrationCode;
       rememberEarlyAccess(incomingRegistrationCode);
     }
+
+    const defaultSpecialties = [
+      { value: "design", label: "تصميم" },
+      { value: "web", label: "برمجة وتطوير" },
+      { value: "writing", label: "كتابة وترجمة" },
+      { value: "marketing", label: "تسويق رقمي" },
+      { value: "audio", label: "صوتيات" },
+      { value: "video", label: "فيديو وأنيميشن" }
+    ];
+
+    async function loadRegistrationSpecialties() {
+      const select = document.getElementById("fSpecialty");
+      const selected = select.value;
+      try {
+        const snapshot = await getDocs(query(collection(db, "serviceCategories"), where("active", "==", true)));
+        const dynamic = snapshot.docs.map(item => {
+          const data = item.data();
+          return { value: data.slug || item.id, label: data.name || data.slug || item.id };
+        });
+        const used = new Set();
+        const options = [new Option("اختر", "")];
+        [...defaultSpecialties, ...dynamic].forEach(item => {
+          const key = item.label.trim().toLowerCase();
+          if (!key || used.has(key)) return;
+          used.add(key);
+          options.push(new Option(item.label, item.value));
+        });
+        select.replaceChildren(...options);
+        if ([...select.options].some(option => option.value === selected)) select.value = selected;
+      } catch (error) {
+        console.warn("Unable to load registration specialties", error);
+        select.replaceChildren(
+          new Option("اختر", ""),
+          ...defaultSpecialties.map(item => new Option(item.label, item.value))
+        );
+        if ([...select.options].some(option => option.value === selected)) select.value = selected;
+      }
+    }
+
+    const specialtiesReady = loadRegistrationSpecialties();
 
     function normalizeEmail(value) {
       return value.trim().toLowerCase();
@@ -455,6 +519,7 @@
           return;
         }
 
+        await specialtiesReady;
         const snapshot = await getDoc(doc(db, "users", user.uid));
         const profile = snapshot.exists() ? snapshot.data() : null;
         if (!profile || profile.accountType !== "freelancer" || profile.status !== "rejected") {
