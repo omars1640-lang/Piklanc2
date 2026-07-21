@@ -323,6 +323,12 @@ function ensurePromotionsUi() {
         </div>
         <div class="admin-content-list" id="promoCodesList"></div>
       </div>
+      <form class="content-editor featured-badges-form" id="featuredBadgesForm">
+        <header><div><small>الصفحة الرئيسية</small><h3>شارات الخدمات المميزة</h3></div></header>
+        <p class="form-help">اختر شارة أو أكثر لعرض خدمات أصحابها في بطاقات الصفحة الرئيسية. إذا لم تحدد أي شارة ستُعرض كل الخدمات المنشورة.</p>
+        <div class="badge-choice-grid" id="featuredBadgeOptions"></div>
+        <button class="primary-button" type="submit">حفظ فئات العرض</button>
+      </form>
       <form class="content-editor" id="badgeAssignForm">
         <header><div><small>شارة يدوية</small><h3>إسناد شارة لمستخدم</h3></div></header>
         <div class="content-form-row">
@@ -354,6 +360,7 @@ function ensurePromotionsUi() {
   `;
   document.getElementById("users-section")?.after(section);
   document.getElementById("promoCodeForm").addEventListener("submit", createPromoCodes);
+  document.getElementById("featuredBadgesForm").addEventListener("submit", saveFeaturedBadges);
   document.getElementById("badgeAssignForm").addEventListener("submit", assignManualBadge);
   document.getElementById("badgeCreateForm").addEventListener("submit", createPlatformBadge);
   document.getElementById("badgeUserSearch").addEventListener("input", renderPromotions);
@@ -407,6 +414,24 @@ function renderPromotions() {
     promoBadge.replaceChildren(new Option("بدون شارة", ""), ...badges.map(badge => new Option(badge.label, badge.id)));
     if (current && badges.some(badge => badge.id === current)) promoBadge.value = current;
   }
+  const selectedFeaturedBadges = new Set(Array.isArray(state.settings?.homeFeaturedBadgeIds) ? state.settings.homeFeaturedBadgeIds : []);
+  const featuredOptions = document.getElementById("featuredBadgeOptions");
+  if (featuredOptions) {
+    featuredOptions.replaceChildren(...badges.map(badge => {
+      const label = document.createElement("label");
+      label.className = "badge-choice";
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.name = "homeFeaturedBadge";
+      input.value = badge.id;
+      input.checked = selectedFeaturedBadges.has(badge.id);
+      const icon = document.createElement("span");
+      icon.className = `profile-extra-badge ${badge.tone || ""}`.trim();
+      icon.textContent = `${badge.icon || "◆"} ${badge.label || badge.id}`;
+      label.append(input, icon);
+      return label;
+    }));
+  }
 
   const codes = [...state.promoCodes].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
   const filteredCodes = filteredPromoCodes();
@@ -442,6 +467,22 @@ function renderPromotions() {
     row.innerHTML = `<div><strong>${badge.icon} ${badge.label}</strong><small>${badge.id}</small></div><span>${badge.tone}</span>`;
     return row;
   }));
+}
+
+async function saveFeaturedBadges(event) {
+  event.preventDefault();
+  if (!hasPermission("promotions.manage")) return showToast("لا تملك صلاحية إدارة الشارات.");
+  const badgeIds = [...document.querySelectorAll('input[name="homeFeaturedBadge"]:checked')].map(input => input.value);
+  const batch = writeBatch(db);
+  batch.set(doc(db, "platformSettings", "general"), {
+    homeFeaturedBadgeIds: badgeIds,
+    updatedAt: serverTimestamp(),
+    updatedBy: state.admin.id
+  }, { merge: true });
+  batch.set(doc(collection(db, "adminAuditLogs")), auditData("update_settings", {}, `home_featured_badges: ${badgeIds.join(",") || "all"}`));
+  await batch.commit();
+  showToast(badgeIds.length ? "تم تقييد الخدمات المميزة بالشارات المحددة." : "ستُعرض خدمات كل المستقلين في الصفحة الرئيسية.");
+  await loadData();
 }
 
 function exportPromoCodes() {
@@ -977,7 +1018,7 @@ async function loadData() {
       (hasPermission("overview.view") || hasPermission("audit.view")) ? getDocs(query(collection(db, "adminAuditLogs"), orderBy("createdAt", "desc"), limit(100))) : empty,
       getDoc(doc(db, "platformSettings", "general")),
       hasPermission("promotions.manage") ? getDocs(query(collection(db, "promoCodes"), limit(100))) : empty,
-      hasPermission("promotions.manage") ? getDocs(query(collection(db, "badges"), limit(100))) : empty,
+      hasPermission("promotions.manage") ? getDocs(collection(db, "badges")) : empty,
       hasPermission("promotions.manage") ? getDocs(query(collection(db, "referrals"), limit(100))) : empty,
       hasPermission("promotions.manage") ? getDocs(query(collection(db, "userBenefits"), limit(100))) : empty,
       loadDashboardMetrics()

@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, doc, getDoc, limit, onSnapshot, orderBy, query } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 import { getDownloadURL, ref as storageRef } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -63,11 +63,11 @@ function sortNewest(items) {
 function listenForPaymentRequests() {
   stopDeposits?.();
   stopWithdrawals?.();
-  stopDeposits = onSnapshot(collection(db, "depositRequests"), snapshot => {
+  stopDeposits = onSnapshot(query(collection(db, "depositRequests"), orderBy("createdAt", "desc"), limit(100)), snapshot => {
     state.deposits = sortNewest(snapshot.docs.map(item => ({ id: item.id, ...item.data() })));
     render();
   }, error => console.error("Unable to listen for deposit requests", error));
-  stopWithdrawals = onSnapshot(collection(db, "withdrawalRequests"), snapshot => {
+  stopWithdrawals = onSnapshot(query(collection(db, "withdrawalRequests"), orderBy("createdAt", "desc"), limit(100)), snapshot => {
     state.withdrawals = sortNewest(snapshot.docs.map(item => ({ id: item.id, ...item.data() })));
     render();
   }, error => console.error("Unable to listen for withdrawal requests", error));

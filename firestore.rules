@@ -63,6 +63,30 @@ service cloud.firestore {
         && value.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
     }
 
+    function validPlatformSettings(data) {
+      return data.keys().hasOnly([
+          "maintenanceMode", "prelaunchMode", "registrationsEnabled",
+          "freelancerApplicationsEnabled", "platformFeePercent",
+          "supportEmail", "platformName", "homeFeaturedBadgeIds", "updatedAt", "updatedBy"
+        ])
+        && data.maintenanceMode is bool
+        && data.prelaunchMode is bool
+        && data.registrationsEnabled is bool
+        && data.freelancerApplicationsEnabled is bool
+        && data.platformFeePercent is number
+        && data.platformFeePercent >= 0
+        && data.platformFeePercent <= 100
+        && data.supportEmail is string
+        && data.supportEmail.size() <= 160
+        && data.platformName is string
+        && data.platformName.size() > 0
+        && data.platformName.size() <= 60
+        && (!data.keys().hasAny(["homeFeaturedBadgeIds"])
+          || (data.homeFeaturedBadgeIds is list && data.homeFeaturedBadgeIds.size() <= 50))
+        && data.updatedAt == request.time
+        && data.updatedBy == request.auth.uid;
+    }
+
     function validParticipantMap(data, field) {
       return data[field] is map
         && data[field].keys().hasOnly(data.participantUids);
@@ -1182,27 +1206,16 @@ service cloud.firestore {
 
     match /platformSettings/{settingId} {
       allow read: if true;
-      allow create, update: if hasAdminPermission("settings.manage")
+      allow create: if hasAdminPermission("settings.manage")
         && settingId == "general"
-        && request.resource.data.keys().hasOnly([
-          "maintenanceMode", "prelaunchMode", "registrationsEnabled",
-          "freelancerApplicationsEnabled", "platformFeePercent",
-          "supportEmail", "platformName", "updatedAt", "updatedBy"
-        ])
-        && request.resource.data.maintenanceMode is bool
-        && request.resource.data.prelaunchMode is bool
-        && request.resource.data.registrationsEnabled is bool
-        && request.resource.data.freelancerApplicationsEnabled is bool
-        && request.resource.data.platformFeePercent is number
-        && request.resource.data.platformFeePercent >= 0
-        && request.resource.data.platformFeePercent <= 100
-        && request.resource.data.supportEmail is string
-        && request.resource.data.supportEmail.size() <= 160
-        && request.resource.data.platformName is string
-        && request.resource.data.platformName.size() > 0
-        && request.resource.data.platformName.size() <= 60
-        && request.resource.data.updatedAt == request.time
-        && request.resource.data.updatedBy == request.auth.uid;
+        && validPlatformSettings(request.resource.data);
+      allow update: if settingId == "general"
+        && validPlatformSettings(request.resource.data)
+        && (hasAdminPermission("settings.manage")
+          || (hasAdminPermission("promotions.manage")
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "homeFeaturedBadgeIds", "updatedAt", "updatedBy"
+            ])));
       allow delete: if false;
     }
 

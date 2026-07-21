@@ -6,6 +6,7 @@ const team = require("./lib/team");
 const adminUsers = require("./lib/admin-users");
 const articles = require("./lib/articles");
 const articleCounters = require("./lib/article-counters");
+const financeReports = require("./lib/finance-reports");
 
 exports.submitDepositRequest = wallet.submitDepositRequest;
 exports.reviewDepositRequest = wallet.reviewDepositRequest;
@@ -33,3 +34,4 @@ exports.migrateArticlesForScale = articles.migrateArticlesForScale;
 exports.purgeExpiredArticles = articles.purgeExpiredArticles;
 exports.syncArticleLikesCount = articleCounters.syncArticleLikesCount;
 exports.syncArticleCommentsCount = articleCounters.syncArticleCommentsCount;
+exports.getFinancialReport = financeReports.getFinancialReport;

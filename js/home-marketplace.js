@@ -73,6 +73,32 @@ function normalizeCategory(value) {
   return "other";
 }
 
+function profileBadgeIds(profile = {}) {
+  const ids = new Set();
+  if (profile.badges && typeof profile.badges === "object") {
+    Object.entries(profile.badges).forEach(([id, value]) => {
+      if (value) ids.add(id);
+      if (value?.id) ids.add(value.id);
+    });
+  }
+  if (Array.isArray(profile.badgeSummary)) {
+    profile.badgeSummary.forEach(badge => {
+      if (badge?.id) ids.add(badge.id);
+      else if (typeof badge === "string") ids.add(badge);
+    });
+  }
+  return ids;
+}
+
+function featuredServicesByBadge(services, profiles, badgeIds) {
+  if (!badgeIds.length) return services;
+  const allowed = new Set(badgeIds);
+  return services.filter(service => {
+    const badges = profileBadgeIds(profiles.get(service.ownerUid));
+    return [...badges].some(id => allowed.has(id));
+  });
+}
+
 function loadMarketplaceImage(element, source) {
   const imageSource = source || "assets/service-placeholder.svg";
   element.classList.add("is-image-loading");
@@ -367,7 +393,8 @@ async function loadHomeData() {
       getDocs(query(collection(db, "publicProfiles"), where("accountType", "==", "freelancer"))),
       getDoc(doc(db, "platformSettings", "general"))
     ]);
-    const feePercent = Number(settingsSnapshot.exists() ? settingsSnapshot.data().platformFeePercent : 20);
+    const settings = settingsSnapshot.exists() ? settingsSnapshot.data() : {};
+    const feePercent = Number(settings.platformFeePercent ?? 20);
     setStatValue("homePlatformFee", `${feePercent.toLocaleString("en-US")}%`);
     const services = (await Promise.all(servicesSnapshot.docs.map(async item => {
       const service = { id: item.id, ...item.data() };
@@ -402,11 +429,17 @@ async function loadHomeData() {
       element.textContent = `${count.toLocaleString("en-US")} خدمة`;
     });
 
-    if (services.length) {
-      createHeroStackRotator(services, profiles);
-      createFeaturedRotator(featured, services, profiles);
+    const featuredBadgeIds = Array.isArray(settings.homeFeaturedBadgeIds) ? settings.homeFeaturedBadgeIds.filter(Boolean) : [];
+    const featuredServices = featuredServicesByBadge(services, profiles, featuredBadgeIds);
+    if (featuredServices.length) {
+      createHeroStackRotator(featuredServices, profiles);
+      createFeaturedRotator(featured, featuredServices, profiles);
     }
-    else featured.innerHTML = '<div class="testimonial-card" style="grid-column:1/-1;text-align:center"><p class="testimonial-text">لا توجد خدمات منشورة بعد. ستظهر أول خدمة هنا فور موافقة الإدارة عليها.</p></div>';
+    else {
+      const stack = document.getElementById("heroServiceStack");
+      if (stack) { stack.replaceChildren(); stack.hidden = true; }
+      featured.innerHTML = `<div class="testimonial-card" style="grid-column:1/-1;text-align:center"><p class="testimonial-text">${services.length ? "لا توجد خدمات منشورة لأصحاب الشارات المحددة حالياً." : "لا توجد خدمات منشورة بعد. ستظهر أول خدمة هنا فور موافقة الإدارة عليها."}</p></div>`;
+    }
   } catch (error) {
     console.error("Unable to load homepage marketplace data", error);
     ["homeFreelancersCount", "homeServicesCount", "homeCategoriesCount", "homePlatformFee"].forEach(id => setStatValue(id, "—"));

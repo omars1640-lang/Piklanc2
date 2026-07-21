@@ -1,7 +1,7 @@
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
-  addDoc, collection, doc, getAggregateFromServer, getCountFromServer, getDoc, getDocs, limit, orderBy, query,
-  serverTimestamp, startAfter, sum, updateDoc, where, writeBatch
+  addDoc, collection, doc, getCountFromServer, getDoc, getDocs, limit, orderBy, query,
+  serverTimestamp, startAfter, updateDoc, where, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
   deleteObject, getDownloadURL, ref as storageRef, uploadBytes
@@ -25,7 +25,36 @@ const serviceLabels = { draft: "مسودة", pending: "قيد المراجعة",
 const ticketLabels = { open: "مفتوحة", in_progress: "قيد المعالجة", waiting_user: "بانتظار المستخدم", resolved: "محلولة", closed: "مغلقة" };
 const orderLabels = { funded: "محجوز", active: "قيد التنفيذ", delivered: "قيد المراجعة", completed: "محرر", disputed: "نزاع", cancelled: "ملغي" };
 const categoryLabels = { technical: "تقنية", account: "الحساب", payment: "الدفع", dispute: "نزاع", report: "بلاغ", general: "عام" };
+const faqSectionLabels = { buyer: "للمشترين", freelancer: "للمستقلين", payment: "الدفع والسحب", technical: "أسئلة تقنية", general: "أسئلة عامة" };
 const ADMIN_PAGE_SIZE = 20;
+const money = value => `${Number(value || 0).toLocaleString("en-US")} ل.س`;
+
+function initializeFinancePeriod() {
+  const now = new Date();
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  $("financeReportMonth").value ||= month;
+  $("financeReportYear").value ||= String(now.getFullYear());
+  $("financeReportStart").value ||= `${now.getFullYear()}-01-01`;
+  $("financeReportEnd").value ||= now.toISOString().slice(0, 10);
+  updateFinancePeriodControls();
+}
+
+function updateFinancePeriodControls() {
+  const mode = $("financePeriodMode").value;
+  document.querySelectorAll("[data-finance-period]").forEach(control => {
+    control.hidden = control.dataset.financePeriod !== mode;
+  });
+}
+
+function financeReportRequest() {
+  return {
+    mode: $("financePeriodMode").value,
+    month: $("financeReportMonth").value,
+    year: Number($("financeReportYear").value),
+    startDate: $("financeReportStart").value,
+    endDate: $("financeReportEnd").value
+  };
+}
 
 function operationId(prefix) {
   const random = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -482,12 +511,25 @@ function renderFinance() {
     const haystack = `${order.id} ${order.serviceTitle || ""} ${order.buyerName || ""} ${order.freelancerName || ""}`.toLowerCase();
     return (!term || haystack.includes(term)) && (filter === "all" || order.status === filter);
   });
-  const held = state.orders.filter(order => ["funded", "active", "delivered", "disputed"].includes(order.status));
-  const completed = state.orders.filter(order => order.status === "completed");
-  $("financeOrdersTotal").textContent = state.financeMetrics?.ordersTotal ?? state.orders.length;
-  $("financeHeldTotal").textContent = `${Number(state.financeMetrics?.heldTotal ?? held.reduce((total, order) => total + Number(order.total || 0), 0)).toLocaleString("en-US")} ل.س`;
-  $("financeFeeTotal").textContent = `${Number(state.financeMetrics?.feeTotal ?? completed.reduce((total, order) => total + Number(order.platformFeeAmount || 0), 0)).toLocaleString("en-US")} ل.س`;
-  $("financeReleasedTotal").textContent = `${Number(state.financeMetrics?.releasedTotal ?? completed.reduce((total, order) => total + Number(order.freelancerAmount || 0), 0)).toLocaleString("en-US")} ل.س`;
+  const report = state.financeMetrics;
+  $("financeDepositsApproved").textContent = money(report?.deposits?.amount);
+  $("financeDepositsCount").textContent = `${Number(report?.deposits?.count || 0).toLocaleString("en-US")} عملية`;
+  $("financePlatformFunds").textContent = money(report?.current?.platformFunds);
+  $("financeWithdrawnTotal").textContent = money(report?.withdrawals?.amount);
+  $("financeWithdrawalsCount").textContent = `${Number(report?.withdrawals?.count || 0).toLocaleString("en-US")} عملية`;
+  $("financeFeeTotal").textContent = money(report?.completed?.profit);
+  $("financeGrossTotal").textContent = money(report?.orders?.gross);
+  $("financeOrdersTotal").textContent = `${Number(report?.orders?.count || 0).toLocaleString("en-US")} طلب`;
+  $("financeReleasedTotal").textContent = money(report?.completed?.freelancerReleased);
+  $("financeCompletedOrders").textContent = `${Number(report?.completed?.count || 0).toLocaleString("en-US")} طلب مكتمل`;
+  $("financeHeldTotal").textContent = money(report?.current?.heldOrders);
+  $("financeWalletAvailable").textContent = money(report?.current?.walletAvailable);
+  $("financeWalletBreakdown").textContent = `محجوز ${money(report?.current?.walletHeld)} · قيد السحب ${money(report?.current?.pendingWithdrawalBalance)}`;
+  $("financeReportPeriod").textContent = report?.period?.label ? `الفترة المعروضة: ${report.period.label}` : "تعذر تحميل الملخص المالي";
+  if (report?.current) {
+    $("pendingDepositsTotal").textContent = Number(report.current.pendingDepositsCount || 0).toLocaleString("en-US");
+    $("pendingWithdrawalsTotal").textContent = Number(report.current.pendingWithdrawalsCount || 0).toLocaleString("en-US");
+  }
   const rows = orders.map(order => {
     const row = document.createElement("tr");
     const values = [
@@ -640,7 +682,7 @@ function renderContent() {
   $("articlesLoadMore").hidden = !state.articleHasMore;
   $("articlesLoadMore").disabled = state.articleLoading;
   $("faqsList").replaceChildren(...state.faqs.map(item => contentItem(
-    item.question, `${item.category || "عام"} · ${item.published ? "منشور" : "مخفي"}`,
+    item.question, `${item.categoryLabel || faqSectionLabels[item.category] || item.category || "أسئلة عامة"} · ${item.published ? "منشور" : "مخفي"}`,
     () => toggleContent("faqItems", item, "published", !item.published, "manage_faq"),
     item.published ? "إخفاء" : "نشر",
     () => removeContent("faqItems", item, "manage_faq")
@@ -838,9 +880,10 @@ async function saveArticle(event) {
 async function addFaq(event) {
   event.preventDefault();
   if (!hasPermission("content.manage")) return toast("لا تملك صلاحية تعديل المحتوى.");
+  const category = $("faqCategory").value || "general";
   await addDoc(collection(db, "faqItems"), {
     question: $("faqQuestion").value.trim(), answer: $("faqAnswer").value.trim(),
-    category: $("faqCategory").value.trim() || "عام", published: $("faqPublished").checked,
+    category, categoryLabel: faqSectionLabels[category] || "أسئلة عامة", published: $("faqPublished").checked,
     order: Date.now(), createdAt: serverTimestamp(), updatedAt: serverTimestamp(), updatedBy: state.admin.id
   });
   await addDoc(collection(db, "adminAuditLogs"), auditData("manage_faq", {}, "create"));
@@ -933,23 +976,14 @@ async function loadOperationCounts() {
 }
 
 async function loadFinanceMetrics() {
-  if (!(hasPermission("finance.view") || hasPermission("services.view"))) return;
+  if (!hasPermission("finance.view")) return;
   try {
-    const completed = query(collection(db, "orders"), where("status", "==", "completed"));
-    const held = query(collection(db, "orders"), where("status", "in", ["funded", "active", "delivered", "disputed"]));
-    const [orders, heldAmounts, completedAmounts] = await Promise.all([
-      getCountFromServer(collection(db, "orders")),
-      getAggregateFromServer(held, { total: sum("total") }),
-      getAggregateFromServer(completed, { fees: sum("platformFeeAmount"), released: sum("freelancerAmount") })
-    ]);
-    state.financeMetrics = {
-      ordersTotal: orders.data().count,
-      heldTotal: Number(heldAmounts.data().total || 0),
-      feeTotal: Number(completedAmounts.data().fees || 0),
-      releasedTotal: Number(completedAmounts.data().released || 0)
-    };
+    const result = await httpsCallable(functions, "getFinancialReport")(financeReportRequest());
+    state.financeMetrics = result.data;
   } catch (error) {
     console.warn("Unable to load finance aggregates", error);
+    state.financeMetrics = null;
+    toast("تعذر تحميل التقرير المالي. تأكد من نشر الدالة والفهارس الجديدة.");
   }
 }
 
@@ -979,7 +1013,7 @@ async function loadOperations(section = document.querySelector(".nav-link.active
   const [services, tickets, orders, faqs, categories] = await Promise.all([
     wants("marketplace") && (hasPermission("services.view") || hasPermission("services.moderate")) ? safeSnapshot("الخدمات", getDocs(query(collection(db, "services"), orderBy("updatedAt", "desc"), limit(50)))) : empty,
     wants("support") && (hasPermission("support.view") || hasPermission("support.reply")) ? safeSnapshot("الدعم", getDocs(query(collection(db, "supportTickets"), orderBy("updatedAt", "desc"), limit(50)))) : empty,
-    wants("finance") && (hasPermission("finance.view") || hasPermission("services.view")) ? safeSnapshot("الطلبات", getDocs(query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(50)))) : empty,
+    wants("finance") && hasPermission("finance.view") ? safeSnapshot("الطلبات", getDocs(query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(50)))) : empty,
     wants("content") && (hasPermission("content.view") || hasPermission("content.manage")) ? safeSnapshot("الأسئلة الشائعة", getDocs(query(collection(db, "faqItems"), orderBy("order"), limit(50)))) : empty,
     wants("content") && (hasPermission("content.view") || hasPermission("content.manage")) ? safeSnapshot("التصنيفات", getDocs(query(collection(db, "serviceCategories"), orderBy("order"), limit(50)))) : empty
   ]);
@@ -1010,6 +1044,19 @@ $("ticketAdminSearch").addEventListener("input", renderTickets);
 $("ticketAdminFilter").addEventListener("change", renderTickets);
 $("financeSearch").addEventListener("input", renderFinance);
 $("financeFilter").addEventListener("change", renderFinance);
+$("financePeriodMode").addEventListener("change", updateFinancePeriodControls);
+$("financeReportForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const button = $("financeReportSubmit");
+  button.disabled = true;
+  try {
+    await loadFinanceMetrics();
+    renderFinance();
+  } finally {
+    button.disabled = false;
+  }
+});
+initializeFinancePeriod();
 bindAsyncForm("ticketAdminForm", saveTicket, "تعذر حفظ تحديث التذكرة.");
 document.querySelectorAll("[data-close-ticket-admin]").forEach(control => control.addEventListener("click", closeTicket));
 $("ticketAdminModal").addEventListener("click", event => { if (event.target === $("ticketAdminModal")) closeTicket(); });
