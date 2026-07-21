@@ -398,6 +398,17 @@ function renderPromotions() {
       && (userTypeFilter === "all" || user.accountType === userTypeFilter || user.role === userTypeFilter);
   }).slice(0, 80);
   const badges = state.badges.length ? state.badges : Object.values(defaultBadges);
+  const configuredRanks = new Map(rankLevels.filter(item => item.id !== "auto").map(item => [item.id, item]));
+  state.users.forEach(user => {
+    const rank = user.rank;
+    if (rank?.id && rank?.label && !configuredRanks.has(rank.id)) {
+      configuredRanks.set(rank.id, { id: rank.id, label: rank.label, color: rank.color || "auto", minCompleted: Number(rank.completedServices || 0) });
+    }
+  });
+  const featuredCriteriaOptions = [
+    ...badges.map(item => ({ ...item, criterionId: `badge:${item.id}`, criterionType: "badge" })),
+    ...[...configuredRanks.values()].map(item => ({ ...item, criterionId: `rank:${item.id}`, criterionType: "rank", icon: "◆", tone: item.color }))
+  ];
   const userSelect = document.getElementById("badgeUserSelect");
   if (userSelect) {
     userSelect.replaceChildren(...users.map(user => new Option(`${user.name || user.email} - ${user.role === "admin" ? "إدارة" : accountTypeLabel(user.accountType)}`, user.id)));
@@ -414,20 +425,22 @@ function renderPromotions() {
     promoBadge.replaceChildren(new Option("بدون شارة", ""), ...badges.map(badge => new Option(badge.label, badge.id)));
     if (current && badges.some(badge => badge.id === current)) promoBadge.value = current;
   }
-  const selectedFeaturedBadges = new Set(Array.isArray(state.settings?.homeFeaturedBadgeIds) ? state.settings.homeFeaturedBadgeIds : []);
+  const selectedCriteria = new Set(Array.isArray(state.settings?.homeFeaturedCriteria)
+    ? state.settings.homeFeaturedCriteria
+    : (Array.isArray(state.settings?.homeFeaturedBadgeIds) ? state.settings.homeFeaturedBadgeIds.map(id => `badge:${id}`) : []));
   const featuredOptions = document.getElementById("featuredBadgeOptions");
   if (featuredOptions) {
-    featuredOptions.replaceChildren(...badges.map(badge => {
+    featuredOptions.replaceChildren(...featuredCriteriaOptions.map(badge => {
       const label = document.createElement("label");
       label.className = "badge-choice";
       const input = document.createElement("input");
       input.type = "checkbox";
       input.name = "homeFeaturedBadge";
-      input.value = badge.id;
-      input.checked = selectedFeaturedBadges.has(badge.id);
+      input.value = badge.criterionId;
+      input.checked = selectedCriteria.has(badge.criterionId) || selectedCriteria.has(badge.id);
       const icon = document.createElement("span");
       icon.className = `profile-extra-badge ${badge.tone || ""}`.trim();
-      icon.textContent = `${badge.icon || "◆"} ${badge.label || badge.id}`;
+      icon.textContent = `${badge.icon || "◆"} ${badge.label || badge.id}${badge.criterionType === "rank" ? " · رتبة" : " · شارة"}`;
       label.append(input, icon);
       return label;
     }));
@@ -472,16 +485,18 @@ function renderPromotions() {
 async function saveFeaturedBadges(event) {
   event.preventDefault();
   if (!hasPermission("promotions.manage")) return showToast("لا تملك صلاحية إدارة الشارات.");
-  const badgeIds = [...document.querySelectorAll('input[name="homeFeaturedBadge"]:checked')].map(input => input.value);
+  const criteria = [...document.querySelectorAll('input[name="homeFeaturedBadge"]:checked')].map(input => input.value);
+  const badgeIds = criteria.filter(value => value.startsWith("badge:")).map(value => value.slice(6));
   const batch = writeBatch(db);
   batch.set(doc(db, "platformSettings", "general"), {
     homeFeaturedBadgeIds: badgeIds,
+    homeFeaturedCriteria: criteria,
     updatedAt: serverTimestamp(),
     updatedBy: state.admin.id
   }, { merge: true });
-  batch.set(doc(collection(db, "adminAuditLogs")), auditData("update_settings", {}, `home_featured_badges: ${badgeIds.join(",") || "all"}`));
+  batch.set(doc(collection(db, "adminAuditLogs")), auditData("update_settings", {}, `home_featured_criteria: ${criteria.join(",") || "all"}`));
   await batch.commit();
-  showToast(badgeIds.length ? "تم تقييد الخدمات المميزة بالشارات المحددة." : "ستُعرض خدمات كل المستقلين في الصفحة الرئيسية.");
+  showToast(criteria.length ? "تم حفظ فئات الشارات والرتب للخدمات المميزة." : "ستُعرض خدمات كل المستقلين في الصفحة الرئيسية.");
   await loadData();
 }
 

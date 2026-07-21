@@ -67,7 +67,7 @@ service cloud.firestore {
       return data.keys().hasOnly([
           "maintenanceMode", "prelaunchMode", "registrationsEnabled",
           "freelancerApplicationsEnabled", "platformFeePercent",
-          "supportEmail", "platformName", "homeFeaturedBadgeIds", "updatedAt", "updatedBy"
+          "supportEmail", "platformName", "homeFeaturedBadgeIds", "homeFeaturedCriteria", "updatedAt", "updatedBy"
         ])
         && data.maintenanceMode is bool
         && data.prelaunchMode is bool
@@ -83,6 +83,8 @@ service cloud.firestore {
         && data.platformName.size() <= 60
         && (!data.keys().hasAny(["homeFeaturedBadgeIds"])
           || (data.homeFeaturedBadgeIds is list && data.homeFeaturedBadgeIds.size() <= 50))
+        && (!data.keys().hasAny(["homeFeaturedCriteria"])
+          || (data.homeFeaturedCriteria is list && data.homeFeaturedCriteria.size() <= 50))
         && data.updatedAt == request.time
         && data.updatedBy == request.auth.uid;
     }
@@ -1214,7 +1216,7 @@ service cloud.firestore {
         && (hasAdminPermission("settings.manage")
           || (hasAdminPermission("promotions.manage")
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              "homeFeaturedBadgeIds", "updatedAt", "updatedBy"
+              "homeFeaturedBadgeIds", "homeFeaturedCriteria", "updatedAt", "updatedBy"
             ])));
       allow delete: if false;
     }
