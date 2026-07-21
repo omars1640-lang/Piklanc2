@@ -5,6 +5,11 @@ import { ALWAYS_ALLOWED_PAGES, platformAccessDecision } from "./access-policy.js
 
 const page = location.pathname.split("/").pop() || "index.html";
 
+function revealPage() {
+  document.documentElement.setAttribute("data-platform-access", "ready");
+  document.getElementById("platform-access-bootstrap")?.remove();
+}
+
 function safeReturnUrl(fallback = "/index.html") {
   const requested = new URLSearchParams(location.search).get("returnUrl") || "";
   try {
@@ -26,7 +31,10 @@ function currentUser() {
 }
 
 export const platformReady = (async () => {
-  if (ALWAYS_ALLOWED_PAGES.has(page)) return true;
+  if (ALWAYS_ALLOWED_PAGES.has(page)) {
+    revealPage();
+    return true;
+  }
   return new Promise(resolve => {
     let firstCheck = true;
     let redirecting = false;
@@ -53,7 +61,10 @@ export const platformReady = (async () => {
         earlyAccess: profileData?.earlyAccess
       });
 
-      if (decision === "allow") return finish(true);
+      if (decision === "allow") {
+        revealPage();
+        return finish(true);
+      }
 
       if (decision === "maintenance") {
         if (!redirecting) {
@@ -86,7 +97,10 @@ export const platformReady = (async () => {
     }, error => {
       console.warn("Platform access status could not be checked", error);
       const fallbackDecision = platformAccessDecision({ page, maintenanceMode: false, prelaunchMode: true });
-      if (fallbackDecision === "allow") return finish(true);
+      if (fallbackDecision === "allow") {
+        revealPage();
+        return finish(true);
+      }
       if (!redirecting) {
         redirecting = true;
         const returnUrl = `${location.pathname}${location.search}${location.hash}`;
