@@ -176,13 +176,13 @@
     {
       "collectionGroup": "adminOperations",
       "fieldPath": "expireAt",
-      "ttl": { "enabled": true },
+      "ttl": true,
       "indexes": []
     },
     {
       "collectionGroup": "systemEvents",
       "fieldPath": "expireAt",
-      "ttl": { "enabled": true },
+      "ttl": true,
       "indexes": []
     }
   ]
