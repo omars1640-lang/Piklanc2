@@ -1,7 +1,7 @@
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
   addDoc, collection, deleteDoc, doc, getDoc, increment, onSnapshot,
-  query, serverTimestamp, setDoc, updateDoc, where
+  limit, orderBy, query, serverTimestamp, setDoc, updateDoc, where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth, db } from "./firebase.js";
 
@@ -107,7 +107,16 @@ function renderArticle(article) {
   $("articleCategory").textContent = article.category || "عام";
   $("articleTitle").textContent = article.title;
   $("articleExcerpt").textContent = article.excerpt || "";
-  $("articleMeta").innerHTML = `<span>${article.authorName || "فريق PikLance"}</span><span>${formatDate(article.publishedAt || article.createdAt)}</span><span>◷ ${readTime(article.body)} دقائق قراءة</span><span id="articleViews">${Number(article.views || 0).toLocaleString("en-US")} مشاهدة</span>`;
+  const author = document.createElement("span");
+  author.textContent = article.authorName || "فريق PikLance";
+  const date = document.createElement("span");
+  date.textContent = formatDate(article.publishedAt || article.createdAt);
+  const reading = document.createElement("span");
+  reading.textContent = `◷ ${article.readingMinutes || readTime(article.body)} دقائق قراءة`;
+  const views = document.createElement("span");
+  views.id = "articleViews";
+  views.textContent = `${Number(article.views || 0).toLocaleString("en-US")} مشاهدة`;
+  $("articleMeta").replaceChildren(author, date, reading, views);
   if (article.coverUrl) {
     $("articleCover").style.backgroundImage = `url("${String(article.coverUrl).replace(/"/g, "%22")}")`;
     $("articleCover").hidden = false;
@@ -164,7 +173,7 @@ function renderComments(snapshot = null) {
   if (snapshot) state.comments = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
   const comments = [...state.comments];
   comments.sort((a, b) => (toDate(b.createdAt)?.getTime() || 0) - (toDate(a.createdAt)?.getTime() || 0));
-  $("commentsCount").textContent = comments.length.toLocaleString("en-US");
+  $("commentsCount").textContent = Math.max(comments.length, Number(state.article?.commentsCount || 0)).toLocaleString("en-US");
   if (!comments.length) {
     $("commentsList").innerHTML = '<div class="comment-empty">كن أول من يشارك رأيه في هذا المقال.</div>';
     return;
@@ -268,16 +277,23 @@ if (!articleId) {
     if (!snapshot.exists() || snapshot.data().status !== "published") {
       $("articleState").textContent = "المقال غير موجود أو لم يعد منشوراً.";
     } else {
-      state.article = { id: snapshot.id, ...snapshot.data() };
+      const bodySnapshot = await getDoc(doc(db, "articleBodies", articleId)).catch(() => null);
+      state.article = { id: snapshot.id, ...snapshot.data(), body: bodySnapshot?.exists() ? bodySnapshot.data().body : (snapshot.data().body || "") };
       renderArticle(state.article);
-      onSnapshot(collection(db, "articles", articleId, "likes"), likes => {
-        state.likeIds = likes.docs.map(item => item.id);
-        const count = likes.size.toLocaleString("en-US");
-        $("likesCount").textContent = count;
-        $("likesCountMobile").textContent = count;
-        setLikeState(Boolean(state.user && state.likeIds.includes(state.user.uid)));
+      const count = Number(state.article.likesCount || 0).toLocaleString("en-US");
+      $("likesCount").textContent = count;
+      $("likesCountMobile").textContent = count;
+      onSnapshot(doc(db, "articles", articleId), current => {
+        if (!current.exists()) return;
+        const data = current.data();
+        state.article = { ...state.article, ...data };
+        const likesCount = Number(data.likesCount || 0).toLocaleString("en-US");
+        $("likesCount").textContent = likesCount;
+        $("likesCountMobile").textContent = likesCount;
+        $("commentsCount").textContent = Number(data.commentsCount || state.comments.length || 0).toLocaleString("en-US");
+        $("articleViews").textContent = `${Number(data.views || 0).toLocaleString("en-US")} مشاهدة`;
       });
-      onSnapshot(query(collection(db, "articles", articleId, "comments"), where("status", "==", "published")), renderComments);
+      onSnapshot(query(collection(db, "articles", articleId, "comments"), where("status", "==", "published"), orderBy("createdAt", "desc"), limit(30)), renderComments);
       registerView();
     }
   } catch (error) {
@@ -292,6 +308,10 @@ onAuthStateChanged(auth, async user => {
   if (user) {
     const profile = await getDoc(doc(db, "users", user.uid));
     if (profile.exists()) state.profile = profile.data();
+    onSnapshot(doc(db, "articles", articleId, "likes", user.uid), like => {
+      state.likeIds = like.exists() ? [user.uid] : [];
+      setLikeState(like.exists());
+    });
   }
   $("commentHint").textContent = user && state.profile?.status === "active"
     ? `سيظهر تعليقك باسم ${state.profile.name || user.email}.`

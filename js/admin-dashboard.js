@@ -3,12 +3,14 @@ import {
   collection,
   deleteField,
   doc,
+  getCountFromServer,
   getDoc,
   getDocs,
   limit,
   orderBy,
   query,
   serverTimestamp,
+  where,
   writeBatch
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { deleteObject, getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
@@ -116,6 +118,7 @@ const state = {
   referrals: [],
   benefits: [],
   settings: null,
+  metrics: null,
   selectedUser: null,
   pendingDecision: null
 };
@@ -582,6 +585,7 @@ function showSection(sectionName) {
   history.replaceState({}, "", `#${sectionName}`);
   elements.sidebar.classList.remove("open");
   elements.backdrop.classList.remove("open");
+  window.dispatchEvent(new CustomEvent("admin:section-change", { detail: { section: sectionName } }));
 }
 
 function buildFutureSections() {
@@ -608,30 +612,38 @@ function renderMetrics() {
   const pending = users.filter(user => user.status === "pending");
   const inactive = users.filter(user => user.status !== "active");
 
-  document.getElementById("totalUsers").textContent = users.length;
-  document.getElementById("activeFreelancers").textContent = activeFreelancers.length;
-  document.getElementById("pendingUsers").textContent = pending.length;
-  document.getElementById("totalChats").textContent = state.chats.length;
+  const metrics = state.metrics || {};
+  const totalUsers = metrics.totalUsers ?? users.length;
+  const activeFreelancersTotal = metrics.activeFreelancers ?? activeFreelancers.length;
+  const pendingTotal = metrics.pendingUsers ?? pending.length;
+  const chatsTotal = metrics.totalChats ?? state.chats.length;
+  const buyersTotal = metrics.buyers ?? buyers.length;
+  const freelancersTotal = metrics.freelancers ?? freelancers.length;
+  const inactiveTotal = metrics.inactiveUsers ?? inactive.length;
+  document.getElementById("totalUsers").textContent = totalUsers;
+  document.getElementById("activeFreelancers").textContent = activeFreelancersTotal;
+  document.getElementById("pendingUsers").textContent = pendingTotal;
+  document.getElementById("totalChats").textContent = chatsTotal;
   const verificationBadge = document.getElementById("verificationBadge");
-  verificationBadge.textContent = pending.length ? String(pending.length) : "";
-  verificationBadge.hidden = pending.length === 0;
-  window.dispatchEvent(new CustomEvent("admin:verification-count", { detail: { count: pending.length } }));
-  document.getElementById("pendingHeadingCount").textContent = pending.length;
-  document.getElementById("freelancerShare").textContent = `${users.length ? Math.round(activeFreelancers.length / users.length * 100) : 0}% من المستخدمين`;
-  document.getElementById("buyersCount").textContent = buyers.length;
-  document.getElementById("freelancersCount").textContent = freelancers.length;
-  document.getElementById("inactiveCount").textContent = inactive.length;
-  document.getElementById("donutTotal").textContent = users.length;
-  const buyerPercent = users.length ? buyers.length / users.length * 100 : 0;
-  const freelancerPercent = users.length ? freelancers.length / users.length * 100 : 0;
+  verificationBadge.textContent = pendingTotal ? String(pendingTotal) : "";
+  verificationBadge.hidden = pendingTotal === 0;
+  window.dispatchEvent(new CustomEvent("admin:verification-count", { detail: { count: pendingTotal } }));
+  document.getElementById("pendingHeadingCount").textContent = pendingTotal;
+  document.getElementById("freelancerShare").textContent = `${totalUsers ? Math.round(activeFreelancersTotal / totalUsers * 100) : 0}% من المستخدمين`;
+  document.getElementById("buyersCount").textContent = buyersTotal;
+  document.getElementById("freelancersCount").textContent = freelancersTotal;
+  document.getElementById("inactiveCount").textContent = inactiveTotal;
+  document.getElementById("donutTotal").textContent = totalUsers;
+  const buyerPercent = totalUsers ? buyersTotal / totalUsers * 100 : 0;
+  const freelancerPercent = totalUsers ? freelancersTotal / totalUsers * 100 : 0;
   const donut = document.getElementById("accountDonut");
   donut.style.setProperty("--buyer", `${buyerPercent}%`);
   donut.style.setProperty("--freelancer", `${freelancerPercent}%`);
 
-  document.getElementById("chatMetricTotal").textContent = state.chats.length;
+  document.getElementById("chatMetricTotal").textContent = chatsTotal;
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  document.getElementById("activeChatsWeek").textContent = state.chats.filter(chat => toDate(chat.lastUpdated)?.getTime() >= weekAgo).length;
-  document.getElementById("serviceChats").textContent = state.chats.filter(chat => chat.context?.serviceId).length;
+  document.getElementById("activeChatsWeek").textContent = metrics.activeChatsWeek ?? state.chats.filter(chat => toDate(chat.lastUpdated)?.getTime() >= weekAgo).length;
+  document.getElementById("serviceChats").textContent = metrics.serviceChats ?? state.chats.filter(chat => chat.context?.serviceId).length;
 }
 
 function renderRegistrationChart() {
@@ -657,7 +669,7 @@ function renderRegistrationChart() {
 }
 
 function renderAlerts() {
-  const pending = state.users.filter(user => user.status === "pending").length;
+  const pending = state.metrics?.pendingUsers ?? state.users.filter(user => user.status === "pending").length;
   const suspended = state.users.filter(user => user.status === "suspended").length;
   const alerts = [];
   if (pending) alerts.push(["warning", "◷", `${pending} طلب توثيق ينتظر المراجعة`, "راجع الهوية واتخذ قراراً حتى لا تتأخر طلبات المستقلين.", "verifications"]);
@@ -918,23 +930,68 @@ async function syncAutomaticRanks() {
   }
 }
 
+async function loadDashboardMetrics() {
+  if (!hasPermission("overview.view")) return null;
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const requests = {
+    totalUsers: getCountFromServer(collection(db, "users")),
+    activeFreelancers: getCountFromServer(query(collection(db, "users"), where("accountType", "==", "freelancer"), where("status", "==", "active"))),
+    pendingUsers: getCountFromServer(query(collection(db, "users"), where("status", "==", "pending"))),
+    activeUsers: getCountFromServer(query(collection(db, "users"), where("status", "==", "active"))),
+    buyers: getCountFromServer(query(collection(db, "users"), where("accountType", "==", "buyer"))),
+    freelancers: getCountFromServer(query(collection(db, "users"), where("accountType", "==", "freelancer"))),
+    totalChats: getCountFromServer(collection(db, "chats")),
+    activeChatsWeek: getCountFromServer(query(collection(db, "chats"), where("lastUpdated", ">=", weekAgo))),
+    serviceChats: getCountFromServer(query(collection(db, "chats"), where("context.serviceId", ">", "")))
+  };
+  const entries = await Promise.all(Object.entries(requests).map(async ([key, request]) => {
+    try {
+      const snapshot = await request;
+      return [key, snapshot.data().count];
+    } catch (error) {
+      console.warn(`Unable to load dashboard metric ${key}`, error);
+      return [key, null];
+    }
+  }));
+  const metrics = Object.fromEntries(entries);
+  if (metrics.totalUsers != null && metrics.activeUsers != null) metrics.inactiveUsers = metrics.totalUsers - metrics.activeUsers;
+  return metrics;
+}
+
+function settledSnapshot(result, label, fallback = { docs: [] }) {
+  if (result.status === "fulfilled") return result.value;
+  console.error(`Unable to load admin ${label}`, result.reason);
+  return fallback;
+}
+
 async function loadData() {
   document.getElementById("refreshData").disabled = true;
   try {
     if (hasPermission("promotions.manage")) await seedDefaultBadges().catch(error => console.warn("Unable to seed default badges", error));
     const empty = { docs: [] };
     const needsUsers = hasPermission("overview.view") || hasPermission("users.view") || hasPermission("verifications.view") || hasPermission("ranks.manage") || hasPermission("promotions.manage");
-    const [usersSnapshot, ordersSnapshot, chatsSnapshot, auditSnapshot, settingsSnapshot, promoCodesSnapshot, badgesSnapshot, referralsSnapshot, benefitsSnapshot] = await Promise.all([
-      needsUsers ? getDocs(collection(db, "users")) : empty,
-      (hasPermission("overview.view") || hasPermission("finance.view") || hasPermission("services.view")) ? getDocs(collection(db, "orders")) : empty,
-      (hasPermission("overview.view") || hasPermission("conversations.view")) ? getDocs(collection(db, "chats")) : empty,
+    const results = await Promise.allSettled([
+      needsUsers ? getDocs(query(collection(db, "users"), orderBy("createdAt", "desc"), limit(100))) : empty,
+      (hasPermission("overview.view") || hasPermission("finance.view") || hasPermission("services.view")) ? getDocs(query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(100))) : empty,
+      (hasPermission("overview.view") || hasPermission("conversations.view")) ? getDocs(query(collection(db, "chats"), orderBy("lastUpdated", "desc"), limit(100))) : empty,
       (hasPermission("overview.view") || hasPermission("audit.view")) ? getDocs(query(collection(db, "adminAuditLogs"), orderBy("createdAt", "desc"), limit(100))) : empty,
       getDoc(doc(db, "platformSettings", "general")),
-      hasPermission("promotions.manage") ? getDocs(collection(db, "promoCodes")) : empty,
-      hasPermission("promotions.manage") ? getDocs(collection(db, "badges")) : empty,
-      hasPermission("promotions.manage") ? getDocs(collection(db, "referrals")) : empty,
-      hasPermission("promotions.manage") ? getDocs(collection(db, "userBenefits")) : empty
+      hasPermission("promotions.manage") ? getDocs(query(collection(db, "promoCodes"), limit(100))) : empty,
+      hasPermission("promotions.manage") ? getDocs(query(collection(db, "badges"), limit(100))) : empty,
+      hasPermission("promotions.manage") ? getDocs(query(collection(db, "referrals"), limit(100))) : empty,
+      hasPermission("promotions.manage") ? getDocs(query(collection(db, "userBenefits"), limit(100))) : empty,
+      loadDashboardMetrics()
     ]);
+    const usersSnapshot = settledSnapshot(results[0], "users");
+    const ordersSnapshot = settledSnapshot(results[1], "orders");
+    const chatsSnapshot = settledSnapshot(results[2], "chats");
+    const auditSnapshot = settledSnapshot(results[3], "audit");
+    const settingsSnapshot = settledSnapshot(results[4], "settings", { exists: () => false });
+    const promoCodesSnapshot = settledSnapshot(results[5], "promo codes");
+    const badgesSnapshot = settledSnapshot(results[6], "badges");
+    const referralsSnapshot = settledSnapshot(results[7], "referrals");
+    const benefitsSnapshot = settledSnapshot(results[8], "benefits");
+    state.metrics = results[9].status === "fulfilled" ? results[9].value : null;
     state.users = usersSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.orders = ordersSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.chats = chatsSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
@@ -944,7 +1001,6 @@ async function loadData() {
     state.referrals = referralsSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.benefits = benefitsSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.settings = settingsSnapshot.exists() ? settingsSnapshot.data() : null;
-    if (hasPermission("ranks.manage")) await syncAutomaticRanks();
     renderAll();
     document.getElementById("lastRefresh").textContent = `آخر تحديث: ${new Date().toLocaleTimeString("ar-SY", { hour: "2-digit", minute: "2-digit" })}`;
   } catch (error) {
@@ -1369,7 +1425,10 @@ function bindEvents() {
     localStorage.setItem("admin-theme", theme);
     document.getElementById("themeToggle").textContent = theme === "dark" ? "☀" : "☾";
   });
-  document.getElementById("refreshData").addEventListener("click", loadData);
+  document.getElementById("refreshData").addEventListener("click", async () => {
+    await loadData();
+    window.dispatchEvent(new CustomEvent("admin:refresh", { detail: { section: location.hash.slice(1) } }));
+  });
   document.getElementById("logoutButton").addEventListener("click", async () => {
     await signOut(auth);
     location.replace("login.html");

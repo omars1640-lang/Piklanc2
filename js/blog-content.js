@@ -1,10 +1,13 @@
 import {
-  collection, getCountFromServer, getDocs, onSnapshot, query, where
+  collection, getCountFromServer, getDocs, limit, orderBy, query, startAfter, where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from "./firebase.js";
 
 const PAGE_SIZE = 9;
-const state = { articles: [], category: "الكل", search: "", page: 1 };
+const state = {
+  articles: [], featured: null, category: "الكل", search: "", page: 1,
+  total: 0, hasMore: false, cursors: [null], loading: false, categories: ["الكل"]
+};
 const grid = document.getElementById("articlesGrid");
 const featured = document.getElementById("featuredArticle");
 const categories = document.getElementById("blogCategories");
@@ -19,30 +22,28 @@ function formatDate(value) {
   return toDate(value)?.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) || "حديثاً";
 }
 
-function readTime(body) {
-  return Math.max(2, Math.ceil(String(body || "").trim().split(/\s+/).filter(Boolean).length / 180));
+function readTime(article) {
+  return Number(article.readingMinutes || Math.max(2, Math.ceil(String(article.body || "").trim().split(/\s+/).filter(Boolean).length / 180)));
 }
 
 function coverStyle(url) {
   return url ? `url("${String(url).replace(/"/g, "%22")}")` : "";
 }
 
-async function loadStats(article) {
-  try {
-    const [likes, comments] = await Promise.all([
-      getCountFromServer(collection(db, "articles", article.id, "likes")),
-      getCountFromServer(query(collection(db, "articles", article.id, "comments"), where("status", "==", "published")))
-    ]);
-    return { ...article, likesCount: likes.data().count, commentsCount: comments.data().count };
-  } catch {
-    return { ...article, likesCount: 0, commentsCount: 0 };
-  }
-}
-
 function statsNode(article) {
   const stats = document.createElement("div");
   stats.className = "article-stats";
-  stats.innerHTML = `<span>◷ ${readTime(article.body)} دقائق</span><span>♡ ${article.likesCount || 0}</span><span>◌ ${article.commentsCount || 0}</span><span>شاهد ${Number(article.views || 0).toLocaleString("en-US")}</span>`;
+  const values = [
+    `◷ ${readTime(article)} دقائق`,
+    `♡ ${Number(article.likesCount || 0).toLocaleString("en-US")}`,
+    `◌ ${Number(article.commentsCount || 0).toLocaleString("en-US")}`,
+    `شاهد ${Number(article.views || 0).toLocaleString("en-US")}`
+  ];
+  stats.replaceChildren(...values.map(value => {
+    const span = document.createElement("span");
+    span.textContent = value;
+    return span;
+  }));
   return stats;
 }
 
@@ -90,101 +91,127 @@ function articleCard(article) {
   title.textContent = article.title;
   const excerpt = document.createElement("p");
   excerpt.textContent = article.excerpt;
-  copy.append(category, title, excerpt, statsNode(article));
+  const date = document.createElement("small");
+  date.textContent = formatDate(article.publishedAt || article.createdAt);
+  copy.append(category, title, excerpt, date, statsNode(article));
   link.append(cover, copy);
   card.append(link);
   return card;
 }
 
-function filteredArticles() {
-  return state.articles.filter(article => {
-    const categoryMatch = state.category === "الكل" || article.category === state.category;
-    const haystack = `${article.title || ""} ${article.excerpt || ""} ${(article.tags || []).join(" ")}`.toLowerCase();
-    return categoryMatch && (!state.search || haystack.includes(state.search));
-  });
-}
-
-function renderPagination(total) {
-  const pages = Math.ceil(total / PAGE_SIZE);
-  if (pages <= 1) {
+function renderPagination() {
+  if (state.total <= PAGE_SIZE) {
     pagination.replaceChildren();
     return;
   }
-  const buttons = Array.from({ length: pages }, (_, index) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = String(index + 1);
-    button.classList.toggle("active", state.page === index + 1);
-    button.addEventListener("click", () => {
-      state.page = index + 1;
-      render();
-      document.querySelector(".blog-section-heading").scrollIntoView({ behavior: "smooth" });
-    });
-    return button;
-  });
-  pagination.replaceChildren(...buttons);
+  const previous = document.createElement("button");
+  previous.type = "button";
+  previous.textContent = "السابق";
+  previous.disabled = state.page === 1 || state.loading;
+  previous.addEventListener("click", () => loadPage(state.page - 1));
+  const current = document.createElement("span");
+  current.className = "blog-page-current";
+  current.textContent = `صفحة ${state.page.toLocaleString("en-US")} من ${Math.max(1, Math.ceil(state.total / PAGE_SIZE)).toLocaleString("en-US")}`;
+  const next = document.createElement("button");
+  next.type = "button";
+  next.textContent = "التالي";
+  next.disabled = !state.hasMore || state.loading;
+  next.addEventListener("click", () => loadPage(state.page + 1));
+  pagination.replaceChildren(previous, current, next);
 }
 
 function render() {
-  const items = filteredArticles();
-  const featuredArticle = state.articles.find(article => article.featured) || state.articles[0];
-  renderFeatured(featuredArticle);
-  resultCount.textContent = `${items.length.toLocaleString("en-US")} مقال`;
-  const maxPage = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
-  state.page = Math.min(state.page, maxPage);
-  const pageItems = items.slice((state.page - 1) * PAGE_SIZE, state.page * PAGE_SIZE);
-  if (!pageItems.length) {
+  renderFeatured(state.featured || state.articles[0]);
+  resultCount.textContent = `${state.total.toLocaleString("en-US")} مقال`;
+  if (!state.articles.length) {
     const empty = document.createElement("div");
     empty.className = "blog-state";
     empty.textContent = "لا توجد مقالات مطابقة لبحثك حالياً.";
     grid.replaceChildren(empty);
   } else {
-    grid.replaceChildren(...pageItems.map(articleCard));
+    grid.replaceChildren(...state.articles.map(articleCard));
   }
-  renderPagination(items.length);
+  renderPagination();
 }
 
 function renderCategories() {
-  const names = ["الكل", ...new Set(state.articles.map(article => article.category || "عام"))];
-  categories.replaceChildren(...names.map(name => {
+  categories.replaceChildren(...state.categories.map(name => {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = name;
     button.classList.toggle("active", state.category === name);
     button.addEventListener("click", () => {
       state.category = name;
-      state.page = 1;
+      state.cursors = [null];
       renderCategories();
-      render();
+      loadPage(1);
     });
     return button;
   }));
 }
 
-document.getElementById("blogSearch").addEventListener("input", event => {
-  state.search = event.target.value.trim().toLowerCase();
-  state.page = 1;
-  render();
-});
+function normalizedSearchToken() {
+  return state.search.toLowerCase().replace(/[^\u0600-\u06ffa-z0-9_-]/gi, " ").trim().split(/\s+/)[0] || "";
+}
 
-onSnapshot(query(collection(db, "articles"), where("status", "==", "published")), async snapshot => {
-  const articles = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
-  articles.sort((a, b) => (toDate(b.publishedAt || b.createdAt)?.getTime() || 0) - (toDate(a.publishedAt || a.createdAt)?.getTime() || 0));
-  state.articles = await Promise.all(articles.map(loadStats));
-  renderCategories();
-  render();
-}, error => {
-  console.error("Unable to load articles realtime", error);
+function queryParts(includePaging = true, page = state.page) {
+  const constraints = [where("status", "==", "published")];
+  if (state.category !== "الكل") constraints.push(where("category", "==", state.category));
+  const token = normalizedSearchToken();
+  if (token) constraints.push(where("searchTokens", "array-contains", token));
+  constraints.push(orderBy("publishedAt", "desc"));
+  if (includePaging) {
+    const cursor = state.cursors[page - 1];
+    if (cursor) constraints.push(startAfter(cursor));
+    constraints.push(limit(PAGE_SIZE + 1));
+  }
+  return constraints;
+}
+
+async function loadPage(page = 1) {
+  if (state.loading || page < 1 || (page > 1 && !state.cursors[page - 1])) return;
+  state.loading = true;
+  grid.innerHTML = '<div class="blog-state">جاري تحميل المقالات...</div>';
+  try {
+    const [snapshot, countSnapshot] = await Promise.all([
+      getDocs(query(collection(db, "articles"), ...queryParts(true, page))),
+      getCountFromServer(query(collection(db, "articles"), ...queryParts(false, page)))
+    ]);
+    const visible = snapshot.docs.slice(0, PAGE_SIZE);
+    state.articles = visible.map(item => ({ id: item.id, ...item.data() }));
+    state.page = page;
+    state.total = countSnapshot.data().count;
+    state.hasMore = snapshot.docs.length > PAGE_SIZE;
+    if (state.hasMore && visible.length) state.cursors[page] = visible.at(-1);
+  } catch (error) {
+    console.error("Unable to load articles", error);
+    state.articles = [];
+    state.total = 0;
+  } finally {
+    state.loading = false;
+    render();
+  }
+}
+
+let searchTimer;
+document.getElementById("blogSearch").addEventListener("input", event => {
+  clearTimeout(searchTimer);
+  state.search = event.target.value.trim();
+  state.cursors = [null];
+  searchTimer = setTimeout(() => loadPage(1), 300);
 });
 
 try {
-  const snapshot = await getDocs(query(collection(db, "articles"), where("status", "==", "published")));
-  const articles = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
-  articles.sort((a, b) => (toDate(b.publishedAt || b.createdAt)?.getTime() || 0) - (toDate(a.publishedAt || a.createdAt)?.getTime() || 0));
-  state.articles = await Promise.all(articles.map(loadStats));
-  renderCategories();
-  render();
+  const [categorySnapshot, featuredSnapshot] = await Promise.all([
+    getDocs(query(collection(db, "articleCategories"), where("active", "==", true), orderBy("name"))),
+    getDocs(query(collection(db, "articles"), where("status", "==", "published"), where("featured", "==", true), limit(1)))
+  ]);
+  const names = categorySnapshot.docs.map(item => item.data().name).filter(Boolean);
+  state.categories = ["الكل", ...new Set(names)];
+  state.featured = featuredSnapshot.docs[0] ? { id: featuredSnapshot.docs[0].id, ...featuredSnapshot.docs[0].data() } : null;
 } catch (error) {
-  console.error("Unable to load articles", error);
-  grid.innerHTML = '<div class="blog-state">تعذر تحميل المقالات حالياً. حاول مرة أخرى لاحقاً.</div>';
+  console.warn("Unable to load blog taxonomy", error);
 }
+
+renderCategories();
+await loadPage(1);

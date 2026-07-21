@@ -59,6 +59,7 @@ body { margin: 0; color: var(--blog-text); background: var(--blog-bg); font-fami
 .blog-state { grid-column: 1 / -1; padding: 55px 20px; border: 1px dashed var(--blog-border); border-radius: 16px; color: var(--blog-muted); background: var(--blog-panel); text-align: center; font-size: 15.6px; }
 .blog-pagination { margin-top: 28px; display: flex; justify-content: center; gap: 7px; }
 .blog-pagination button { width: 39px; height: 39px; border: 1px solid var(--blog-border); border-radius: 10px; color: var(--blog-text); background: var(--blog-panel); font: 700 11px "Cairo"; cursor: pointer; }
+.blog-pagination button:first-child,.blog-pagination button:last-child{width:auto;min-width:72px;padding:0 14px}.blog-pagination button:disabled{opacity:.45;cursor:not-allowed}.blog-page-current{display:inline-flex;align-items:center;padding:0 10px;color:var(--blog-muted);font:700 11px "Cairo"}
 .blog-pagination button.active { color: #fff; border-color: var(--blog-primary); background: var(--blog-primary); }
 .blog-footer { padding: 35px 0; color: #c2b9cc; background: #17131f; }
 .blog-footer .blog-container { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 16px; }
