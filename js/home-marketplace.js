@@ -90,12 +90,15 @@ function profileBadgeIds(profile = {}) {
   return ids;
 }
 
-function featuredServicesByBadge(services, profiles, badgeIds) {
-  if (!badgeIds.length) return services;
-  const allowed = new Set(badgeIds);
+function featuredServicesByCriteria(services, profiles, criteria) {
+  if (!criteria.length) return services;
+  const allowed = new Set(criteria);
   return services.filter(service => {
-    const badges = profileBadgeIds(profiles.get(service.ownerUid));
-    return [...badges].some(id => allowed.has(id));
+    const profile = profiles.get(service.ownerUid) || {};
+    const badges = profileBadgeIds(profile);
+    const rankId = profile.rank?.id || profile.rankId || profile.manualRank;
+    return [...badges].some(id => allowed.has(`badge:${id}`) || allowed.has(id))
+      || (rankId && (allowed.has(`rank:${rankId}`) || allowed.has(rankId)));
   });
 }
 
@@ -429,8 +432,10 @@ async function loadHomeData() {
       element.textContent = `${count.toLocaleString("en-US")} خدمة`;
     });
 
-    const featuredBadgeIds = Array.isArray(settings.homeFeaturedBadgeIds) ? settings.homeFeaturedBadgeIds.filter(Boolean) : [];
-    const featuredServices = featuredServicesByBadge(services, profiles, featuredBadgeIds);
+    const featuredCriteria = Array.isArray(settings.homeFeaturedCriteria)
+      ? settings.homeFeaturedCriteria.filter(Boolean)
+      : (Array.isArray(settings.homeFeaturedBadgeIds) ? settings.homeFeaturedBadgeIds.filter(Boolean).map(id => `badge:${id}`) : []);
+    const featuredServices = featuredServicesByCriteria(services, profiles, featuredCriteria);
     if (featuredServices.length) {
       createHeroStackRotator(featuredServices, profiles);
       createFeaturedRotator(featured, featuredServices, profiles);
