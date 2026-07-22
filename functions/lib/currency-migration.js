@@ -31,7 +31,7 @@ function convertedData(collectionName, data) {
   return update;
 }
 
-exports.migrateNewSyrianLira = onCall({ region: REGION, enforceAppCheck: false, timeoutSeconds: 540 }, async request => {
+exports.migrateNewSyrianLira = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true", timeoutSeconds: 540 }, async request => {
   const admin = await requireAdmin(request, "settings.manage");
   if (request.data?.confirmation !== "CONVERT_SYP_2026") {
     throw new HttpsError("failed-precondition", "تأكيد ترحيل العملة غير صالح.");

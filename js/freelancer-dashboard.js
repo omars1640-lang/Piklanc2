@@ -1,12 +1,12 @@
 import "./platform-guard.js";
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, query,
   serverTimestamp, setDoc, updateDoc, where, writeBatch
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import {
   deleteObject, getDownloadURL, ref as storageRef, uploadBytes
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
 import { auth, db, storage } from "./firebase.js";
 import { cacheBustUrl } from "./avatar-utils.js";
 import {

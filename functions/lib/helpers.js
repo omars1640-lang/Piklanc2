@@ -30,7 +30,7 @@ async function requireProfile(uid, type = "") {
 
 async function adminAccess(uid) {
   const snapshot = await db.doc(`users/${uid}`).get();
-  if (!snapshot.exists || snapshot.data().role !== "admin") return null;
+  if (!snapshot.exists || snapshot.data().role !== "admin" || snapshot.data().status !== "active") return null;
   const profile = { id: uid, ...snapshot.data() };
   if (profile.adminAccessLevel === "super_admin" || !profile.adminRoleId) {
     return { profile, isSuperAdmin: true, permissions: ["*"] };
@@ -136,9 +136,32 @@ async function assertStorageObject(path, uid, root) {
   if (!normalized.startsWith(`${root}/${uid}/`)) {
     throw new HttpsError("invalid-argument", "مسار الملف غير صالح.");
   }
-  const [exists] = await storageBucket().file(normalized).exists();
+  const file = storageBucket().file(normalized);
+  const [exists] = await file.exists();
   if (!exists) throw new HttpsError("failed-precondition", "الملف المرفوع غير موجود.");
-  return normalized;
+  const [metadata] = await file.getMetadata();
+  const size = Number(metadata.size || 0);
+  const contentType = String(metadata.contentType || "");
+  if (!Number.isSafeInteger(size) || size < 1 || size > 5 * 1024 * 1024 || !["image/jpeg", "image/png", "image/webp"].includes(contentType)) {
+    throw new HttpsError("failed-precondition", "نوع الملف المرفوع أو حجمه غير مسموح.");
+  }
+  const extension = normalized.split(".").pop()?.toLowerCase();
+  const expectedContentType = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp" }[extension];
+  if (expectedContentType !== contentType) throw new HttpsError("failed-precondition", "امتداد الملف لا يطابق نوع الصورة.");
+  const [header] = await file.download({ start: 0, end: 15 });
+  const isJpeg = header.length >= 3 && header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff;
+  const isPng = header.length >= 8 && header.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  const isWebp = header.length >= 12 && header.subarray(0, 4).toString("ascii") === "RIFF" && header.subarray(8, 12).toString("ascii") === "WEBP";
+  if ((contentType === "image/jpeg" && !isJpeg) || (contentType === "image/png" && !isPng) || (contentType === "image/webp" && !isWebp)) {
+    throw new HttpsError("failed-precondition", "محتوى الملف لا يطابق نوع الصورة المعلن.");
+  }
+  return {
+    path: normalized,
+    size,
+    contentType,
+    generation: String(metadata.generation || ""),
+    md5Hash: String(metadata.md5Hash || "")
+  };
 }
 
 module.exports = {

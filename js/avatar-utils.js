@@ -1,4 +1,4 @@
-import { getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
 import { storage } from "./firebase.js";
 
 export function cacheBustUrl(url) {

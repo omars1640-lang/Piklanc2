@@ -31,7 +31,7 @@ async function loadAboutStats() {
       firestoreModule,
       firebaseModule
     ] = await Promise.all([
-      import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"),
+      import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"),
       import("./firebase.js")
     ]);
     const { collection, doc, getDoc, getDocs, query, where } = firestoreModule;

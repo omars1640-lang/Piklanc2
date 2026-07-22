@@ -2,7 +2,7 @@ const nodemailer = require("nodemailer");
 const { defineSecret } = require("firebase-functions/params");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onCall } = require("firebase-functions/v2/https");
-const { FieldValue, HttpsError, REGION, db, requireAdmin } = require("./helpers");
+const { FieldValue, HttpsError, REGION, cleanText, db, requireAdmin } = require("./helpers");
 
 const SMTP_USER = defineSecret("SMTP_USER");
 const SMTP_PASS = defineSecret("SMTP_PASS");
@@ -38,15 +38,27 @@ async function queueMailOnce(id, mail) {
   });
 }
 
-exports.sendAdminOfficialEmail = onCall({ region: REGION, enforceAppCheck: false }, async request => {
+exports.sendAdminOfficialEmail = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
   const admin = await requireAdmin(request, ["support.reply", "verifications.manage", "services.moderate"]);
   const to = String(request.data?.to || "").trim().toLowerCase();
   const subject = String(request.data?.subject || "").trim().slice(0, 180);
   const message = String(request.data?.message || "").trim().slice(0, 5000);
   const actionUrl = String(request.data?.actionUrl || "").trim().slice(0, 500);
   const actionLabel = String(request.data?.actionLabel || "فتح PikLance").trim().slice(0, 80);
+  const purpose = cleanText(request.data?.purpose, 80) || "admin_message";
+  const reference = cleanText(request.data?.reference, 160);
   if (!validRecipient(to) || !subject || !message) {
     throw new HttpsError("invalid-argument", "بيانات البريد غير مكتملة أو غير صالحة.");
+  }
+  const recipient = await db.collection("users").where("email", "==", to).limit(1).get();
+  if (recipient.empty) throw new HttpsError("permission-denied", "يمكن إرسال البريد الإداري إلى حساب مسجل فقط.");
+  if (actionUrl) {
+    try {
+      const parsed = new URL(actionUrl);
+      if (parsed.protocol !== "https:" || !["piklance.com", "www.piklance.com"].includes(parsed.hostname)) throw new Error("untrusted_host");
+    } catch {
+      throw new HttpsError("invalid-argument", "رابط الإجراء يجب أن يكون رابطاً آمناً ضمن PikLance.");
+    }
   }
   const safeMessage = escapeHtml(message).replace(/\n/g, "<br>");
   const safeAction = /^https:\/\//i.test(actionUrl)
@@ -54,18 +66,27 @@ exports.sendAdminOfficialEmail = onCall({ region: REGION, enforceAppCheck: false
     : "";
   const mailRef = db.collection("mailQueue").doc();
   const logRef = db.collection("mailLogs").doc();
-  const batch = db.batch();
-  batch.set(mailRef, {
-    from: "PikLance <info@piklance.com>", replyTo: admin.email || "info@piklance.com",
-    to, subject, text: message, html: emailShell(subject, `<p>${safeMessage}</p>${safeAction}`),
-    template: request.data?.purpose || "admin_message", reference: request.data?.reference || "",
-    status: "queued", attempts: 0, createdAt: FieldValue.serverTimestamp()
+  const day = new Date().toISOString().slice(0, 10);
+  const rateRef = db.doc(`securityRateLimits/admin_mail_${admin.id}_${day}`);
+  await db.runTransaction(async transaction => {
+    const rate = await transaction.get(rateRef);
+    const count = Number(rate.data()?.count || 0);
+    if (count >= 100) throw new HttpsError("resource-exhausted", "تم بلوغ الحد اليومي للبريد الإداري.");
+    transaction.set(rateRef, {
+      scope: "admin_mail", count: count + 1, updatedAt: FieldValue.serverTimestamp(),
+      expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000)
+    }, { merge: true });
+    transaction.set(mailRef, {
+      from: "PikLance <info@piklance.com>", replyTo: admin.email || "info@piklance.com",
+      to, subject, text: message, html: emailShell(subject, `<p>${safeMessage}</p>${safeAction}`),
+      template: purpose, reference,
+      status: "queued", attempts: 0, createdAt: FieldValue.serverTimestamp()
+    });
+    transaction.set(logRef, {
+      to, subject, purpose, sentBy: admin.id,
+      queueId: mailRef.id, createdAt: FieldValue.serverTimestamp()
+    });
   });
-  batch.set(logRef, {
-    to, subject, purpose: request.data?.purpose || "admin_message", sentBy: admin.id,
-    queueId: mailRef.id, createdAt: FieldValue.serverTimestamp()
-  });
-  await batch.commit();
   return { ok: true, queueId: mailRef.id };
 });
 

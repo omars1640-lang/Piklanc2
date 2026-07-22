@@ -1,9 +1,9 @@
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
   collection, deleteDoc, doc, getDoc, getDocs, query,
   serverTimestamp, setDoc, where
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
 import { auth, db, storage } from "./firebase.js";
 import { createEscrowOrder } from "./escrow.js";
 import { refreshImageFromStorage, resolveProfileAvatar } from "./avatar-utils.js";

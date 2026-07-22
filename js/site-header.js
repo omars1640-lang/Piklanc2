@@ -227,8 +227,8 @@ async function initHeaderAuth() {
       firebaseModule,
       avatarModule
     ] = await Promise.all([
-      import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"),
-      import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"),
+      import("https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js"),
+      import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"),
       import("./firebase.js"),
       import("./avatar-utils.js")
     ]);

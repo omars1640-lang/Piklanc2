@@ -26,8 +26,8 @@ async function loadMarketplaceDeps() {
     firebaseModule,
     avatarModule
   ] = await Promise.all([
-    import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"),
-    import("https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js"),
+    import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"),
+    import("https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js"),
     import("./firebase.js"),
     import("./avatar-utils.js")
   ]);

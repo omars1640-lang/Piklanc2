@@ -1,4 +1,4 @@
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
   arrayUnion,
   collection,
@@ -11,13 +11,13 @@ import {
   setDoc,
   updateDoc,
   where
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import {
   deleteObject,
   getDownloadURL,
   ref,
   uploadBytes
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
 import { auth, db, storage } from "./firebase.js";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -377,17 +377,23 @@ async function markConversationRead(chat) {
 
 function renderAttachment(message) {
   const attachment = message.attachment || {};
+  let safeUrl = "";
+  try {
+    const parsed = new URL(String(attachment.url || ""));
+    if (parsed.protocol === "https:" && parsed.hostname === "firebasestorage.googleapis.com") safeUrl = parsed.href;
+  } catch {}
   const link = document.createElement("a");
   link.className = "message-attachment";
-  link.href = attachment.url || "#";
+  link.href = safeUrl || "#";
   link.target = "_blank";
   link.rel = "noopener noreferrer";
+  if (!safeUrl) link.removeAttribute("target");
 
-  if (attachment.contentType?.startsWith("image/")) {
+  if (safeUrl && attachment.contentType?.startsWith("image/")) {
     link.classList.add("has-image");
     const image = document.createElement("img");
     image.className = "message-attachment-preview";
-    image.src = attachment.url;
+    image.src = safeUrl;
     image.alt = attachment.name || "مرفق";
     image.addEventListener("error", () => image.remove());
     link.appendChild(image);
@@ -528,7 +534,13 @@ function subscribeToConversations() {
     elements.conversationList.innerHTML = "";
     const empty = document.createElement("div");
     empty.className = "empty-list";
-    empty.innerHTML = `<span>!</span><strong>تعذر تحميل المحادثات</strong><p>الخطأ: ${error.code || "unknown"}. تحقق من قواعد Firebase أو الاتصال.</p>`;
+    const icon = document.createElement("span");
+    icon.textContent = "!";
+    const title = document.createElement("strong");
+    title.textContent = "تعذر تحميل المحادثات";
+    const detail = document.createElement("p");
+    detail.textContent = `الخطأ: ${String(error.code || "unknown").slice(0, 80)}. تحقق من قواعد Firebase أو الاتصال.`;
+    empty.append(icon, title, detail);
     elements.conversationList.appendChild(empty);
   });
 }

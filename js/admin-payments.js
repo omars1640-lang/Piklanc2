@@ -1,7 +1,7 @@
-import { collection, doc, getDoc, limit, onSnapshot, orderBy, query } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
-import { getDownloadURL, ref as storageRef } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { collection, doc, getDoc, limit, onSnapshot, orderBy, query } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
+import { getDownloadURL, ref as storageRef } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import { auth, db, functions, storage } from "./firebase.js";
 import { hasPermission, initializeAdminAccess } from "./admin-access.js";
 

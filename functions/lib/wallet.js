@@ -12,7 +12,7 @@ const DEPOSIT_MAX = 100;
 const WITHDRAWAL_MIN = 1;
 const WITHDRAWAL_MAX = 50;
 
-exports.submitDepositRequest = onCall({ region: REGION, enforceAppCheck: false }, async request => {
+exports.submitDepositRequest = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
   const uid = requireAuth(request);
   const profile = await requireProfile(uid, "buyer");
   const amount = integerAmount(request.data?.amount, DEPOSIT_MIN, DEPOSIT_MAX);
@@ -28,7 +28,8 @@ exports.submitDepositRequest = onCall({ region: REGION, enforceAppCheck: false }
   if (!requestedReceiptPath.startsWith(receiptBase) || !["jpg", "png", "webp"].includes(requestedReceiptPath.slice(receiptBase.length))) {
     throw new HttpsError("invalid-argument", "مسار إيصال التحويل غير صالح.");
   }
-  const receiptPath = await assertStorageObject(requestedReceiptPath, uid, "payment-receipts");
+  const receiptEvidence = await assertStorageObject(requestedReceiptPath, uid, "payment-receipts");
+  const receiptPath = receiptEvidence.path;
   const requestRef = db.doc(`depositRequests/${requestId}`);
   const reference = platformReference("DEP", requestId);
   const providerReferenceId = createHash("sha256").update(`${providerId}:${transferReference.toLowerCase()}`).digest("hex");
@@ -55,6 +56,7 @@ exports.submitDepositRequest = onCall({ region: REGION, enforceAppCheck: false }
       providerMode: "manual",
       transferReference,
       receiptPath,
+      receiptEvidence,
       status: "pending",
       reviewWindow: "2-6 business hours",
       createdAt: FieldValue.serverTimestamp(),
@@ -64,7 +66,7 @@ exports.submitDepositRequest = onCall({ region: REGION, enforceAppCheck: false }
   return { requestId, reference, status: "pending" };
 });
 
-exports.reviewDepositRequest = onCall({ region: REGION, enforceAppCheck: false }, async request => {
+exports.reviewDepositRequest = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
   const admin = await requireAdmin(request, "finance.manage");
   await requireCurrencyReady();
   const requestId = cleanText(request.data?.requestId, 80);
@@ -159,7 +161,7 @@ exports.reviewDepositRequest = onCall({ region: REGION, enforceAppCheck: false }
   return { requestId, status: decision === "approve" ? "approved" : "rejected" };
 });
 
-exports.requestWithdrawal = onCall({ region: REGION, enforceAppCheck: false }, async request => {
+exports.requestWithdrawal = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
   const uid = requireAuth(request);
   await requireCurrencyReady();
   const profile = await requireProfile(uid, "freelancer");
@@ -176,8 +178,22 @@ exports.requestWithdrawal = onCall({ region: REGION, enforceAppCheck: false }, a
   if (!requestedQrPath.startsWith(qrBase) || !["jpg", "png", "webp"].includes(requestedQrPath.slice(qrBase.length))) {
     throw new HttpsError("invalid-argument", "مسار صورة QR غير صالح.");
   }
-  const qrPath = await assertStorageObject(requestedQrPath, uid, "payout-qr");
+  const qrSource = await assertStorageObject(requestedQrPath, uid, "payout-qr");
   const requestRef = db.collection("withdrawalRequests").doc();
+  const extension = qrSource.contentType === "image/png" ? "png" : qrSource.contentType === "image/webp" ? "webp" : "jpg";
+  const qrPath = `payout-evidence/${uid}/${requestRef.id}/qr.${extension}`;
+  const sourceFile = storageBucket().file(qrSource.path);
+  const evidenceFile = storageBucket().file(qrPath);
+  await sourceFile.copy(evidenceFile, { preconditionOpts: { ifGenerationMatch: 0 } });
+  const [evidenceMetadata] = await evidenceFile.getMetadata();
+  const qrEvidence = {
+    path: qrPath,
+    sourcePath: qrSource.path,
+    size: Number(evidenceMetadata.size || qrSource.size),
+    contentType: String(evidenceMetadata.contentType || qrSource.contentType),
+    generation: String(evidenceMetadata.generation || ""),
+    md5Hash: String(evidenceMetadata.md5Hash || qrSource.md5Hash || "")
+  };
   const walletRef = db.doc(`wallets/${uid}`);
   const payoutRef = db.doc(`payoutMethods/${uid}/items/sham_cash`);
   const reference = platformReference("WDR", requestRef.id);
@@ -197,7 +213,8 @@ exports.requestWithdrawal = onCall({ region: REGION, enforceAppCheck: false }, a
       providerId,
       holderName,
       walletNumber,
-      qrPath,
+      qrPath: qrSource.path,
+      latestEvidencePath: qrPath,
       updatedAt: FieldValue.serverTimestamp()
     }, { merge: true });
     transaction.set(requestRef, {
@@ -210,7 +227,7 @@ exports.requestWithdrawal = onCall({ region: REGION, enforceAppCheck: false }, a
       currencyVersion: CURRENCY_VERSION,
       providerId,
       providerMode: "manual",
-      payout: { holderName, walletNumber, qrPath },
+      payout: { holderName, walletNumber, qrPath, evidence: qrEvidence },
       status: "pending",
       reviewWindow: "24-48 hours",
       createdAt: FieldValue.serverTimestamp(),
@@ -233,7 +250,7 @@ exports.requestWithdrawal = onCall({ region: REGION, enforceAppCheck: false }, a
   return { requestId: requestRef.id, reference, status: "pending" };
 });
 
-exports.reviewWithdrawalRequest = onCall({ region: REGION, enforceAppCheck: false }, async request => {
+exports.reviewWithdrawalRequest = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
   const admin = await requireAdmin(request, "finance.manage");
   await requireCurrencyReady();
   const requestId = cleanText(request.data?.requestId, 80);

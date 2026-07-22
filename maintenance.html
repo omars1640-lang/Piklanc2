@@ -24,9 +24,9 @@
     <div class="system-foot">© 2026 PikLance · شكراً لصبرك</div>
   </main>
   <script type="module">
-    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
     import { db } from "./js/firebase.js";
-    const params=new URLSearchParams(location.search);const requested=params.get("returnUrl")||"";const target=requested.startsWith("/")&&!requested.startsWith("//")?requested:"/index.html";
+    const params=new URLSearchParams(location.search);const requested=params.get("returnUrl")||"";let target="/index.html";try{const parsed=new URL(requested,location.origin);if(parsed.origin===location.origin&&parsed.pathname.endsWith(".html"))target=`${parsed.pathname}${parsed.search}${parsed.hash}`;}catch{}
     async function check(){try{const snap=await getDoc(doc(db,"platformSettings","general"));if(!snap.exists()||snap.data().maintenanceMode!==true)location.replace(target);}catch{document.getElementById("maintenanceStatus").textContent="نعمل على استعادة المنصة";}}
     check();setInterval(check,30000);
   </script>

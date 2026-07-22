@@ -1,8 +1,9 @@
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
   addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, where
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { auth, db } from "./firebase.js";
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
+import { auth, db, functions } from "./firebase.js";
 
 const state = { user: null, profile: null, tickets: [], selectedId: null, replies: [] };
 const $ = id => document.getElementById(id);
@@ -121,25 +122,19 @@ async function createTicket(event) {
     toast("اكتب الاسم والبريد الإلكتروني ليتمكن الدعم من التواصل معك.");
     return;
   }
-  const reference = await addDoc(collection(db, "supportTickets"), {
-    requesterUid: state.user?.uid || "",
-    requesterName: state.user ? (state.profile.name || state.user.email || "مستخدم") : guestName,
-    requesterEmail: state.user ? (state.user.email || "") : guestEmail,
-    requesterPhone: state.user ? (state.profile.phone || "") : $("guestPhone").value.trim(),
+  const result = await httpsCallable(functions, "createSupportTicket")({
+    requesterName: guestName,
+    requesterEmail: guestEmail,
+    requesterPhone: $("guestPhone").value.trim(),
     subject: $("ticketSubject").value.trim(),
     category,
     message: $("ticketMessage").value.trim(),
-    orderId: category === "dispute" ? $("ticketOrderId").value.trim() : "",
-    status: "open",
-    priority: category === "dispute" ? "high" : "normal",
-    assignedAdminUid: "",
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    orderId: category === "dispute" ? $("ticketOrderId").value.trim() : ""
   });
   closeModal();
   if (state.user) {
     await loadTickets();
-    await selectTicket(reference.id);
+    await selectTicket(result.data.ticketId);
   }
   toast(state.user ? "تم إنشاء التذكرة بنجاح." : "تم إرسال تذكرتك. سيتواصل الدعم معك عبر البريد أو الهاتف.");
 }

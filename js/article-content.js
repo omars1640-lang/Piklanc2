@@ -1,9 +1,10 @@
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
-  addDoc, collection, deleteDoc, doc, getDoc, increment, onSnapshot,
-  limit, orderBy, query, serverTimestamp, setDoc, updateDoc, where
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { auth, db } from "./firebase.js";
+  addDoc, collection, deleteDoc, doc, getDoc, onSnapshot,
+  limit, orderBy, query, serverTimestamp, setDoc, where
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
+import { auth, db, functions } from "./firebase.js";
 
 const articleId = new URLSearchParams(location.search).get("id");
 const state = { article: null, user: null, profile: null, liked: false, likeIds: [], comments: [], pendingConfirmAction: null };
@@ -225,7 +226,8 @@ async function registerView() {
   const viewedKey = `piklance_article_viewed_${articleId}`;
   if (localStorage.getItem(viewedKey)) return;
   try {
-    await updateDoc(doc(db, "articles", articleId), { views: increment(1) });
+    const result = await httpsCallable(functions, "registerArticleView")({ articleId });
+    if (result.data?.counted === false) return;
     localStorage.setItem(viewedKey, "1");
     state.article.views = Number(state.article.views || 0) + 1;
     $("articleViews").textContent = `${state.article.views.toLocaleString("en-US")} مشاهدة`;

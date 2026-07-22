@@ -1,6 +1,6 @@
-import { collection, doc, getDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
-import { getDownloadURL, ref as storageRef, uploadBytes } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { collection, doc, getDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
+import { getDownloadURL, ref as storageRef, uploadBytes } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
 import { db, functions, storage } from "./firebase.js";
 
 const state = { user: null, profile: null, wallet: {}, payout: {}, withdrawals: [], toast: () => {} };
