@@ -7,7 +7,9 @@ service firebase.storage {
 
     function isAdmin() {
       return signedIn()
-        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == "admin";
+        && request.auth.token.email_verified == true
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == "admin"
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.status == "active";
     }
 
     function isSuperAdmin() {
@@ -23,6 +25,7 @@ service firebase.storage {
         || (
           admin.adminRoleId is string
           && firestore.exists(/databases/(default)/documents/adminRoles/$(admin.adminRoleId))
+          && firestore.get(/databases/(default)/documents/adminRoles/$(admin.adminRoleId)).data.get("active", true) != false
           && permission in firestore.get(/databases/(default)/documents/adminRoles/$(admin.adminRoleId)).data.get("permissions", [])
         )
       );
@@ -50,13 +53,25 @@ service firebase.storage {
     }
 
     match /identity/{userId}/{fileName} {
-      allow create, update: if signedIn()
+      allow create: if signedIn()
         && request.auth.uid == userId
         && fileName in ["front", "back"]
+        && request.resource.size > 0
         && request.resource.size <= 5 * 1024 * 1024
-        && request.resource.contentType.matches("image/.*");
-      allow delete: if signedIn() && (request.auth.uid == userId || hasAdminPermission("verifications.manage"));
-      allow read: if signedIn() && (request.auth.uid == userId || hasAdminPermission("verifications.view"));
+        && request.resource.contentType.matches("image/(jpeg|png|webp)");
+      allow update: if signedIn()
+        && request.auth.uid == userId
+        && firestore.exists(/databases/(default)/documents/users/$(userId))
+        && firestore.get(/databases/(default)/documents/users/$(userId)).data.status == "rejected"
+        && fileName in ["front", "back"]
+        && request.resource.size > 0
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches("image/(jpeg|png|webp)");
+      allow delete: if hasAdminPermission("verifications.manage")
+        || (signedIn() && request.auth.uid == userId
+          && (!firestore.exists(/databases/(default)/documents/users/$(userId))
+            || firestore.get(/databases/(default)/documents/users/$(userId)).data.status == "rejected"));
+      allow read: if (signedIn() && request.auth.uid == userId) || hasAdminPermission("verifications.view");
     }
 
     match /chat-attachments/{chatId}/{messageId}/{fileName} {
@@ -67,7 +82,7 @@ service firebase.storage {
           "image/(jpeg|png|webp)|application/(pdf|msword|vnd.openxmlformats-officedocument.wordprocessingml.document|zip|x-zip-compressed)"
         );
       allow read: if isChatParticipant(chatId);
-      allow delete: if isChatParticipant(chatId);
+      allow delete: if false;
       allow update: if false;
     }
 
@@ -157,7 +172,9 @@ service firebase.storage {
         && request.resource.size <= 5 * 1024 * 1024
         && request.resource.contentType.matches("image/(jpeg|png|webp)");
       allow update: if false;
-      allow delete: if hasAdminPermission("finance.manage") || (activeUser() && request.auth.uid == userId);
+      allow delete: if hasAdminPermission("finance.manage")
+        || (activeUser() && request.auth.uid == userId
+          && !firestore.exists(/databases/(default)/documents/depositRequests/$(requestId)));
     }
 
     match /payout-qr/{userId}/sham_cash/{fileName} {
@@ -169,6 +186,12 @@ service firebase.storage {
         && request.resource.size <= 5 * 1024 * 1024
         && request.resource.contentType.matches("image/(jpeg|png|webp)");
       allow delete: if hasAdminPermission("finance.manage") || (activeUser() && request.auth.uid == userId);
+    }
+
+    match /payout-evidence/{userId}/{requestId}/{fileName} {
+      allow read: if hasAdminPermission("finance.view") || (activeUser() && request.auth.uid == userId);
+      allow create, update: if false;
+      allow delete: if hasAdminPermission("finance.manage");
     }
 
     match /{allPaths=**} {

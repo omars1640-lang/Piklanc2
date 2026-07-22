@@ -2,7 +2,7 @@ const { onCall } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { FieldPath } = require("firebase-admin/firestore");
 const {
-  FieldValue, HttpsError, REGION, Timestamp, cleanText, db, requireAdmin, storageBucket
+  FieldValue, HttpsError, REGION, Timestamp, cleanText, db, requireAdmin, requireAuth, requireProfile, storageBucket
 } = require("./helpers");
 
 const ARTICLE_STATUSES = new Set(["draft", "published"]);
@@ -41,6 +41,23 @@ function operationReference(operationId) {
   return db.doc(`adminOperations/${operationId}`);
 }
 
+exports.registerArticleView = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
+  const uid = requireAuth(request);
+  await requireProfile(uid);
+  const articleId = requiredId(request.data?.articleId, ARTICLE_ID, "معرف المقال غير صالح.");
+  const articleRef = db.doc(`articles/${articleId}`);
+  const viewRef = db.doc(`articleViews/${articleId}_${uid}`);
+  const counted = await db.runTransaction(async transaction => {
+    const [article, previous] = await Promise.all([transaction.get(articleRef), transaction.get(viewRef)]);
+    if (!article.exists || article.data().status !== "published") throw new HttpsError("not-found", "المقال غير موجود.");
+    if (previous.exists) return false;
+    transaction.create(viewRef, { articleId, uid, createdAt: FieldValue.serverTimestamp() });
+    transaction.update(articleRef, { views: FieldValue.increment(1) });
+    return true;
+  });
+  return { counted };
+});
+
 function operationExpiry() {
   return Timestamp.fromMillis(Date.now() + 30 * 24 * 60 * 60 * 1000);
 }
@@ -63,7 +80,7 @@ async function purgeArticleData(articleId) {
   return articleSnapshot.data() || {};
 }
 
-exports.saveArticle = onCall({ region: REGION, enforceAppCheck: false }, async request => {
+exports.saveArticle = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
   const admin = await requireAdmin(request, "content.manage");
   const articleId = requiredId(request.data?.articleId, ARTICLE_ID, "معرّف المقال غير صالح.");
   const operationId = requiredId(request.data?.operationId, OPERATION_ID, "معرّف عملية الحفظ غير صالح.");
@@ -85,7 +102,7 @@ exports.saveArticle = onCall({ region: REGION, enforceAppCheck: false }, async r
   if (coverUrl) {
     try {
       const parsed = new URL(coverUrl);
-      if (!["https:", "http:"].includes(parsed.protocol)) throw new Error("invalid_protocol");
+      if (parsed.protocol !== "https:" || parsed.hostname !== "firebasestorage.googleapis.com") throw new Error("untrusted_cover_host");
     } catch {
       throw new HttpsError("invalid-argument", "رابط صورة الغلاف غير صالح.");
     }
@@ -175,7 +192,7 @@ exports.saveArticle = onCall({ region: REGION, enforceAppCheck: false }, async r
   return result;
 });
 
-exports.updateArticleStatus = onCall({ region: REGION, enforceAppCheck: false }, async request => {
+exports.updateArticleStatus = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
   const admin = await requireAdmin(request, "content.manage");
   const articleId = requiredId(request.data?.articleId, ARTICLE_ID, "معرّف المقال غير صالح.");
   const operationId = requiredId(request.data?.operationId, OPERATION_ID, "معرّف العملية غير صالح.");
@@ -198,7 +215,7 @@ exports.updateArticleStatus = onCall({ region: REGION, enforceAppCheck: false },
   });
 });
 
-exports.archiveArticle = onCall({ region: REGION, enforceAppCheck: false }, async request => {
+exports.archiveArticle = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
   const admin = await requireAdmin(request, "content.manage");
   const articleId = requiredId(request.data?.articleId, ARTICLE_ID, "معرّف المقال غير صالح.");
   const operationId = requiredId(request.data?.operationId, OPERATION_ID, "معرّف العملية غير صالح.");
@@ -221,7 +238,7 @@ exports.archiveArticle = onCall({ region: REGION, enforceAppCheck: false }, asyn
   });
 });
 
-exports.restoreArticle = onCall({ region: REGION, enforceAppCheck: false }, async request => {
+exports.restoreArticle = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
   const admin = await requireAdmin(request, "content.manage");
   const articleId = requiredId(request.data?.articleId, ARTICLE_ID, "معرّف المقال غير صالح.");
   const operationId = requiredId(request.data?.operationId, OPERATION_ID, "معرّف العملية غير صالح.");
@@ -244,7 +261,7 @@ exports.restoreArticle = onCall({ region: REGION, enforceAppCheck: false }, asyn
   });
 });
 
-exports.deleteArticlePermanently = onCall({ region: REGION, enforceAppCheck: false, timeoutSeconds: 120 }, async request => {
+exports.deleteArticlePermanently = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true", timeoutSeconds: 120 }, async request => {
   const admin = await requireAdmin(request, "content.manage");
   const articleId = requiredId(request.data?.articleId, ARTICLE_ID, "معرّف المقال غير صالح.");
   const operationId = requiredId(request.data?.operationId, OPERATION_ID, "معرّف العملية غير صالح.");
@@ -266,7 +283,7 @@ exports.deleteArticlePermanently = onCall({ region: REGION, enforceAppCheck: fal
   return result;
 });
 
-exports.migrateArticlesForScale = onCall({ region: REGION, enforceAppCheck: false, timeoutSeconds: 120 }, async request => {
+exports.migrateArticlesForScale = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true", timeoutSeconds: 120 }, async request => {
   const admin = await requireAdmin(request, "content.manage");
   const migrationRef = db.doc("platformMigrations/ARTICLE_SCALE_V2");
   const migration = await migrationRef.get();

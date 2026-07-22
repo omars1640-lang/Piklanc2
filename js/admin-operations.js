@@ -1,12 +1,12 @@
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
   addDoc, collection, doc, getCountFromServer, getDoc, getDocs, limit, orderBy, query,
   serverTimestamp, startAfter, updateDoc, where, writeBatch
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import {
   deleteObject, getDownloadURL, ref as storageRef, uploadBytes
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
 import { auth, db, functions, storage } from "./firebase.js";
 import { sendOfficialEmail } from "./email-client.js";
 import { applyAdminAccess, hasPermission, initializeAdminAccess } from "./admin-access.js";
@@ -961,7 +961,7 @@ async function loadOperationCounts() {
   if (hasPermission("support.view") || hasPermission("support.reply")) {
     requests.activeTickets = getCountFromServer(query(collection(db, "supportTickets"), where("status", "in", ["open", "in_progress", "waiting_user"])));
   }
-  if (hasPermission("finance.view") || hasPermission("services.view")) {
+  if (hasPermission("finance.view")) {
     requests.financeOrders = getCountFromServer(query(collection(db, "orders"), where("status", "in", ["funded", "active", "delivered", "disputed"])));
   }
   if (hasPermission("content.view") || hasPermission("content.manage")) {

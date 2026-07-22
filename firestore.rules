@@ -16,7 +16,8 @@ service cloud.firestore {
 
     function isAdmin() {
       return verified()
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin"
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == "active";
     }
 
     function isSuperAdmin() {
@@ -36,6 +37,17 @@ service cloud.firestore {
           && permission in get(/databases/$(database)/documents/adminRoles/$(admin.adminRoleId)).data.get("permissions", [])
         )
       );
+    }
+
+    function canCreateAuditAction(action) {
+      return (action in ["approve_user", "reject_user"] && hasAdminPermission("verifications.manage"))
+        || (action in ["suspend_user", "activate_user"] && hasAdminPermission("users.manage"))
+        || (action == "update_settings" && hasAdminPermission("settings.manage"))
+        || (action in ["update_ticket", "reply_ticket"] && hasAdminPermission("support.reply"))
+        || (action in ["create_article", "update_article", "delete_article", "manage_faq", "manage_category"] && hasAdminPermission("content.manage"))
+        || (action in ["approve_service", "reject_service", "delete_service"] && hasAdminPermission("services.moderate"))
+        || (action == "update_freelancer_rank" && hasAdminPermission("ranks.manage"))
+        || (action in ["create_promo_codes", "assign_badge", "create_badge"] && hasAdminPermission("promotions.manage"));
     }
 
     function isAccountType(type) {
@@ -61,6 +73,18 @@ service cloud.firestore {
         && value.size() >= 6
         && value.size() <= 160
         && value.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
+    }
+
+    function validAdminNotification(data) {
+      return data.keys().hasOnly(["title", "body", "link", "type", "relatedOrderId", "read", "createdAt"])
+        && data.keys().hasAll(["title", "body", "read", "createdAt"])
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 140
+        && data.body is string && data.body.size() <= 500
+        && data.read == false
+        && data.createdAt == request.time
+        && (!data.keys().hasAny(["link"]) || (data.link is string && data.link.matches("^[A-Za-z0-9][A-Za-z0-9._/?#=&%-]{0,299}$")))
+        && (!data.keys().hasAny(["type"]) || (data.type is string && data.type.size() <= 60))
+        && (!data.keys().hasAny(["relatedOrderId"]) || (data.relatedOrderId is string && data.relatedOrderId.size() <= 100));
     }
 
     function validPlatformSettings(data) {
@@ -155,6 +179,7 @@ service cloud.firestore {
       return !data.keys().hasAny(["context"])
         || (
           data.context is map
+          && exists(/databases/$(database)/documents/services/$(data.context.serviceId))
           && data.context.keys().hasOnly(["serviceId", "title", "image", "price", "sellerUid"])
           && data.context.keys().hasAll(["serviceId", "title", "image", "price", "sellerUid"])
           && data.context.serviceId is string
@@ -168,10 +193,17 @@ service cloud.firestore {
           && data.context.price is number
           && data.context.price >= 0
           && data.context.sellerUid in data.participantUids
+          && data.context.sellerUid == get(/databases/$(database)/documents/services/$(data.context.serviceId)).data.ownerUid
+          && data.context.title == get(/databases/$(database)/documents/services/$(data.context.serviceId)).data.title
+          && data.context.price == get(/databases/$(database)/documents/services/$(data.context.serviceId)).data.price
+          && (
+            data.context.image == ""
+            || data.context.image.matches("^https://firebasestorage\\.googleapis\\.com/.*$")
+          )
         );
     }
 
-    function validAttachment(data) {
+    function validAttachment(data, chatId, messageId) {
       return !data.keys().hasAny(["attachment"])
         || (
           data.attachment is map
@@ -182,142 +214,21 @@ service cloud.firestore {
           && data.attachment.name.size() <= 160
           && data.attachment.url is string
           && data.attachment.url.size() > 0
+          && data.attachment.url.size() <= 3000
+          && data.attachment.url.matches("^https://firebasestorage\\.googleapis\\.com/.*$")
           && data.attachment.path is string
-          && data.attachment.path.size() > 0
+          && data.attachment.path.matches("^chat-attachments/" + chatId + "/" + messageId + "/[^/]{1,100}$")
           && data.attachment.size is int
           && data.attachment.size > 0
           && data.attachment.size <= 10 * 1024 * 1024
-          && data.attachment.contentType is string
+          && data.attachment.contentType in [
+            "image/jpeg", "image/png", "image/webp", "application/pdf", "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/zip", "application/x-zip-compressed"
+          ]
         );
     }
 
-    function isOrderParticipant(data) {
-      return activeUser()
-        && request.auth.uid in [data.buyerUid, data.freelancerUid];
-    }
-
-    function validOrderDelivery() {
-      let changed = request.resource.data.diff(resource.data).affectedKeys();
-      return activeUser()
-        && request.auth.uid == resource.data.freelancerUid
-        && resource.data.status in ["funded", "active"]
-        && request.resource.data.status == "delivered"
-        && request.resource.data.escrow.status == "review_hold"
-        && request.resource.data.autoReleaseAt is timestamp
-        && request.resource.data.autoReleaseAt > request.time
-        && request.resource.data.deliveredAt == request.time
-        && request.resource.data.updatedAt == request.time
-        && changed.hasOnly([
-          "status", "deliveryNote", "deliveredAt", "autoReleaseAt", "escrow", "updatedAt"
-        ]);
-    }
-
-    function validOrderApproval() {
-      let changed = request.resource.data.diff(resource.data).affectedKeys();
-      return activeUser()
-        && request.auth.uid == resource.data.buyerUid
-        && resource.data.status == "delivered"
-        && request.resource.data.status == "completed"
-        && request.resource.data.escrow.status == "released"
-        && request.resource.data.releaseType == "manual_approval"
-        && request.resource.data.completedAt == request.time
-        && request.resource.data.releasedAt == request.time
-        && request.resource.data.updatedAt == request.time
-        && changed.hasOnly([
-          "status", "releaseType", "completedAt", "releasedAt", "escrow", "updatedAt"
-        ]);
-    }
-
-    function validOrderAutoRelease() {
-      let changed = request.resource.data.diff(resource.data).affectedKeys();
-      return isOrderParticipant(resource.data)
-        && resource.data.status == "delivered"
-        && resource.data.escrow.status == "review_hold"
-        && resource.data.autoReleaseAt <= request.time
-        && request.resource.data.status == "completed"
-        && request.resource.data.escrow.status == "released"
-        && request.resource.data.releaseType == "auto_after_review_window"
-        && request.resource.data.completedAt == request.time
-        && request.resource.data.releasedAt == request.time
-        && request.resource.data.updatedAt == request.time
-        && changed.hasOnly([
-          "status", "releaseType", "completedAt", "releasedAt", "escrow", "updatedAt"
-        ]);
-    }
-
-    function validOrderDispute() {
-      let changed = request.resource.data.diff(resource.data).affectedKeys();
-      return isOrderParticipant(resource.data)
-        && resource.data.status in ["funded", "active", "delivered"]
-        && request.resource.data.status == "disputed"
-        && request.resource.data.escrow.status == "disputed"
-        && request.resource.data.dispute is map
-        && request.resource.data.dispute.status == "open"
-        && request.resource.data.dispute.openedByUid == request.auth.uid
-        && request.resource.data.dispute.reason is string
-        && request.resource.data.dispute.reason.size() > 0
-        && request.resource.data.dispute.reason.size() <= 1000
-        && request.resource.data.dispute.createdAt == request.time
-        && request.resource.data.disputedAt == request.time
-        && request.resource.data.updatedAt == request.time
-        && changed.hasOnly([
-          "status", "disputedAt", "escrow", "dispute", "updatedAt"
-        ]);
-    }
-
-    function validReviewCreate(reviewId) {
-      let data = request.resource.data;
-      let orderPath = /databases/$(database)/documents/orders/$(data.orderId);
-      let order = get(orderPath).data;
-      return activeUser() && exists(orderPath)
-        && reviewId == data.orderId + "_" + request.auth.uid
-        && order.status == "completed"
-        && request.auth.uid in [order.buyerUid, order.freelancerUid]
-        && data.keys().hasOnly([
-          "orderId", "serviceId", "serviceTitle", "serviceCategory", "reviewerUid", "reviewerName", "reviewerType",
-          "targetUid", "targetName", "targetType", "rating", "comment", "status", "createdAt"
-        ])
-        && data.keys().hasAll([
-          "orderId", "serviceId", "serviceTitle", "reviewerUid", "reviewerName", "reviewerType",
-          "targetUid", "targetName", "targetType", "rating", "comment", "status", "createdAt"
-        ])
-        && data.reviewerUid == request.auth.uid && data.status == "published"
-        && data.rating is int && data.rating >= 1 && data.rating <= 5
-        && data.comment is string && data.comment.size() <= 1000
-        && data.serviceId is string && data.serviceId.size() <= 100
-        && data.serviceTitle is string && data.serviceTitle.size() > 0 && data.serviceTitle.size() <= 180
-        && data.serviceCategory is string && data.serviceCategory.size() <= 120
-        && data.reviewerName is string && data.reviewerName.size() > 0 && data.reviewerName.size() <= 160
-        && data.targetName is string && data.targetName.size() > 0 && data.targetName.size() <= 160
-        && data.createdAt == request.time
-        && ((request.auth.uid == order.buyerUid && data.reviewerType == "buyer" && data.targetType == "freelancer" && data.targetUid == order.freelancerUid)
-          || (request.auth.uid == order.freelancerUid && data.reviewerType == "freelancer" && data.targetType == "buyer" && data.targetUid == order.buyerUid));
-    }
-
     match /users/{userId} {
-      function validAccessUpdate() {
-        let changed = request.resource.data.diff(resource.data).affectedKeys();
-        let codeId = request.resource.data.accessCode;
-        let codePath = /databases/$(database)/documents/promoCodes/$(codeId);
-        return changed.hasOnly(["earlyAccess", "accessCode", "badges", "accessGrantedAt"])
-          && request.resource.data.earlyAccess == true
-          && request.resource.data.accessGrantedAt == request.time
-          && existsAfter(codePath)
-          && getAfter(codePath).data.type == "early_access"
-          && getAfter(codePath).data.lastUsedBy == userId;
-      }
-
-      function validReferralUpdate() {
-        let changed = request.resource.data.diff(resource.data).affectedKeys();
-        let codeId = request.resource.data.referralCodeUsed;
-        let codePath = /databases/$(database)/documents/promoCodes/$(codeId);
-        return changed.hasOnly(["referredByUid", "referralCodeUsed"])
-          && existsAfter(codePath)
-          && getAfter(codePath).data.type == "referral"
-          && getAfter(codePath).data.lastUsedBy == userId
-          && request.resource.data.referredByUid == getAfter(codePath).data.ownerUid;
-      }
-
       function validFreelancerResubmission() {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
         return signedIn()
@@ -356,14 +267,6 @@ service cloud.firestore {
           && request.resource.data.updatedAt == request.time;
       }
 
-      function validAdminStatusUpdate() {
-        return hasAdminPermission("users.manage")
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            "status", "suspensionReason", "suspendedAt", "suspendedBy",
-            "reactivatedAt", "reactivatedBy"
-          ]);
-      }
-
       function validAdminRankUpdate() {
         return hasAdminPermission("ranks.manage")
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -381,6 +284,24 @@ service cloud.firestore {
           "legalAccepted", "legalAcceptedAt", "identityConsent", "identityConsentAt",
           "createdAt"
         ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 80
+        && validEmail(request.resource.data.email)
+        && request.resource.data.accountType in ["buyer", "freelancer"]
+        && request.resource.data.createdAt == request.time
+        && (!request.resource.data.keys().hasAny(["phone"])
+          || (request.resource.data.phone is string && request.resource.data.phone.size() <= 30))
+        && (!request.resource.data.keys().hasAny(["specialty"])
+          || (request.resource.data.specialty is string && request.resource.data.specialty.size() <= 80))
+        && (!request.resource.data.keys().hasAny(["idNumber"])
+          || (request.resource.data.idNumber is string && request.resource.data.idNumber.size() <= 60))
+        && (!request.resource.data.keys().hasAny(["idName"])
+          || (request.resource.data.idName is string && request.resource.data.idName.size() <= 120))
+        && (!request.resource.data.keys().hasAny(["idFrontPath"])
+          || request.resource.data.idFrontPath == "identity/" + userId + "/front")
+        && (!request.resource.data.keys().hasAny(["idBackPath"])
+          || request.resource.data.idBackPath == "identity/" + userId + "/back")
         && (
           !request.resource.data.keys().hasAny(["legalAccepted", "legalAcceptedAt"])
           || (request.resource.data.legalAccepted == true && request.resource.data.legalAcceptedAt == request.time)
@@ -396,22 +317,13 @@ service cloud.firestore {
 
       allow get: if signedIn() && (request.auth.uid == userId
         || hasAdminPermission("users.view") || hasAdminPermission("verifications.view")
-        || hasAdminPermission("services.moderate") || isSuperAdmin());
+        || isSuperAdmin());
       allow list: if hasAdminPermission("users.view")
         || hasAdminPermission("verifications.view")
-        || hasAdminPermission("ranks.manage")
-        || hasAdminPermission("promotions.manage")
-        || hasAdminPermission("overview.view")
         || isSuperAdmin();
 
-      allow update: if isSuperAdmin()
-        || validAdminStatusUpdate()
-        || validAdminRankUpdate()
+      allow update: if validAdminRankUpdate()
         || validFreelancerResubmission()
-        || (
-          signedIn() && request.auth.uid == userId
-          && (validAccessUpdate() || validReferralUpdate())
-        )
         || (
           signedIn()
           && request.auth.uid == userId
@@ -439,12 +351,11 @@ service cloud.firestore {
 
     match /publicProfiles/{userId} {
       allow read: if true;
-      allow create: if isSuperAdmin() || hasAdminPermission("users.manage")
-        || (
+      allow create: if (
           signedIn()
           && request.auth.uid == userId
           && request.resource.data.keys().hasOnly([
-            "name", "accountType", "avatar", "avatarPath", "status", "specialty", "about", "skills", "careerItems", "badges", "badgeSummary", "referralCode"
+            "name", "accountType", "avatar", "avatarPath", "status", "specialty", "about", "skills", "careerItems"
           ])
           && request.resource.data.accountType in ["buyer", "freelancer"]
           && request.resource.data.name == userAfter(userId).name
@@ -459,6 +370,10 @@ service cloud.firestore {
             || (
               request.resource.data.avatar is string
               && request.resource.data.avatar.size() <= 10000
+              && (
+                request.resource.data.avatar == ""
+                || request.resource.data.avatar.matches("^https://firebasestorage\\.googleapis\\.com/.*$")
+              )
             )
           )
           && (
@@ -479,20 +394,10 @@ service cloud.firestore {
             || (request.resource.data.careerItems is list && request.resource.data.careerItems.size() <= 8)
           )
         );
-      allow update: if isSuperAdmin()
-        || (hasAdminPermission("users.manage")
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"]))
-        || (hasAdminPermission("ranks.manage")
+      allow update: if (hasAdminPermission("ranks.manage")
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["rank"]))
         || (hasAdminPermission("promotions.manage")
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["badges", "badgeSummary"]))
-        || (
-          signedIn() && request.auth.uid == userId
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["badges", "badgeSummary"])
-          && existsAfter(/databases/$(database)/documents/userBadges/$(userId + "_friends"))
-          && getAfter(/databases/$(database)/documents/userBadges/$(userId + "_friends")).data.uid == userId
-          && getAfter(/databases/$(database)/documents/userBadges/$(userId + "_friends")).data.source == "early_access_code"
-        )
         || (
           activeUser()
           && request.auth.uid == userId
@@ -500,11 +405,13 @@ service cloud.firestore {
           && request.resource.data.name is string
           && request.resource.data.name.size() > 0
           && request.resource.data.name.size() <= 80
+          && request.resource.data.name == userAfter(userId).name
           && (
             !request.resource.data.keys().hasAny(["specialty"])
             || (
               request.resource.data.specialty is string
               && request.resource.data.specialty.size() <= 60
+              && request.resource.data.specialty == userAfter(userId).specialty
             )
           )
            && (
@@ -512,6 +419,10 @@ service cloud.firestore {
             || (
               request.resource.data.avatar is string
               && request.resource.data.avatar.size() <= 10000
+              && (
+                request.resource.data.avatar == ""
+                || request.resource.data.avatar.matches("^https://firebasestorage\\.googleapis\\.com/.*$")
+              )
              )
            )
            && (
@@ -563,6 +474,8 @@ service cloud.firestore {
         && request.resource.data.participantNames[
           request.resource.data.participantUids[0]
         ].size() <= 80
+        && request.resource.data.participantNames[request.resource.data.participantUids[0]]
+          == get(/databases/$(database)/documents/users/$(request.resource.data.participantUids[0])).data.name
         && request.resource.data.participantNames[
           request.resource.data.participantUids[1]
         ] is string
@@ -572,6 +485,8 @@ service cloud.firestore {
         && request.resource.data.participantNames[
           request.resource.data.participantUids[1]
         ].size() <= 80
+        && request.resource.data.participantNames[request.resource.data.participantUids[1]]
+          == get(/databases/$(database)/documents/users/$(request.resource.data.participantUids[1])).data.name
         && request.resource.data.lastMessage is string
         && request.resource.data.lastMessage.size() <= 140
         && request.resource.data.lastMessageType in ["text", "attachment", "mixed"]
@@ -620,7 +535,7 @@ service cloud.firestore {
           && request.resource.data.readBy.size() == 1
           && request.resource.data.readBy[0] == request.auth.uid
           && request.resource.data.timestamp == request.time
-          && validAttachment(request.resource.data);
+          && validAttachment(request.resource.data, chatId, messageId);
         allow update: if isChatParticipant(chatId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["readBy"])
           && request.resource.data.readBy is list
@@ -644,6 +559,7 @@ service cloud.firestore {
         && request.resource.data.ownerName is string
         && request.resource.data.ownerName.size() > 0
         && request.resource.data.ownerName.size() <= 100
+        && request.resource.data.ownerName == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.name
         && request.resource.data.title is string
         && request.resource.data.title.size() >= 5
         && request.resource.data.title.size() <= 100
@@ -703,6 +619,7 @@ service cloud.firestore {
             || (
               request.resource.data.imageUrl is string
               && request.resource.data.imageUrl.size() <= 3000
+              && request.resource.data.imageUrl.matches("^https://firebasestorage\\.googleapis\\.com/.*$")
             )
           )
           && (
@@ -733,7 +650,7 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      allow read: if hasAdminPermission("finance.view") || hasAdminPermission("services.view")
+      allow read: if hasAdminPermission("finance.view")
         || (
           activeUser()
           && (
@@ -742,16 +659,14 @@ service cloud.firestore {
           )
         );
       allow create: if false;
-      allow update: if hasAdminPermission("finance.manage")
-        || validOrderDelivery()
-        || validOrderDispute();
+      allow update: if false;
       allow delete: if false;
     }
 
     match /reviews/{reviewId} {
       allow read: if resource.data.status == "published" || hasAdminPermission("services.view") || hasAdminPermission("services.moderate")
         || (activeUser() && request.auth.uid in [resource.data.reviewerUid, resource.data.targetUid]);
-      allow create: if validReviewCreate(reviewId);
+      allow create: if false;
       allow update, delete: if hasAdminPermission("services.moderate");
     }
 
@@ -760,17 +675,7 @@ service cloud.firestore {
     }
 
     match /launchSubscribers/{subscriberId} {
-      allow create: if request.resource.data.keys().hasOnly([
-          "email", "category", "source", "launchDate", "createdAt"
-        ])
-        && request.resource.data.keys().hasAll([
-          "email", "category", "source", "launchDate", "createdAt"
-        ])
-        && validEmail(request.resource.data.email)
-        && request.resource.data.category == "coming-soon-launch"
-        && request.resource.data.source == "coming-soon-page"
-        && request.resource.data.launchDate == "2026-08-01"
-        && request.resource.data.createdAt == request.time;
+      allow create: if false;
       allow read, update, delete: if hasAdminPermission("content.manage");
     }
 
@@ -779,20 +684,11 @@ service cloud.firestore {
     }
 
     match /promoCodes/{codeId} {
-      allow get: if true;
+      allow get: if hasAdminPermission("promotions.manage");
       allow list: if hasAdminPermission("promotions.manage");
       allow create: if hasAdminPermission("promotions.manage");
       allow delete: if hasAdminPermission("promotions.manage");
-      allow update: if hasAdminPermission("promotions.manage") || (
-        signedIn() && resource.data.status == "active" && resource.data.usedCount < resource.data.maxUses
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["usedCount", "status", "lastUsedAt", "lastUsedBy", "usedBy"])
-        && request.resource.data.usedCount == resource.data.usedCount + 1
-        && request.resource.data.usedBy is list
-        && request.resource.data.usedBy.size() == resource.data.usedBy.size() + 1
-        && request.resource.data.lastUsedBy == request.auth.uid
-        && request.resource.data.lastUsedAt == request.time
-        && request.resource.data.status in ["active", "used"]
-      );
+      allow update: if hasAdminPermission("promotions.manage");
     }
 
     match /badges/{badgeId} {
@@ -802,27 +698,13 @@ service cloud.firestore {
 
     match /userBadges/{badgeDocId} {
       allow read: if hasAdminPermission("promotions.manage") || (signedIn() && resource.data.uid == request.auth.uid);
-      allow create: if hasAdminPermission("promotions.manage") || (
-        signedIn() && request.resource.data.uid == request.auth.uid
-        && request.resource.data.badgeId == "friends" && request.resource.data.source == "early_access_code"
-        && request.resource.data.code is string
-        && existsAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code))
-        && getAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code)).data.type == "early_access"
-        && getAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code)).data.lastUsedBy == request.auth.uid
-      );
+      allow create: if hasAdminPermission("promotions.manage");
       allow update, delete: if hasAdminPermission("promotions.manage");
     }
 
     match /referrals/{referralId} {
       allow read: if hasAdminPermission("promotions.manage") || (signedIn() && request.auth.uid in [resource.data.inviterUid, resource.data.invitedUid]);
-      allow create, update: if hasAdminPermission("promotions.manage") || (
-        signedIn() && request.resource.data.invitedUid == request.auth.uid && request.resource.data.status == "pending"
-        && request.resource.data.code is string
-        && existsAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code))
-        && getAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code)).data.type == "referral"
-        && getAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code)).data.lastUsedBy == request.auth.uid
-        && request.resource.data.inviterUid == getAfter(/databases/$(database)/documents/promoCodes/$(request.resource.data.code)).data.ownerUid
-      );
+      allow create, update: if hasAdminPermission("promotions.manage");
       allow delete: if hasAdminPermission("promotions.manage");
     }
 
@@ -833,63 +715,7 @@ service cloud.firestore {
     }
 
     match /supportTickets/{ticketId} {
-      allow create: if (
-        (
-          activeUser()
-          && request.resource.data.requesterUid == request.auth.uid
-          && request.resource.data.requesterEmail == request.auth.token.email
-        ) || (
-          !signedIn()
-          && request.resource.data.requesterUid == ""
-          && request.resource.data.requesterName is string
-          && request.resource.data.requesterName.size() >= 2
-          && request.resource.data.requesterName.size() <= 100
-          && request.resource.data.requesterEmail is string
-          && request.resource.data.requesterEmail.size() >= 6
-          && request.resource.data.requesterEmail.size() <= 160
-          && request.resource.data.requesterPhone is string
-          && request.resource.data.requesterPhone.size() <= 40
-        )
-      )
-        && request.resource.data.status == "open"
-        && request.resource.data.keys().hasOnly([
-          "requesterUid", "requesterName", "requesterEmail", "requesterPhone",
-          "subject", "category", "message", "orderId", "status", "priority",
-          "assignedAdminUid", "createdAt", "updatedAt"
-        ])
-        && request.resource.data.keys().hasAll([
-          "requesterUid", "requesterName", "requesterEmail",
-          "subject", "category", "message", "orderId", "status", "priority",
-          "assignedAdminUid", "createdAt", "updatedAt"
-        ])
-        && request.resource.data.category in [
-          "technical", "account", "payment", "dispute", "report", "general"
-        ]
-        && request.resource.data.priority in ["normal", "high"]
-        && request.resource.data.assignedAdminUid == ""
-        && request.resource.data.requesterName is string
-        && request.resource.data.requesterName.size() >= 2
-        && request.resource.data.requesterName.size() <= 100
-        && request.resource.data.requesterEmail is string
-        && request.resource.data.requesterEmail.size() >= 6
-        && request.resource.data.requesterEmail.size() <= 160
-        && (
-          !request.resource.data.keys().hasAny(["requesterPhone"])
-          || (
-            request.resource.data.requesterPhone is string
-            && request.resource.data.requesterPhone.size() <= 40
-          )
-        )
-        && request.resource.data.orderId is string
-        && request.resource.data.orderId.size() <= 100
-        && request.resource.data.subject is string
-        && request.resource.data.subject.size() > 0
-        && request.resource.data.subject.size() <= 120
-        && request.resource.data.message is string
-        && request.resource.data.message.size() > 0
-        && request.resource.data.message.size() <= 3000
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time;
+      allow create: if false;
       allow read: if hasAdminPermission("support.view") || hasAdminPermission("support.reply")
         || (activeUser() && resource.data.requesterUid == request.auth.uid);
       allow update: if hasAdminPermission("support.reply")
@@ -927,6 +753,7 @@ service cloud.firestore {
           && request.resource.data.authorName is string
           && request.resource.data.authorName.size() > 0
           && request.resource.data.authorName.size() <= 160
+          && request.resource.data.authorName == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.name
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
           && request.resource.data.text.size() <= 2000
@@ -937,39 +764,11 @@ service cloud.firestore {
 
     match /notifications/{userId}/items/{notificationId} {
       allow read: if activeUser() && request.auth.uid == userId;
-      allow create: if hasAdminPermission("verifications.manage")
-        || hasAdminPermission("services.moderate")
-        || hasAdminPermission("support.reply")
-        || (
-          activeUser()
-          && request.resource.data.relatedOrderId is string
-          && request.resource.data.relatedOrderId.size() > 0
-          && request.auth.uid in [
-            getAfter(/databases/$(database)/documents/orders/$(request.resource.data.relatedOrderId)).data.buyerUid,
-            getAfter(/databases/$(database)/documents/orders/$(request.resource.data.relatedOrderId)).data.freelancerUid
-          ]
-          && userId in [
-            getAfter(/databases/$(database)/documents/orders/$(request.resource.data.relatedOrderId)).data.buyerUid,
-            getAfter(/databases/$(database)/documents/orders/$(request.resource.data.relatedOrderId)).data.freelancerUid
-          ]
-          && request.resource.data.keys().hasOnly([
-            "title", "body", "relatedOrderId", "read", "createdAt"
-          ])
-          && request.resource.data.read == false
-          && request.resource.data.createdAt == request.time
-          && request.resource.data.title is string
-          && request.resource.data.title.size() > 0
-          && request.resource.data.title.size() <= 140
-          && request.resource.data.body is string
-          && request.resource.data.body.size() <= 500
-          && (
-            !request.resource.data.keys().hasAny(["relatedOrderId"])
-            || (
-              request.resource.data.relatedOrderId is string
-              && request.resource.data.relatedOrderId.size() <= 100
-            )
-          )
-        );
+      allow create: if (
+          hasAdminPermission("verifications.manage")
+          || hasAdminPermission("services.moderate")
+          || hasAdminPermission("support.reply")
+        ) && validAdminNotification(request.resource.data);
       allow update: if activeUser()
         && request.auth.uid == userId
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["read"])
@@ -980,12 +779,7 @@ service cloud.firestore {
     match /articles/{articleId} {
       allow read: if hasAdminPermission("content.view") || hasAdminPermission("content.manage") || resource.data.status == "published";
       allow create, delete: if false;
-      allow update: if (
-          activeUser()
-          && resource.data.status == "published"
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["views"])
-          && request.resource.data.views == resource.data.get("views", 0) + 1
-        );
+      allow update: if false;
 
       match /likes/{userId} {
         allow read: if hasAdminPermission("content.view") || hasAdminPermission("content.manage")
@@ -1015,6 +809,7 @@ service cloud.firestore {
           && request.resource.data.authorName is string
           && request.resource.data.authorName.size() > 0
           && request.resource.data.authorName.size() <= 100
+          && request.resource.data.authorName == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.name
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
           && request.resource.data.text.size() <= 1500
@@ -1035,6 +830,10 @@ service cloud.firestore {
       allow read: if hasAdminPermission("content.view") || hasAdminPermission("content.manage")
         || get(/databases/$(database)/documents/articles/$(articleId)).data.status == "published";
       allow write: if false;
+    }
+
+    match /articleViews/{viewId} {
+      allow read, write: if false;
     }
 
     match /articleCategories/{categoryId} {
@@ -1142,7 +941,7 @@ service cloud.firestore {
 
     match /adminAuditLogs/{logId} {
       allow read: if hasAdminPermission("audit.view");
-      allow create: if isAdmin()
+      allow create: if canCreateAuditAction(request.resource.data.action)
         && request.resource.data.keys().hasOnly([
           "action", "actorUid", "actorName", "actorEmail",
           "targetUid", "targetName", "targetEmail", "reason", "createdAt"
@@ -1152,6 +951,8 @@ service cloud.firestore {
           "targetUid", "targetName", "targetEmail", "reason", "createdAt"
         ])
         && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.actorName == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get("name", get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email)
+        && request.resource.data.actorEmail == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email
         && request.resource.data.action in [
           "approve_user", "reject_user", "suspend_user",
           "activate_user", "update_settings", "update_ticket",
@@ -1162,6 +963,12 @@ service cloud.firestore {
         ]
         && request.resource.data.reason is string
         && request.resource.data.reason.size() <= 500
+        && request.resource.data.targetUid is string
+        && request.resource.data.targetUid.size() <= 128
+        && request.resource.data.targetName is string
+        && request.resource.data.targetName.size() <= 160
+        && request.resource.data.targetEmail is string
+        && request.resource.data.targetEmail.size() <= 160
         && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
     }

@@ -6,12 +6,16 @@
     "node": "22"
   },
   "scripts": {
-    "check": "node --check index.js && node --check lib/helpers.js && node --check lib/wallet.js && node --check lib/orders.js && node --check lib/email.js && node --check lib/currency-migration.js && node --check lib/team.js && node --check lib/admin-users.js && node --check lib/articles.js && node --check lib/article-counters.js && node --check lib/finance-reports.js",
+    "check": "node --check index.js && node --check lib/helpers.js && node --check lib/access.js && node --check lib/admin-data.js && node --check lib/public-endpoints.js && node --check lib/reviews.js && node --check lib/wallet.js && node --check lib/orders.js && node --check lib/email.js && node --check lib/currency-migration.js && node --check lib/team.js && node --check lib/admin-users.js && node --check lib/articles.js && node --check lib/article-counters.js && node --check lib/finance-reports.js",
     "test": "node --test test/articles.test.js test/finance-reports.test.js && node ../scripts/test-content-architecture.mjs"
   },
   "dependencies": {
     "firebase-admin": "^13.4.0",
     "firebase-functions": "^6.4.0",
-    "nodemailer": "^7.0.5"
+    "nodemailer": "^9.0.3"
+  },
+  "overrides": {
+    "fast-xml-parser": "5.10.1",
+    "uuid": "11.1.1"
   }
 }

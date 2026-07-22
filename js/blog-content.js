@@ -1,6 +1,6 @@
 import {
   collection, getCountFromServer, getDocs, limit, orderBy, query, startAfter, where
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { db } from "./firebase.js";
 
 const PAGE_SIZE = 9;

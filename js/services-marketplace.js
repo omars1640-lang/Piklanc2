@@ -1,7 +1,7 @@
 import {
   collection, getDocs, query, where
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
 import { db, storage } from "./firebase.js";
 import { resolveProfileAvatar } from "./avatar-utils.js";
 

@@ -79,7 +79,7 @@ async function releaseOrder(orderRef, expectedBuyerUid = "") {
   });
 }
 
-exports.createWalletOrder = onCall({ region: REGION, enforceAppCheck: false }, async request => {
+exports.createWalletOrder = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
   const uid = requireAuth(request);
   await requireCurrencyReady();
   const buyer = await requireProfile(uid, "buyer");
@@ -191,12 +191,77 @@ exports.createWalletOrder = onCall({ region: REGION, enforceAppCheck: false }, a
   return { orderId: orderRef.id, reference };
 });
 
-exports.approveWalletOrder = onCall({ region: REGION, enforceAppCheck: false }, async request => {
+exports.approveWalletOrder = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
   const uid = requireAuth(request);
   const orderId = cleanText(request.data?.orderId, 100);
   if (!orderId) throw new HttpsError("invalid-argument", "الطلب غير محدد.");
   await releaseOrder(db.doc(`orders/${orderId}`), uid);
   return { orderId, status: "completed" };
+});
+
+exports.deliverWalletOrder = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
+  const uid = requireAuth(request);
+  await requireProfile(uid, "freelancer");
+  const orderId = cleanText(request.data?.orderId, 100);
+  const deliveryNote = cleanText(request.data?.deliveryNote, 1000);
+  if (!/^[A-Za-z0-9_-]{6,100}$/.test(orderId) || deliveryNote.length < 3) throw new HttpsError("invalid-argument", "بيانات التسليم غير مكتملة.");
+  const orderRef = db.doc(`orders/${orderId}`);
+  await db.runTransaction(async transaction => {
+    const snapshot = await transaction.get(orderRef);
+    if (!snapshot.exists) throw new HttpsError("not-found", "الطلب غير موجود.");
+    const order = snapshot.data();
+    if (order.freelancerUid !== uid) throw new HttpsError("permission-denied", "لا تملك هذا الطلب.");
+    if (!["funded", "active"].includes(order.status) || order.escrow?.status !== "held") throw new HttpsError("failed-precondition", "الطلب غير جاهز للتسليم.");
+    transaction.update(orderRef, {
+      status: "delivered",
+      deliveryNote,
+      deliveredAt: FieldValue.serverTimestamp(),
+      autoReleaseAt: Timestamp.fromMillis(Date.now() + REVIEW_DAYS * 24 * 60 * 60 * 1000),
+      "escrow.status": "review_hold",
+      "escrow.reviewStartedAt": FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
+    });
+    transaction.create(db.collection(`notifications/${order.buyerUid}/items`).doc(), notification(
+      "تم تسليم طلبك",
+      `سلّم المستقل طلب ${cleanText(order.serviceTitle || order.reference, 180)}. لديك ${REVIEW_DAYS} يوماً للمراجعة قبل تحرير المبلغ تلقائياً.`,
+      { relatedOrderId: orderId }
+    ));
+  });
+  return { orderId, status: "delivered" };
+});
+
+exports.disputeWalletOrder = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
+  const uid = requireAuth(request);
+  await requireProfile(uid);
+  const orderId = cleanText(request.data?.orderId, 100);
+  const reason = cleanText(request.data?.reason, 1000);
+  if (!/^[A-Za-z0-9_-]{6,100}$/.test(orderId) || reason.length < 3) throw new HttpsError("invalid-argument", "سبب النزاع وبيانات الطلب مطلوبة.");
+  const orderRef = db.doc(`orders/${orderId}`);
+  let otherUid = "";
+  await db.runTransaction(async transaction => {
+    const snapshot = await transaction.get(orderRef);
+    if (!snapshot.exists) throw new HttpsError("not-found", "الطلب غير موجود.");
+    const order = snapshot.data();
+    if (![order.buyerUid, order.freelancerUid].includes(uid)) throw new HttpsError("permission-denied", "لست طرفاً في هذا الطلب.");
+    if (!["funded", "active", "delivered"].includes(order.status) || !["held", "review_hold"].includes(order.escrow?.status)) {
+      throw new HttpsError("failed-precondition", "لا يمكن فتح نزاع على حالة الطلب الحالية.");
+    }
+    otherUid = uid === order.buyerUid ? order.freelancerUid : order.buyerUid;
+    transaction.update(orderRef, {
+      status: "disputed",
+      disputedAt: FieldValue.serverTimestamp(),
+      "escrow.status": "disputed",
+      "escrow.disputedAt": FieldValue.serverTimestamp(),
+      dispute: { status: "open", openedByUid: uid, reason, createdAt: FieldValue.serverTimestamp() },
+      updatedAt: FieldValue.serverTimestamp()
+    });
+    transaction.create(db.collection(`notifications/${otherUid}/items`).doc(), notification(
+      "فُتح نزاع على طلب",
+      `تم إيقاف رصيد طلب ${cleanText(order.serviceTitle || order.reference, 180)} وحده حتى مراجعة الدعم.`,
+      { relatedOrderId: orderId }
+    ));
+  });
+  return { orderId, status: "disputed", otherUid };
 });
 
 exports.releaseDueOrders = onSchedule({ region: REGION, schedule: "every 60 minutes", timeZone: "Asia/Damascus" }, async () => {

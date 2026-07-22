@@ -61,7 +61,7 @@ async function aggregate(query, fields) {
   return Object.fromEntries(Object.entries(data).map(([key, value]) => [key, Number(value || 0)]));
 }
 
-exports.getFinancialReport = onCall({ region: REGION, enforceAppCheck: false }, async request => {
+exports.getFinancialReport = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
   await requireAdmin(request, "finance.view");
   const period = reportPeriod(request.data);
 

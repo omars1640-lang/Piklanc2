@@ -19,7 +19,7 @@ function normalizedPermissions(values) {
   return [...selected];
 }
 
-exports.saveAdminRole = onCall({ region: REGION, enforceAppCheck: false }, async request => {
+exports.saveAdminRole = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
   const admin = await requireSuperAdmin(request);
   const roleId = cleanText(request.data?.roleId, 80);
   const name = cleanText(request.data?.name, 80);
@@ -41,7 +41,7 @@ exports.saveAdminRole = onCall({ region: REGION, enforceAppCheck: false }, async
   return { ok: true, roleId: reference.id };
 });
 
-exports.deleteAdminRole = onCall({ region: REGION, enforceAppCheck: false }, async request => {
+exports.deleteAdminRole = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
   await requireSuperAdmin(request);
   const roleId = cleanText(request.data?.roleId, 80);
   if (!roleId) throw new HttpsError("invalid-argument", "الدور غير صالح.");
@@ -58,7 +58,7 @@ exports.deleteAdminRole = onCall({ region: REGION, enforceAppCheck: false }, asy
   return { ok: true };
 });
 
-exports.assignAdminRole = onCall({ region: REGION, enforceAppCheck: false }, async request => {
+exports.assignAdminRole = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
   const admin = await requireSuperAdmin(request);
   const email = cleanText(request.data?.email, 160).toLowerCase();
   const roleId = cleanText(request.data?.roleId, 80);
@@ -89,7 +89,7 @@ exports.assignAdminRole = onCall({ region: REGION, enforceAppCheck: false }, asy
   return { ok: true, userId: member.id };
 });
 
-exports.removeAdminMember = onCall({ region: REGION, enforceAppCheck: false }, async request => {
+exports.removeAdminMember = onCall({ region: REGION, enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true" }, async request => {
   const admin = await requireSuperAdmin(request);
   const userId = cleanText(request.data?.userId, 100);
   if (!userId || userId === admin.id) throw new HttpsError("failed-precondition", "لا يمكن إزالة حساب الإدارة الحالي.");

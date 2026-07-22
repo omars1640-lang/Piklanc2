@@ -1,4 +1,4 @@
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
   collection,
   deleteField,
@@ -12,9 +12,9 @@ import {
   serverTimestamp,
   where,
   writeBatch
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { deleteObject, getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { deleteObject, getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
 import { auth, db, functions, storage } from "./firebase.js";
 import { sendOfficialEmail } from "./email-client.js";
 import { seedDefaultBadges } from "./piklance-access.js";
@@ -195,7 +195,10 @@ function button(label, className, handler) {
 }
 
 function completedOrdersFor(uid) {
-  return state.orders.filter(order => order.freelancerUid === uid && ["completed", "released"].includes(order.status)).length;
+  if (state.orders.length || hasPermission("finance.view")) {
+    return state.orders.filter(order => order.freelancerUid === uid && ["completed", "released"].includes(order.status)).length;
+  }
+  return Number(state.users.find(user => user.id === uid)?.rank?.completedServices || 0);
 }
 
 function automaticRank(completed) {
@@ -453,23 +456,31 @@ function renderPromotions() {
   document.getElementById("promoActiveCount").textContent = filteredCodes.filter(code => (code.status || "active") === "active").length;
   document.getElementById("promoCodesList").replaceChildren(...filteredCodes.slice(0, 120).map(code => {
     const row = document.createElement("article");
-    const value = code.code || code.id;
+    const value = String(code.code || code.id || "");
     row.className = "admin-content-item promo-code-item";
-    row.innerHTML = `
-      <div class="promo-code-copy">
-        <code>${value}</code>
-        <button class="secondary-button promo-copy-button" type="button" data-code="${value}">نسخ</button>
-      </div>
-      <div>
-        <strong>${code.ownerName || code.type || "كود منصة"}</strong>
-        <small>${code.type || "promo"} · ${code.status || "active"} · ${Number(code.usedCount || 0)}/${Number(code.maxUses || 1)}</small>
-      </div>
-      <span>${code.discountPercent ? `${code.discountPercent}%` : code.badgeIds?.join(", ") || "-"}</span>
-    `;
-    row.querySelector("[data-code]").addEventListener("click", async event => {
-      await navigator.clipboard?.writeText(event.currentTarget.dataset.code).catch(() => {});
+    const copyWrap = document.createElement("div");
+    copyWrap.className = "promo-code-copy";
+    const codeValue = document.createElement("code");
+    codeValue.textContent = value;
+    const copyButton = document.createElement("button");
+    copyButton.className = "secondary-button promo-copy-button";
+    copyButton.type = "button";
+    copyButton.textContent = "نسخ";
+    copyButton.addEventListener("click", async () => {
+      await navigator.clipboard?.writeText(value).catch(() => {});
       showToast("تم نسخ الكود.");
     });
+    copyWrap.append(codeValue, copyButton);
+
+    const details = document.createElement("div");
+    const owner = document.createElement("strong");
+    owner.textContent = String(code.ownerName || code.type || "كود منصة");
+    const usage = document.createElement("small");
+    usage.textContent = `${String(code.type || "promo")} · ${String(code.status || "active")} · ${Number(code.usedCount || 0)}/${Number(code.maxUses || 1)}`;
+    details.append(owner, usage);
+    const benefit = document.createElement("span");
+    benefit.textContent = code.discountPercent ? `${Number(code.discountPercent)}%` : (Array.isArray(code.badgeIds) ? code.badgeIds.map(String).join(", ") : "-");
+    row.append(copyWrap, details, benefit);
     return row;
   }));
 
@@ -477,7 +488,15 @@ function renderPromotions() {
   document.getElementById("badgesList").replaceChildren(...badges.map(badge => {
     const row = document.createElement("article");
     row.className = "admin-content-item";
-    row.innerHTML = `<div><strong>${badge.icon} ${badge.label}</strong><small>${badge.id}</small></div><span>${badge.tone}</span>`;
+    const details = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = `${String(badge.icon || "◆")} ${String(badge.label || badge.id || "شارة")}`;
+    const id = document.createElement("small");
+    id.textContent = String(badge.id || "");
+    details.append(title, id);
+    const tone = document.createElement("span");
+    tone.textContent = String(badge.tone || "");
+    row.append(details, tone);
     return row;
   }));
 }
@@ -500,6 +519,12 @@ async function saveFeaturedBadges(event) {
   await loadData();
 }
 
+function safeCsvCell(value) {
+  const text = String(value ?? "");
+  const neutralized = /^[=+\-@]/.test(text) ? `'${text}` : text;
+  return `"${neutralized.replace(/"/g, '""')}"`;
+}
+
 function exportPromoCodes() {
   const headers = ["code", "type", "status", "usedCount", "maxUses", "discountPercent", "discountDays", "ownerName", "ownerUid", "groupId"];
   const rows = filteredPromoCodes().map(code => [
@@ -515,7 +540,7 @@ function exportPromoCodes() {
     code.groupId || ""
   ]);
   const csv = [headers, ...rows]
-    .map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(","))
+    .map(row => row.map(safeCsvCell).join(","))
     .join("\n");
   const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" });
   const link = document.createElement("a");
@@ -929,7 +954,17 @@ function renderAudit() {
   container.replaceChildren(...logs.map(log => {
     const item = document.createElement("article");
     item.className = "audit-entry";
-    item.innerHTML = `<span>≡</span><div><strong>${actionLabels[log.action] || log.action}</strong><p>${auditDescription(log)}</p></div><time>${formatDate(log.createdAt, true)}</time>`;
+    const icon = document.createElement("span");
+    icon.textContent = "≡";
+    const details = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = String(actionLabels[log.action] || log.action || "إجراء إداري");
+    const description = document.createElement("p");
+    description.textContent = auditDescription(log);
+    details.append(title, description);
+    const time = document.createElement("time");
+    time.textContent = formatDate(log.createdAt, true);
+    item.append(icon, details, time);
     return item;
   }));
   document.getElementById("auditEmpty").hidden = logs.length > 0;
@@ -938,7 +973,17 @@ function renderAudit() {
   recent.replaceChildren(...state.audit.slice(0, 4).map(log => {
     const item = document.createElement("article");
     item.className = "activity-item";
-    item.innerHTML = `<span>≡</span><div><strong>${actionLabels[log.action] || log.action}</strong><p>${auditDescription(log)}</p></div><time>${formatDate(log.createdAt)}</time>`;
+    const icon = document.createElement("span");
+    icon.textContent = "≡";
+    const details = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = String(actionLabels[log.action] || log.action || "إجراء إداري");
+    const description = document.createElement("p");
+    description.textContent = auditDescription(log);
+    details.append(title, description);
+    const time = document.createElement("time");
+    time.textContent = formatDate(log.createdAt);
+    item.append(icon, details, time);
     return item;
   }));
   if (!state.audit.length) recent.innerHTML = '<div class="empty-state"><span>≡</span><strong>سيظهر سجل القرارات هنا</strong></div>';
@@ -1020,6 +1065,23 @@ function settledSnapshot(result, label, fallback = { docs: [] }) {
   return fallback;
 }
 
+async function loadUsersForCurrentPermission(needsUsers) {
+  if (!needsUsers) return { docs: [] };
+  if (hasPermission("users.view") || hasPermission("verifications.view")) {
+    return getDocs(query(collection(db, "users"), orderBy("createdAt", "desc"), limit(100)));
+  }
+  const result = await httpsCallable(functions, "getAdminUserSummaries")();
+  return {
+    docs: (Array.isArray(result.data?.users) ? result.data.users : []).map(user => ({
+      id: user.id,
+      data: () => {
+        const { id, ...data } = user;
+        return data;
+      }
+    }))
+  };
+}
+
 async function loadData() {
   document.getElementById("refreshData").disabled = true;
   try {
@@ -1027,8 +1089,8 @@ async function loadData() {
     const empty = { docs: [] };
     const needsUsers = hasPermission("overview.view") || hasPermission("users.view") || hasPermission("verifications.view") || hasPermission("ranks.manage") || hasPermission("promotions.manage");
     const results = await Promise.allSettled([
-      needsUsers ? getDocs(query(collection(db, "users"), orderBy("createdAt", "desc"), limit(100))) : empty,
-      (hasPermission("overview.view") || hasPermission("finance.view") || hasPermission("services.view")) ? getDocs(query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(100))) : empty,
+      loadUsersForCurrentPermission(needsUsers),
+      hasPermission("finance.view") ? getDocs(query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(100))) : empty,
       (hasPermission("overview.view") || hasPermission("conversations.view")) ? getDocs(query(collection(db, "chats"), orderBy("lastUpdated", "desc"), limit(100))) : empty,
       (hasPermission("overview.view") || hasPermission("audit.view")) ? getDocs(query(collection(db, "adminAuditLogs"), orderBy("createdAt", "desc"), limit(100))) : empty,
       getDoc(doc(db, "platformSettings", "general")),
@@ -1363,21 +1425,6 @@ async function executeDecision(event) {
     showToast("اكتب سبب القرار قبل المتابعة.");
     return;
   }
-  const updates = {
-    approve_user: { status: "active", approvedAt: serverTimestamp(), approvedBy: state.admin.id },
-    reject_user: {
-      status: "rejected",
-      rejectionReason: reason,
-      rejectedAt: serverTimestamp(),
-      rejectedBy: state.admin.id,
-      idNumber: deleteField(),
-      idName: deleteField(),
-      idFrontPath: deleteField(),
-      idBackPath: deleteField()
-    },
-    suspend_user: { status: "suspended", suspensionReason: reason, suspendedAt: serverTimestamp(), suspendedBy: state.admin.id },
-    activate_user: { status: "active", reactivatedAt: serverTimestamp(), reactivatedBy: state.admin.id }
-  }[decision.action];
   document.getElementById("decisionConfirm").disabled = true;
   try {
     if (["approve_user", "reject_user"].includes(decision.action)) {
@@ -1394,26 +1441,18 @@ async function executeDecision(event) {
       await loadData();
       return;
     }
-    const batch = writeBatch(db);
-    batch.update(doc(db, "users", decision.user.id), updates);
-    batch.set(doc(db, "publicProfiles", decision.user.id), {
-      name: decision.user.name || "مستخدم PikLance",
-      accountType: decision.user.accountType,
-      status: updates.status,
-      ...(updates.referralCode ? { referralCode: updates.referralCode } : {}),
-      ...(decision.user.specialty ? { specialty: decision.user.specialty } : {})
-    }, { merge: true });
-    batch.set(doc(collection(db, "adminAuditLogs")), auditData(decision.action, decision.user, reason));
-    await batch.commit();
-    if (decision.action === "reject_user") {
-      await cleanupRejectedIdentity(decision.user);
-      await sendFreelancerRejectionEmail(decision.user, reason);
+    if (["suspend_user", "activate_user"].includes(decision.action)) {
+      await httpsCallable(functions, "setUserStatus")({
+        userId: decision.user.id,
+        status: decision.action === "suspend_user" ? "suspended" : "active",
+        reason
+      });
+      closeDecision();
+      showToast(decision.action === "suspend_user" ? "تم إيقاف الحساب وإلغاء جلساته النشطة." : "تمت إعادة تفعيل الحساب.");
+      await loadData();
+      return;
     }
-    closeDecision();
-    showToast(decision.action === "reject_user"
-      ? "تم رفض الطلب وتنظيف بيانات الهوية. تم تجهيز رسالة البريد لصاحب الطلب."
-      : "تم تنفيذ القرار وتسجيله بنجاح.");
-    await loadData();
+    throw new Error("unsupported-admin-decision");
   } catch (error) {
     console.error("Admin decision failed", error);
     showToast("تعذر تنفيذ القرار. تحقق من الصلاحيات والاتصال.");
@@ -1450,10 +1489,9 @@ async function saveSettings(event) {
 
 function exportUsers() {
   const headers = ["uid", "name", "email", "phone", "accountType", "status", "createdAt"];
-  const escape = value => `"${String(value ?? "").replaceAll('"', '""')}"`;
   const rows = state.users.map(user => [
     user.id, user.name, user.email, user.phone, user.accountType, user.status, toDate(user.createdAt)?.toISOString() || ""
-  ].map(escape).join(","));
+  ].map(safeCsvCell).join(","));
   const csv = `\uFEFF${headers.join(",")}\n${rows.join("\n")}`;
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");
@@ -1528,7 +1566,7 @@ onAuthStateChanged(auth, async user => {
   }
   try {
     const profileSnapshot = await getDoc(doc(db, "users", user.uid));
-    if (!user.emailVerified || !profileSnapshot.exists() || profileSnapshot.data().role !== "admin") {
+    if (!user.emailVerified || !profileSnapshot.exists() || profileSnapshot.data().role !== "admin" || profileSnapshot.data().status !== "active") {
       await signOut(auth);
       alert("غير مصرح لك بدخول لوحة الإدارة.");
       location.replace("index.html");

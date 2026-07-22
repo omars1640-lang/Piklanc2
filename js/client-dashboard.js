@@ -1,12 +1,13 @@
 import "./platform-guard.js";
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
   addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where, writeBatch
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import {
   deleteObject, getDownloadURL, ref as storageRef, uploadBytes
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { auth, db, storage } from "./firebase.js";
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
+import { auth, db, functions, storage } from "./firebase.js";
 import { cacheBustUrl } from "./avatar-utils.js";
 import {
   approveEscrowOrder, disputeEscrowOrder,
@@ -342,20 +343,11 @@ async function openOrderDispute(order, reason) {
     return;
   }
   await disputeEscrowOrder(db, order, state.user, reason);
-  await addDoc(collection(db, "supportTickets"), {
-    requesterUid: state.user.uid,
-    requesterName: state.profile.name || state.user.email || "عميل",
-    requesterEmail: state.user.email || "",
-    requesterPhone: state.profile.phone || "",
+  await httpsCallable(functions, "createSupportTicket")({
     subject: `نزاع على الطلب ${order.id}`,
     category: "dispute",
     message: reason.trim(),
-    orderId: order.id,
-    status: "open",
-    priority: "high",
-    assignedAdminUid: "",
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    orderId: order.id
   });
   state.orders = state.orders.map(item => item.id === order.id ? { ...item, status: "disputed", escrow: { ...(item.escrow || {}), status: "disputed" } } : item);
   renderOrders();

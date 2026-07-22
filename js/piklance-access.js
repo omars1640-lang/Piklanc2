@@ -1,11 +1,10 @@
 import {
   doc,
-  getDoc,
-  runTransaction,
   serverTimestamp,
   setDoc
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { db } from "./firebase.js";
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
+import { db, functions } from "./firebase.js";
 
 export const BADGES = {
   friends: {
@@ -48,10 +47,8 @@ function isUsableCode(data) {
 export async function getAccessCode(code) {
   const id = codeDocId(code);
   if (!id) return null;
-  const snapshot = await getDoc(doc(db, "promoCodes", id));
-  if (!snapshot.exists()) return null;
-  const data = snapshot.data();
-  return { id, ...data, usable: isUsableCode(data) };
+  const result = await httpsCallable(functions, "validateRegistrationCode")({ code: id });
+  return result.data?.valid ? { id, type: result.data.type, usable: true } : null;
 }
 
 export async function validateEarlyAccessCode(code) {
@@ -78,81 +75,8 @@ export function registrationCodeFromUrl() {
 export async function consumeRegistrationCode({ uid, email, name, accountType, code }) {
   const normalized = codeDocId(code);
   if (!uid || !normalized) return { applied: false };
-
-  const codeRef = doc(db, "promoCodes", normalized);
-  const userRef = doc(db, "users", uid);
-  const publicRef = doc(db, "publicProfiles", uid);
-  const badgeRef = doc(db, "userBadges", `${uid}_friends`);
-  const referralRef = doc(db, "referrals", `${normalized}_${uid}`);
-
-  return runTransaction(db, async transaction => {
-    const snapshot = await transaction.get(codeRef);
-    if (!snapshot.exists()) throw new Error("invalid-code");
-    const data = snapshot.data();
-    if (!isUsableCode(data)) throw new Error("used-code");
-
-    const baseUsage = {
-      uid,
-      email: email || "",
-      name: name || "",
-      accountType: accountType || "",
-      usedAt: new Date().toISOString()
-    };
-    const nextUsedCount = Number(data.usedCount || 0) + 1;
-
-    transaction.update(codeRef, {
-      usedCount: nextUsedCount,
-      status: nextUsedCount >= Number(data.maxUses || 1) ? "used" : "active",
-      lastUsedAt: serverTimestamp(),
-      lastUsedBy: uid,
-      usedBy: [...(Array.isArray(data.usedBy) ? data.usedBy : []), baseUsage]
-    });
-
-    if (data.type === "early_access") {
-      const badge = BADGES.friends;
-      transaction.set(badgeRef, {
-        uid,
-        badgeId: badge.id,
-        label: badge.label,
-        icon: badge.icon,
-        tone: badge.tone,
-        source: "early_access_code",
-        code: normalized,
-        assignedAt: serverTimestamp()
-      });
-      transaction.set(publicRef, {
-        badges: { [badge.id]: { label: badge.label, icon: badge.icon, tone: badge.tone } },
-        badgeSummary: [badge]
-      }, { merge: true });
-      transaction.update(userRef, {
-        earlyAccess: true,
-        accessCode: normalized,
-        badges: { [badge.id]: true },
-        accessGrantedAt: serverTimestamp()
-      });
-      return { applied: true, type: "early_access", badgeId: badge.id };
-    }
-
-    if (data.type === "referral" && data.ownerUid && data.ownerUid !== uid) {
-      transaction.set(referralRef, {
-        code: normalized,
-        inviterUid: data.ownerUid,
-        invitedUid: uid,
-        invitedEmail: email || "",
-        invitedName: name || "",
-        invitedAccountType: accountType || "",
-        status: "pending",
-        createdAt: serverTimestamp()
-      });
-      transaction.update(userRef, {
-        referredByUid: data.ownerUid,
-        referralCodeUsed: normalized
-      });
-      return { applied: true, type: "referral", inviterUid: data.ownerUid };
-    }
-
-    return { applied: true, type: data.type || "promo" };
-  });
+  const result = await httpsCallable(functions, "consumeRegistrationCode")({ code: normalized });
+  return result.data;
 }
 
 export async function seedDefaultBadges() {
