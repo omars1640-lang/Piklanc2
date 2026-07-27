@@ -189,8 +189,8 @@ exports.sendLaunchSubscriberWelcome = onDocumentCreated({
   await queueMailOnce(`launch_${event.params.subscriberId}`, {
     to: recipient,
     subject: "أهلاً بك في قائمة إطلاق PikLance",
-    text: "أهلاً بك،\n\nتم تسجيل بريدك بنجاح ضمن قائمة إطلاق PikLance. ستكون من أوائل من تصله أخبار الإطلاق الرسمي بتاريخ 01/08/2026.\n\nفريق PikLance",
-    html: emailShell("أهلاً بك في PikLance", "<p>تم تسجيل بريدك بنجاح ضمن قائمة الإطلاق.</p><p>ستكون من أوائل من تصله أخبار المنصة وموعد الإطلاق الرسمي بتاريخ <strong dir=\"ltr\">01/08/2026</strong>.</p><p style=\"padding:16px;border-radius:14px;background:#f5f3ff;color:#4f43a7\">شكراً لأنك جزء من بداية PikLance.</p>"),
+    text: "أهلاً بك،\n\nتم تسجيل بريدك بنجاح ضمن قائمة إطلاق PikLance. ستكون من أوائل من تصله أخبار الإطلاق الرسمي بتاريخ 15/08/2026.\n\nفريق PikLance",
+    html: emailShell("أهلاً بك في PikLance", "<p>تم تسجيل بريدك بنجاح ضمن قائمة الإطلاق.</p><p>ستكون من أوائل من تصله أخبار المنصة وموعد الإطلاق الرسمي بتاريخ <strong dir=\"ltr\">15/08/2026</strong>.</p><p style=\"padding:16px;border-radius:14px;background:#f5f3ff;color:#4f43a7\">شكراً لأنك جزء من بداية PikLance.</p>"),
     template: "launch_subscriber_welcome",
     reference: event.params.subscriberId,
     relatedSubscriberId: event.params.subscriberId
