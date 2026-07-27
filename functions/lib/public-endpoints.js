@@ -46,7 +46,7 @@ exports.subscribeLaunch = onCall({ region: REGION, enforceAppCheck: process.env.
     email,
     category: "coming-soon-launch",
     source: "coming-soon-page",
-    launchDate: "2026-08-01",
+    launchDate: "2026-08-15",
     createdAt: FieldValue.serverTimestamp()
   });
   return { ok: true, duplicate: false };
