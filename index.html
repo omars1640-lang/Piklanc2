@@ -1187,15 +1187,16 @@
     .step-number {
       width: 55px;
       height: 55px;
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      color: #fff;
-      border-radius: 50%;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.5rem;
-      font-weight: 800;
       margin-bottom: 1.5rem;
+    }
+
+    .step-number .theme-icon {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
 
     .step-card h3 {
@@ -1569,17 +1570,26 @@
       </div>
       <div class="steps-grid">
         <div class="step-card">
-          <div class="step-number">1</div>
+          <div class="step-number">
+            <img class="theme-icon theme-icon-light" src="assets/icons/light/step-1.svg" alt="الخطوة 1">
+            <img class="theme-icon theme-icon-dark" src="assets/icons/dark/step-1.svg" alt="الخطوة 1">
+          </div>
           <h3>أنشئ حساباً</h3>
           <p>سجل مجاناً كعميل أو مستقل في دقيقة واحدة</p>
         </div>
         <div class="step-card">
-          <div class="step-number">2</div>
+          <div class="step-number">
+            <img class="theme-icon theme-icon-light" src="assets/icons/light/step-2.svg" alt="الخطوة 2">
+            <img class="theme-icon theme-icon-dark" src="assets/icons/dark/step-2.svg" alt="الخطوة 2">
+          </div>
           <h3>اختر خدمتك</h3>
           <p>تصفح الخدمات، قارن الأسعار والتقييمات، ثم اطلب</p>
         </div>
         <div class="step-card">
-          <div class="step-number">3</div>
+          <div class="step-number">
+            <img class="theme-icon theme-icon-light" src="assets/icons/light/step-3.svg" alt="الخطوة 3">
+            <img class="theme-icon theme-icon-dark" src="assets/icons/dark/step-3.svg" alt="الخطوة 3">
+          </div>
           <h3>اطلب واستلم بأمان</h3>
           <p>ادفع من رصيدك، تابع التنفيذ، ثم راجع التسليم قبل تحرير مستحقات المستقل</p>
         </div>

@@ -2,8 +2,8 @@ import { collection, getDocs, query, where } from "https://www.gstatic.com/fireb
 import { db } from "./firebase.js";
 
 const faqSections = {
-  buyer: { label: "للمشترين", icon: "search-service" },
-  freelancer: { label: "للمستقلين", icon: "earn-profits" },
+  buyer: { label: "للمشترين", icon: "faq-buyers" },
+  freelancer: { label: "للمستقلين", icon: "faq-freelancers" },
   payment: { label: "الدفع والسحب", icon: "payment-preparing" },
   technical: { label: "أسئلة تقنية", icon: "support" },
   general: { label: "أسئلة عامة", icon: "support" }
