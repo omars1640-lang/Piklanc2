@@ -131,6 +131,9 @@ button { cursor: pointer; }
 .promo-code-copy { display: inline-flex; align-items: center; gap: 8px; min-width: 0; direction: ltr; }
 .promo-code-copy code { min-width: 0; padding: 6px 10px; border: 1px dashed var(--primary); border-radius: 9px; color: var(--primary); background: var(--primary-soft); font: 800 12px/1.4 Consolas, "Courier New", monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .promo-copy-button { min-height: 31px; padding: 0 10px; font-size: 11.5px; }
+.promo-list-footer { min-height: 44px; padding-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--border); }
+.promo-list-footer span { color: var(--muted); font-size: 11.5px; }
+.promo-list-footer button[hidden] { display: none; }
 .form-help { margin: -3px 0 4px; color: var(--muted); font-size: 11.8px; line-height: 1.8; }
 .badge-choice-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(155px,1fr)); gap: 9px; }
 .badge-choice { min-height: 46px; padding: 8px 10px; display: flex !important; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-alt); cursor: pointer; }

@@ -10,6 +10,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  startAfter,
   where,
   writeBatch
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
@@ -114,6 +115,11 @@ const state = {
   chats: [],
   audit: [],
   promoCodes: [],
+  promoCodesTotal: 0,
+  promoCodesActiveTotal: 0,
+  promoCodesCursor: null,
+  promoCodesHasMore: false,
+  promoCodesLoading: false,
   badges: [],
   referrals: [],
   benefits: [],
@@ -265,9 +271,13 @@ function normalizeAdminCode(value) {
 }
 
 function randomCode(prefix = "PIK") {
-  const random = Math.random().toString(36).slice(2, 8).toUpperCase();
+  const entropy = crypto.getRandomValues(new Uint32Array(2));
+  const random = [...entropy].map(value => value.toString(36).padStart(7, "0")).join("").slice(0, 12).toUpperCase();
   return normalizeAdminCode(`${prefix}-${random}`);
 }
+
+const PROMO_CODES_PAGE_SIZE = 100;
+const PROMO_CODES_WRITE_BATCH_SIZE = 400;
 
 function ensurePromotionsUi() {
   if (!document.querySelector('[data-section="promotions"]')) {
@@ -295,7 +305,7 @@ function ensurePromotionsUi() {
         <header><div><small>قائمة أكواد جديدة</small><h3>إنشاء أكواد</h3></div></header>
         <div class="content-form-row">
           <label>نوع الكود<select id="promoType"><option value="early_access">وصول مسبق</option><option value="discount">خصم عام</option><option value="referral">دعوة شخصية</option></select></label>
-          <label>عدد الأكواد<input id="promoCount" type="number" min="1" max="200" value="10"></label>
+          <label>عدد الأكواد<input id="promoCount" type="number" min="1" step="1" inputmode="numeric" value="10"></label>
         </div>
         <div class="content-form-row">
           <label>بادئة الكود<input id="promoPrefix" type="text" maxlength="16" value="FRIEND"></label>
@@ -305,7 +315,8 @@ function ensurePromotionsUi() {
           <label>مدة الخصم بالأيام<input id="promoDuration" type="number" min="0" max="365" value="0"></label>
           <label>الشارة<select id="promoBadge"><option value="">بدون شارة</option><option value="friends">أصدقاء PikLance</option><option value="ambassador">سفير</option></select></label>
         </div>
-        <button class="primary-button" type="submit">إنشاء القائمة</button>
+        <p class="form-help">لا يوجد حد إجمالي للإنشاء. تُحفظ القوائم الكبيرة تلقائياً على دفعات آمنة.</p>
+        <button class="primary-button" id="promoCreateButton" type="submit">إنشاء القائمة</button>
       </form>
       <div class="content-list-panel">
         <div class="panel-head"><div><p>الأكواد الحالية</p><h3>آخر الأكواد</h3></div><b id="promoActiveCount">0</b></div>
@@ -325,6 +336,10 @@ function ensurePromotionsUi() {
           <button class="secondary-button" id="exportPromoCodes" type="button">تصدير CSV</button>
         </div>
         <div class="admin-content-list" id="promoCodesList"></div>
+        <div class="promo-list-footer">
+          <span id="promoLoadedCount">0 من 0</span>
+          <button class="secondary-button" id="promoLoadMore" type="button">تحميل المزيد</button>
+        </div>
       </div>
       <form class="content-editor featured-badges-form" id="featuredBadgesForm">
         <header><div><small>الصفحة الرئيسية</small><h3>شارات الخدمات المميزة</h3></div></header>
@@ -372,6 +387,7 @@ function ensurePromotionsUi() {
   document.getElementById("promoStatusFilter").addEventListener("change", renderPromotions);
   document.getElementById("promoTypeFilter").addEventListener("change", renderPromotions);
   document.getElementById("exportPromoCodes").addEventListener("click", exportPromoCodes);
+  document.getElementById("promoLoadMore").addEventListener("click", loadMorePromoCodes);
 }
 
 function filteredPromoCodes() {
@@ -452,9 +468,9 @@ function renderPromotions() {
   const codes = [...state.promoCodes].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
   const filteredCodes = filteredPromoCodes();
 
-  document.getElementById("promoCodesCount").textContent = codes.length;
-  document.getElementById("promoActiveCount").textContent = filteredCodes.filter(code => (code.status || "active") === "active").length;
-  document.getElementById("promoCodesList").replaceChildren(...filteredCodes.slice(0, 120).map(code => {
+  document.getElementById("promoCodesCount").textContent = state.promoCodesTotal;
+  document.getElementById("promoActiveCount").textContent = state.promoCodesActiveTotal;
+  document.getElementById("promoCodesList").replaceChildren(...filteredCodes.map(code => {
     const row = document.createElement("article");
     const value = String(code.code || code.id || "");
     row.className = "admin-content-item promo-code-item";
@@ -483,6 +499,16 @@ function renderPromotions() {
     row.append(copyWrap, details, benefit);
     return row;
   }));
+  const loadedCount = document.getElementById("promoLoadedCount");
+  if (loadedCount) {
+    loadedCount.textContent = `تم تحميل ${codes.length} من ${state.promoCodesTotal} · المعروض حسب الفلتر ${filteredCodes.length}`;
+  }
+  const loadMore = document.getElementById("promoLoadMore");
+  if (loadMore) {
+    loadMore.hidden = !state.promoCodesHasMore;
+    loadMore.disabled = state.promoCodesLoading;
+    loadMore.textContent = state.promoCodesLoading ? "جاري التحميل..." : "تحميل المزيد";
+  }
 
   document.getElementById("badgesCount").textContent = badges.length;
   document.getElementById("badgesList").replaceChildren(...badges.map(badge => {
@@ -525,9 +551,99 @@ function safeCsvCell(value) {
   return `"${neutralized.replace(/"/g, '""')}"`;
 }
 
-function exportPromoCodes() {
+async function fetchPromoCodesPage(cursor = null, withCounts = false) {
+  const constraints = [orderBy("createdAt", "desc")];
+  if (cursor) constraints.push(startAfter(cursor));
+  constraints.push(limit(PROMO_CODES_PAGE_SIZE));
+  const pagePromise = getDocs(query(collection(db, "promoCodes"), ...constraints));
+  const countPromises = withCounts
+    ? [
+        getCountFromServer(collection(db, "promoCodes")),
+        getCountFromServer(query(collection(db, "promoCodes"), where("status", "==", "active")))
+      ]
+    : [];
+  const [snapshot, ...counts] = await Promise.all([pagePromise, ...countPromises]);
+  return {
+    docs: snapshot.docs,
+    cursor: snapshot.docs.at(-1) || null,
+    total: withCounts ? counts[0].data().count : state.promoCodesTotal,
+    activeTotal: withCounts ? counts[1].data().count : state.promoCodesActiveTotal
+  };
+}
+
+function applyPromoCodesPage(page, reset = false) {
+  const incoming = page.docs.map(item => ({ id: item.id, ...item.data() }));
+  const merged = reset ? incoming : [...state.promoCodes, ...incoming];
+  state.promoCodes = [...new Map(merged.map(code => [code.id, code])).values()];
+  state.promoCodesCursor = page.cursor;
+  state.promoCodesTotal = page.total;
+  state.promoCodesActiveTotal = page.activeTotal;
+  state.promoCodesHasMore = Boolean(page.cursor) && state.promoCodes.length < state.promoCodesTotal;
+}
+
+async function refreshPromoCodes() {
+  const page = await fetchPromoCodesPage(null, true);
+  applyPromoCodesPage(page, true);
+  renderPromotions();
+}
+
+async function loadMorePromoCodes() {
+  if (state.promoCodesLoading || !state.promoCodesHasMore || !state.promoCodesCursor) return;
+  state.promoCodesLoading = true;
+  renderPromotions();
+  try {
+    const page = await fetchPromoCodesPage(state.promoCodesCursor);
+    applyPromoCodesPage(page);
+  } catch (error) {
+    console.error("Unable to load more promo codes", error);
+    showToast("تعذر تحميل المزيد من الأكواد.");
+  } finally {
+    state.promoCodesLoading = false;
+    renderPromotions();
+  }
+}
+
+async function fetchAllPromoCodes() {
+  const codes = [];
+  let cursor = null;
+  do {
+    const page = await fetchPromoCodesPage(cursor);
+    codes.push(...page.docs.map(item => ({ id: item.id, ...item.data() })));
+    cursor = page.cursor;
+    if (page.docs.length < PROMO_CODES_PAGE_SIZE) break;
+  } while (cursor);
+  return [...new Map(codes.map(code => [code.id, code])).values()];
+}
+
+async function exportPromoCodes() {
+  const exportButton = document.getElementById("exportPromoCodes");
+  exportButton.disabled = true;
+  exportButton.textContent = "جاري تجهيز الملف...";
+  let codes;
+  try {
+    codes = await fetchAllPromoCodes();
+  } catch (error) {
+    console.error("Unable to export promo codes", error);
+    showToast("تعذر تحميل جميع الأكواد للتصدير.");
+    return;
+  } finally {
+    exportButton.disabled = false;
+    exportButton.textContent = "تصدير CSV";
+  }
+  const searchText = (document.getElementById("promoSearch")?.value || "").trim().toLowerCase();
+  const statusFilter = document.getElementById("promoStatusFilter")?.value || "all";
+  const typeFilter = document.getElementById("promoTypeFilter")?.value || "all";
+  codes = codes.filter(code => {
+    const haystack = [code.code, code.id, code.type, code.status, code.ownerName, code.ownerUid, code.groupId]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return (!searchText || haystack.includes(searchText))
+      && (statusFilter === "all" || (code.status || "active") === statusFilter)
+      && (typeFilter === "all" || (code.type || "promo") === typeFilter);
+  });
   const headers = ["code", "type", "status", "usedCount", "maxUses", "discountPercent", "discountDays", "ownerName", "ownerUid", "groupId"];
-  const rows = filteredPromoCodes().map(code => [
+  const rows = codes.map(code => [
     code.code || code.id || "",
     code.type || "",
     code.status || "active",
@@ -553,47 +669,84 @@ function exportPromoCodes() {
 async function createPromoCodes(event) {
   event.preventDefault();
   const type = document.getElementById("promoType").value;
-  const count = Math.max(1, Math.min(200, Number(document.getElementById("promoCount").value || 1)));
+  const count = Number(document.getElementById("promoCount").value);
+  if (!Number.isSafeInteger(count) || count < 1) {
+    showToast("أدخل عدداً صحيحاً أكبر من صفر.");
+    return;
+  }
   const prefix = normalizeAdminCode(document.getElementById("promoPrefix").value || "PIK");
   const discountPercent = Number(document.getElementById("promoDiscount").value || 0);
   const discountDays = Number(document.getElementById("promoDuration").value || 0);
   const badgeId = document.getElementById("promoBadge").value;
   const groupRef = doc(collection(db, "promoCodeGroups"));
-  const batch = writeBatch(db);
-  batch.set(groupRef, {
+  const createButton = document.getElementById("promoCreateButton");
+  createButton.disabled = true;
+  const groupBatch = writeBatch(db);
+  groupBatch.set(groupRef, {
     name: `${prefix} - ${type}`,
     type,
     prefix,
     count,
+    createdCount: 0,
     discountPercent,
     discountDays,
     badgeIds: badgeId ? [badgeId] : [],
-    status: "active",
+    status: "creating",
     createdAt: serverTimestamp(),
     createdBy: state.admin.id
   });
-  const created = new Set();
-  while (created.size < count) created.add(randomCode(prefix));
-  created.forEach(code => {
-    batch.set(doc(db, "promoCodes", code), {
-      code,
-      groupId: groupRef.id,
-      type,
-      status: "active",
-      maxUses: 1,
-      usedCount: 0,
-      discountPercent,
-      discountDays,
-      badgeIds: badgeId ? [badgeId] : [],
-      usedBy: [],
-      createdAt: serverTimestamp(),
-      createdBy: state.admin.id
-    });
-  });
-  batch.set(doc(collection(db, "adminAuditLogs")), auditData("create_promo_codes", {}, `${type} ${prefix} x${count}`));
-  await batch.commit();
-  showToast(`تم إنشاء ${count} كود بنجاح.`);
-  await loadData();
+  try {
+    await groupBatch.commit();
+    let createdCount = 0;
+    while (createdCount < count) {
+      const targetSize = Math.min(PROMO_CODES_WRITE_BATCH_SIZE, count - createdCount);
+      const codes = new Set();
+      while (codes.size < targetSize) codes.add(randomCode(prefix));
+      const codeBatch = writeBatch(db);
+      codes.forEach(code => {
+        codeBatch.set(doc(db, "promoCodes", code), {
+          code,
+          groupId: groupRef.id,
+          type,
+          status: "active",
+          maxUses: 1,
+          usedCount: 0,
+          discountPercent,
+          discountDays,
+          badgeIds: badgeId ? [badgeId] : [],
+          usedBy: [],
+          createdAt: serverTimestamp(),
+          createdBy: state.admin.id
+        });
+      });
+      createdCount += codes.size;
+      const complete = createdCount === count;
+      codeBatch.set(groupRef, {
+        createdCount,
+        status: complete ? "active" : "creating",
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      if (complete) {
+        codeBatch.set(doc(collection(db, "adminAuditLogs")), auditData("create_promo_codes", {}, `${type} ${prefix} x${count}`));
+      }
+      createButton.textContent = `جاري الإنشاء ${createdCount}/${count}`;
+      await codeBatch.commit();
+    }
+    showToast(`تم إنشاء ${count} كود بنجاح.`);
+    await refreshPromoCodes();
+  } catch (error) {
+    console.error("Unable to create promo codes", error);
+    const recoveryBatch = writeBatch(db);
+    recoveryBatch.set(groupRef, {
+      status: "partial",
+      errorAt: serverTimestamp()
+    }, { merge: true });
+    await recoveryBatch.commit().catch(() => {});
+    showToast("توقف إنشاء القائمة قبل اكتمالها. تم حفظ الأكواد المنشأة ويمكن إعادة المحاولة.");
+  } finally {
+    createButton.disabled = false;
+    createButton.textContent = "إنشاء القائمة";
+  }
 }
 
 async function assignManualBadge(event) {
@@ -1094,7 +1247,7 @@ async function loadData() {
       (hasPermission("overview.view") || hasPermission("conversations.view")) ? getDocs(query(collection(db, "chats"), orderBy("lastUpdated", "desc"), limit(100))) : empty,
       (hasPermission("overview.view") || hasPermission("audit.view")) ? getDocs(query(collection(db, "adminAuditLogs"), orderBy("createdAt", "desc"), limit(100))) : empty,
       getDoc(doc(db, "platformSettings", "general")),
-      hasPermission("promotions.manage") ? getDocs(query(collection(db, "promoCodes"), limit(100))) : empty,
+      hasPermission("promotions.manage") ? fetchPromoCodesPage(null, true) : { docs: [], cursor: null, total: 0, activeTotal: 0 },
       hasPermission("promotions.manage") ? getDocs(collection(db, "badges")) : empty,
       hasPermission("promotions.manage") ? getDocs(query(collection(db, "referrals"), limit(100))) : empty,
       hasPermission("promotions.manage") ? getDocs(query(collection(db, "userBenefits"), limit(100))) : empty,
@@ -1105,7 +1258,10 @@ async function loadData() {
     const chatsSnapshot = settledSnapshot(results[2], "chats");
     const auditSnapshot = settledSnapshot(results[3], "audit");
     const settingsSnapshot = settledSnapshot(results[4], "settings", { exists: () => false });
-    const promoCodesSnapshot = settledSnapshot(results[5], "promo codes");
+    const promoCodesPage = results[5].status === "fulfilled"
+      ? results[5].value
+      : { docs: [], cursor: null, total: 0, activeTotal: 0 };
+    if (results[5].status === "rejected") console.error("Unable to load admin promo codes", results[5].reason);
     const badgesSnapshot = settledSnapshot(results[6], "badges");
     const referralsSnapshot = settledSnapshot(results[7], "referrals");
     const benefitsSnapshot = settledSnapshot(results[8], "benefits");
@@ -1114,7 +1270,7 @@ async function loadData() {
     state.orders = ordersSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.chats = chatsSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.audit = auditSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
-    state.promoCodes = promoCodesSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    applyPromoCodesPage(promoCodesPage, true);
     state.badges = badgesSnapshot.docs.map(item => ({ id: item.id, ...item.data() })).filter(item => item.active !== false);
     state.referrals = referralsSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.benefits = benefitsSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
