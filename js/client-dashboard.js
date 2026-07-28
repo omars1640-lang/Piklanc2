@@ -1,7 +1,7 @@
 import "./platform-guard.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
-  addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where, writeBatch
+  addDoc, collection, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, startAfter, updateDoc, where, writeBatch
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import {
   deleteObject, getDownloadURL, ref as storageRef, uploadBytes
@@ -17,12 +17,19 @@ import { initializeBuyerWallet } from "./wallet-client.js";
 import {
   canReviewOrder, createOrderReview, formatStars, hasReviewedOrder
 } from "./reviews.js";
+import { appendUnique, ensureLoadMoreButton, updateLoadMoreButton } from "./pagination-ui.js";
 
 const state = {
   user: null, profile: null, orders: [], favorites: [], tickets: [], notifications: [], reviews: [], receivedReviews: [],
   pendingOrderAction: null, pendingReviewOrder: null,
-  avatarFile: null, avatarRemoved: false, avatarPreviewUrl: ""
+  avatarFile: null, avatarRemoved: false, avatarPreviewUrl: "",
+  pages: {
+    orders: { cursor: null, hasMore: false, loading: false },
+    tickets: { cursor: null, hasMore: false, loading: false },
+    notifications: { cursor: null, hasMore: false, loading: false }
+  }
 };
+const DASHBOARD_PAGE_SIZE = 25;
 const sectionTitles = { overview: "نظرة عامة", wallet: "المحفظة", orders: "طلباتي", favorites: "الخدمات المحفوظة", support: "الدعم والنزاعات", notifications: "الإشعارات", account: "إعدادات الحساب" };
 const statusLabels = { pending: "بانتظار التأكيد", active: "قيد التنفيذ", delivered: "بانتظار الاستلام", completed: "مكتمل", cancelled: "ملغي", disputed: "نزاع مفتوح", funded: "تم الدفع وجاهز للتنفيذ", open: "مفتوحة", in_progress: "قيد المعالجة", waiting_user: "بانتظار ردك", resolved: "محلولة", closed: "مغلقة", ...orderStatusLabels };
 
@@ -470,26 +477,79 @@ async function saveAccount(event) {
   }
 }
 
+const clientPageConfig = {
+  orders: {
+    source: uid => collection(db, "orders"),
+    constraints: uid => [where("buyerUid", "==", uid), orderBy("createdAt", "desc")],
+    anchorId: "ordersList",
+    render: renderOrders
+  },
+  tickets: {
+    source: uid => collection(db, "supportTickets"),
+    constraints: uid => [where("requesterUid", "==", uid), orderBy("updatedAt", "desc")],
+    anchorId: "ticketsList",
+    render: renderTickets
+  },
+  notifications: {
+    source: uid => collection(db, "notifications", uid, "items"),
+    constraints: () => [orderBy("createdAt", "desc")],
+    anchorId: "notificationsList",
+    render: renderNotifications
+  }
+};
+
+function clientLoadMoreButton(kind) {
+  const config = clientPageConfig[kind];
+  return ensureLoadMoreButton({
+    anchor: $(config.anchorId),
+    id: `${config.anchorId}LoadMore`,
+    onClick: () => loadClientPage(kind, false)
+  });
+}
+
+async function loadClientPage(kind, reset = false) {
+  const config = clientPageConfig[kind];
+  const page = state.pages[kind];
+  if (!config || page.loading || (!reset && !page.hasMore)) return;
+  page.loading = true;
+  const button = clientLoadMoreButton(kind);
+  updateLoadMoreButton(button, { hasMore: true, loading: true });
+  try {
+    const constraints = config.constraints(state.user.uid);
+    if (!reset && page.cursor) constraints.push(startAfter(page.cursor));
+    constraints.push(limit(DASHBOARD_PAGE_SIZE + 1));
+    const snapshot = await getDocs(query(config.source(state.user.uid), ...constraints));
+    const visibleDocs = snapshot.docs.slice(0, DASHBOARD_PAGE_SIZE);
+    const additions = visibleDocs.map(item => ({ id: item.id, ...item.data() }));
+    state[kind] = reset ? additions : appendUnique(state[kind], additions);
+    page.cursor = visibleDocs.at(-1) || null;
+    page.hasMore = snapshot.docs.length > DASHBOARD_PAGE_SIZE;
+    config.render();
+  } catch (error) {
+    console.error(`Unable to load client ${kind}`, error);
+    showToast("تعذر تحميل سجلات إضافية. حاول مجدداً.");
+  } finally {
+    page.loading = false;
+    updateLoadMoreButton(button, { hasMore: page.hasMore, loading: false });
+  }
+}
+
 async function loadWorkspace() {
   const uid = state.user.uid;
-  const [ordersSnapshot, favoritesSnapshot, ticketsSnapshot, notificationsSnapshot, reviewsSnapshot, receivedReviewsSnapshot] = await Promise.all([
-    getDocs(query(collection(db, "orders"), where("buyerUid", "==", uid))),
+  const [favoritesSnapshot, reviewsSnapshot, receivedReviewsSnapshot] = await Promise.all([
     getDocs(collection(db, "favorites", uid, "services")),
-    getDocs(query(collection(db, "supportTickets"), where("requesterUid", "==", uid))),
-    getDocs(collection(db, "notifications", uid, "items")),
     getDocs(query(collection(db, "reviews"), where("reviewerUid", "==", uid))).catch(() => ({ docs: [] })),
     getDocs(query(collection(db, "reviews"), where("targetUid", "==", uid))).catch(() => ({ docs: [] }))
   ]);
-  state.orders = sortNewest(ordersSnapshot.docs.map(item => ({ id: item.id, ...item.data() })));
   state.favorites = favoritesSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
-  state.tickets = sortNewest(ticketsSnapshot.docs.map(item => ({ id: item.id, ...item.data() })), "updatedAt");
-  state.notifications = sortNewest(notificationsSnapshot.docs.map(item => ({ id: item.id, ...item.data() })));
   state.reviews = sortNewest(reviewsSnapshot.docs.map(item => ({ id: item.id, ...item.data() })));
   state.receivedReviews = sortNewest(receivedReviewsSnapshot.docs.map(item => ({ id: item.id, ...item.data() })).filter(item => item.targetType === "buyer"));
-  renderOrders();
+  await Promise.all([
+    loadClientPage("orders", true),
+    loadClientPage("tickets", true),
+    loadClientPage("notifications", true)
+  ]);
   renderFavorites();
-  renderTickets();
-  renderNotifications();
   renderBuyerRating();
 }
 

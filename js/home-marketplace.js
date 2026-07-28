@@ -6,6 +6,14 @@ const categoryAliases = {
   "صوتيات": "audio", audio: "audio",
   "فيديو": "video", "فيديو وأنيميشن": "video", video: "video"
 };
+const homeCategoryValues = {
+  design: ["تصميم", "design"],
+  code: ["برمجة", "برمجة وتطوير", "web", "code"],
+  write: ["كتابة", "كتابة وترجمة", "writing", "write"],
+  market: ["تسويق", "تسويق رقمي", "marketing", "market"],
+  audio: ["صوتيات", "audio"],
+  video: ["فيديو", "فيديو وأنيميشن", "video"]
+};
 
 function setStatValue(id, value) {
   const element = document.getElementById(id);
@@ -33,9 +41,12 @@ async function loadMarketplaceDeps() {
   ]);
   marketplaceDeps = {
     collection: firestoreModule.collection,
+    documentId: firestoreModule.documentId,
     doc: firestoreModule.doc,
+    getCountFromServer: firestoreModule.getCountFromServer,
     getDoc: firestoreModule.getDoc,
     getDocs: firestoreModule.getDocs,
+    limit: firestoreModule.limit,
     query: firestoreModule.query,
     where: firestoreModule.where,
     getDownloadURL: storageModule.getDownloadURL,
@@ -381,19 +392,25 @@ async function loadHomeData() {
     const {
       collection,
       db,
+      documentId,
       doc,
+      getCountFromServer,
       getDoc,
       getDocs,
       getDownloadURL,
+      limit,
       query,
       ref,
       resolveProfileAvatar,
       storage,
       where
     } = await loadMarketplaceDeps();
-    const [servicesSnapshot, profilesSnapshot, settingsSnapshot] = await Promise.all([
-      getDocs(query(collection(db, "services"), where("status", "==", "published"))),
-      getDocs(query(collection(db, "publicProfiles"), where("accountType", "==", "freelancer"))),
+    const servicesCollection = collection(db, "services");
+    const profilesCollection = collection(db, "publicProfiles");
+    const [servicesSnapshot, servicesCountSnapshot, freelancersCountSnapshot, settingsSnapshot] = await Promise.all([
+      getDocs(query(servicesCollection, where("status", "==", "published"), limit(60))),
+      getCountFromServer(query(servicesCollection, where("status", "==", "published"))),
+      getCountFromServer(query(profilesCollection, where("accountType", "==", "freelancer"), where("status", "==", "active"))),
       getDoc(doc(db, "platformSettings", "general"))
     ]);
     const settings = settingsSnapshot.exists() ? settingsSnapshot.data() : {};
@@ -407,25 +424,36 @@ async function loadHomeData() {
       return service;
     }))).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     const publishedOwners = new Set(services.map(service => service.ownerUid));
-    const profileEntries = profilesSnapshot.docs
-      .map(item => [item.id, item.data()])
-      .filter(([id, profile]) => profile.status === "active" || publishedOwners.has(id));
+    const profileDocs = [];
+    const ownerIds = [...publishedOwners].filter(Boolean);
+    for (let index = 0; index < ownerIds.length; index += 30) {
+      const ids = ownerIds.slice(index, index + 30);
+      const snapshot = await getDocs(query(profilesCollection, where(documentId(), "in", ids)));
+      profileDocs.push(...snapshot.docs);
+    }
+    const profileEntries = profileDocs.map(item => [item.id, item.data()]);
     const profiles = new Map(await Promise.all(profileEntries.map(async ([id, profile]) => [
       id,
       { ...profile, avatar: await resolveProfileAvatar(id, profile) }
     ])));
 
-    setStatValue("homeFreelancersCount", profiles.size.toLocaleString("en-US"));
-    setStatValue("homeServicesCount", services.length.toLocaleString("en-US"));
-    const categoryCounts = services.reduce((counts, service) => {
-      const key = normalizeCategory(service.category);
-      counts[key] = (counts[key] || 0) + 1;
-      return counts;
-    }, {});
+    const freelancerCount = freelancersCountSnapshot.data().count;
+    const serviceCount = servicesCountSnapshot.data().count;
+    setStatValue("homeFreelancersCount", freelancerCount.toLocaleString("en-US"));
+    setStatValue("homeServicesCount", serviceCount.toLocaleString("en-US"));
+    const categoryEntries = await Promise.all(Object.entries(homeCategoryValues).map(async ([key, values]) => {
+      const counts = await Promise.all(values.map(value => getCountFromServer(query(
+        servicesCollection,
+        where("status", "==", "published"),
+        where("category", "==", value)
+      )).then(snapshot => snapshot.data().count).catch(() => 0)));
+      return [key, counts.reduce((sum, count) => sum + count, 0)];
+    }));
+    const categoryCounts = Object.fromEntries(categoryEntries);
     const availableCategories = Object.values(categoryCounts).filter(Boolean).length;
     setStatValue("homeCategoriesCount", availableCategories.toLocaleString("en-US"));
-    document.getElementById("homeHeroFreelancers").textContent = profiles.size
-      ? `${profiles.size.toLocaleString("en-US")} مستقل موثّق وجاهز للعمل`
+    document.getElementById("homeHeroFreelancers").textContent = freelancerCount
+      ? `${freelancerCount.toLocaleString("en-US")} مستقل موثّق وجاهز للعمل`
       : "كن من أوائل المستقلين على PikLance";
     document.querySelectorAll("[data-category-count]").forEach(element => {
       const count = categoryCounts[element.dataset.categoryCount] || 0;
