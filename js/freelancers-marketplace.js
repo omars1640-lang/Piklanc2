@@ -1,8 +1,9 @@
 import {
-  collection, getDocs, query, where
+  collection, getDocs, limit, orderBy, query, startAfter, where
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { db } from "./firebase.js";
 import { resolveProfileAvatar } from "./avatar-utils.js";
+import { appendUnique } from "./pagination-ui.js";
 
 const specialtyLabels = {
   design: "تصميم", web: "برمجة وتطوير", writing: "كتابة وترجمة",
@@ -18,8 +19,12 @@ const defaultCategories = [
 ];
 const $ = id => document.getElementById(id);
 const PAGE_SIZE = 9;
+const FETCH_SIZE = 27;
 const requestedPage = Math.max(1, Number.parseInt(new URLSearchParams(location.search).get("page") || "1", 10) || 1);
-const state = { freelancers: [], filtered: [], categories: new Map(), currentPage: requestedPage };
+const state = {
+  freelancers: [], filtered: [], categories: new Map(), currentPage: requestedPage,
+  cursor: null, hasMore: false, loading: false
+};
 
 function normalized(value) {
   return String(value || "").trim().toLowerCase().replace(/[ـًٌٍَُِّْ]/g, "").replace(/[_-]+/g, " ").replace(/\s+/g, " ");
@@ -128,8 +133,8 @@ function pageButton(label, page, options = {}) {
 function renderPagination(totalItems) {
   const pagination = $("freelancersPagination");
   const pageCount = Math.ceil(totalItems / PAGE_SIZE);
-  pagination.hidden = pageCount <= 1;
-  if (pageCount <= 1) {
+  pagination.hidden = pageCount <= 1 && !state.hasMore;
+  if (pageCount <= 1 && !state.hasMore) {
     pagination.replaceChildren();
     return;
   }
@@ -138,7 +143,17 @@ function renderPagination(totalItems) {
   for (let page = 1; page <= pageCount; page += 1) {
     buttons.push(pageButton(String(page), page, { active: page === state.currentPage }));
   }
-  buttons.push(pageButton("›", state.currentPage + 1, { disabled: state.currentPage === pageCount, label: "الصفحة التالية" }));
+  buttons.push(pageButton("›", state.currentPage + 1, { disabled: state.currentPage === pageCount && !state.hasMore, label: "الصفحة التالية" }));
+  if (state.hasMore) {
+    const more = document.createElement("button");
+    more.type = "button";
+    more.className = "page-link";
+    more.textContent = state.loading ? "..." : "المزيد";
+    more.disabled = state.loading;
+    more.setAttribute("aria-label", "تحميل مستقلين إضافيين");
+    more.addEventListener("click", () => loadFreelancers(false));
+    buttons.push(more);
+  }
   pagination.replaceChildren(...buttons);
 }
 
@@ -154,8 +169,12 @@ function render(items) {
   renderPagination(items.length);
 }
 
-function goToPage(page) {
-  const pageCount = Math.max(1, Math.ceil(state.filtered.length / PAGE_SIZE));
+async function goToPage(page) {
+  let pageCount = Math.max(1, Math.ceil(state.filtered.length / PAGE_SIZE));
+  if (page > pageCount && state.hasMore) {
+    await loadFreelancers(false);
+    pageCount = Math.max(1, Math.ceil(state.filtered.length / PAGE_SIZE));
+  }
   const nextPage = Math.min(Math.max(1, page), pageCount);
   if (nextPage === state.currentPage) return;
   state.currentPage = nextPage;
@@ -181,34 +200,51 @@ function applyFilters({ resetPage = false } = {}) {
   render(state.filtered);
 }
 
-async function loadFreelancers() {
+async function loadFreelancers(reset = true) {
+  if (state.loading || (!reset && !state.hasMore)) return;
+  state.loading = true;
+  renderPagination(state.filtered.length);
   try {
-    const [snapshot, servicesSnapshot, categoriesSnapshot] = await Promise.all([
-      getDocs(query(collection(db, "publicProfiles"), where("accountType", "==", "freelancer"))),
-      getDocs(query(collection(db, "services"), where("status", "==", "published"))),
-      getDocs(query(collection(db, "serviceCategories"), where("active", "==", true)))
-    ]);
+    const constraints = [where("accountType", "==", "freelancer"), orderBy("name"), limit(FETCH_SIZE + 1)];
+    if (!reset && state.cursor) constraints.splice(2, 0, startAfter(state.cursor));
+    const requests = [getDocs(query(collection(db, "publicProfiles"), ...constraints))];
+    if (reset) requests.push(getDocs(query(collection(db, "serviceCategories"), where("active", "==", true))));
+    const [snapshot, categoriesSnapshot] = await Promise.all(requests);
+    const visibleDocs = snapshot.docs.slice(0, FETCH_SIZE);
+    const profileIds = visibleDocs.map(item => item.id);
+    const servicesSnapshot = profileIds.length
+      ? await getDocs(query(collection(db, "services"), where("ownerUid", "in", profileIds)))
+      : { docs: [] };
     const ownerServices = new Map();
     servicesSnapshot.docs.forEach(item => {
       const service = item.data();
+      if (service.status !== "published") return;
       if (!ownerServices.has(service.ownerUid)) ownerServices.set(service.ownerUid, []);
       ownerServices.get(service.ownerUid).push(service);
     });
     const publishedOwners = new Set(ownerServices.keys());
-    populateCategoryFilter(categoriesSnapshot.docs.map(item => ({ id: item.id, ...item.data() })).filter(item => item.active !== false));
-    const freelancers = snapshot.docs
+    if (categoriesSnapshot) {
+      populateCategoryFilter(categoriesSnapshot.docs.map(item => ({ id: item.id, ...item.data() })).filter(item => item.active !== false));
+    }
+    const freelancers = visibleDocs
       .map(item => ({ id: item.id, ...item.data() }))
       .filter(profile => profile.status === "active" || publishedOwners.has(profile.id));
-    state.freelancers = await Promise.all(freelancers.map(async profile => ({
+    const additions = await Promise.all(freelancers.map(async profile => ({
       ...profile,
       serviceCategories: (ownerServices.get(profile.id) || []).map(service => service.category).filter(Boolean),
       serviceTitles: (ownerServices.get(profile.id) || []).map(service => service.title).filter(Boolean),
       avatar: await resolveProfileAvatar(profile.id, profile)
     })));
+    state.freelancers = reset ? additions : appendUnique(state.freelancers, additions);
+    state.cursor = visibleDocs.at(-1) || null;
+    state.hasMore = snapshot.docs.length > FETCH_SIZE;
     applyFilters();
   } catch (error) {
     console.error("Unable to load freelancers", error);
     $("freelancersContainer").innerHTML = '<div class="marketplace-empty"><strong>تعذر تحميل المستقلين</strong><p>تحقق من نشر قواعد وفهارس Firebase الجديدة.</p></div>';
+  } finally {
+    state.loading = false;
+    renderPagination(state.filtered.length);
   }
 }
 
@@ -216,4 +252,16 @@ $("searchInput").addEventListener("input", () => applyFilters({ resetPage: true 
 $("categoryFilter").addEventListener("change", () => applyFilters({ resetPage: true }));
 $("ratingFilter").addEventListener("change", () => applyFilters({ resetPage: true }));
 $("freelancerSearchButton").addEventListener("click", () => applyFilters({ resetPage: true }));
-loadFreelancers();
+
+async function initializeMarketplace() {
+  await loadFreelancers(true);
+  let batches = 1;
+  while (state.hasMore && Math.ceil(state.freelancers.length / PAGE_SIZE) < requestedPage && batches < 10) {
+    await loadFreelancers(false);
+    batches += 1;
+  }
+  state.currentPage = requestedPage;
+  applyFilters();
+}
+
+initializeMarketplace();

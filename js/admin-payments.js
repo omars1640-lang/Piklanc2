@@ -1,11 +1,19 @@
-import { collection, doc, getDoc, limit, onSnapshot, orderBy, query } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { collection, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query, startAfter } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
 import { getDownloadURL, ref as storageRef } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import { auth, db, functions, storage } from "./firebase.js";
 import { hasPermission, initializeAdminAccess } from "./admin-access.js";
+import { appendUnique, ensureLoadMoreButton, updateLoadMoreButton } from "./pagination-ui.js";
 
-const state = { deposits: [], withdrawals: [], selected: null, kind: "" };
+const PAYMENT_PAGE_SIZE = 30;
+const state = {
+  deposits: [], withdrawals: [], selected: null, kind: "",
+  pages: {
+    deposits: { cursor: null, hasMore: false, loading: false },
+    withdrawals: { cursor: null, hasMore: false, loading: false }
+  }
+};
 let stopDeposits = null;
 let stopWithdrawals = null;
 const $ = id => document.getElementById(id);
@@ -60,15 +68,64 @@ function sortNewest(items) {
   return items.sort((a, b) => (toDate(b.createdAt)?.getTime() || 0) - (toDate(a.createdAt)?.getTime() || 0));
 }
 
+function paymentLoadMoreButton(kind) {
+  const tableId = kind === "deposits" ? "depositRequestsTable" : "withdrawalRequestsTable";
+  return ensureLoadMoreButton({
+    anchor: $(tableId)?.closest(".table-wrap"),
+    id: `${tableId}LoadMore`,
+    onClick: () => loadMorePayments(kind)
+  });
+}
+
+async function loadMorePayments(kind) {
+  const page = state.pages[kind];
+  if (page.loading || !page.hasMore || !page.cursor) return;
+  page.loading = true;
+  const button = paymentLoadMoreButton(kind);
+  updateLoadMoreButton(button, { hasMore: true, loading: true });
+  const collectionName = kind === "deposits" ? "depositRequests" : "withdrawalRequests";
+  try {
+    const snapshot = await getDocs(query(
+      collection(db, collectionName),
+      orderBy("createdAt", "desc"),
+      startAfter(page.cursor),
+      limit(PAYMENT_PAGE_SIZE + 1)
+    ));
+    const visibleDocs = snapshot.docs.slice(0, PAYMENT_PAGE_SIZE);
+    const additions = visibleDocs.map(item => ({ id: item.id, ...item.data() }));
+    state[kind] = sortNewest(appendUnique(state[kind], additions));
+    page.cursor = visibleDocs.at(-1) || page.cursor;
+    page.hasMore = snapshot.docs.length > PAYMENT_PAGE_SIZE;
+    render();
+  } catch (error) {
+    console.error(`Unable to load more ${kind}`, error);
+  } finally {
+    page.loading = false;
+    updateLoadMoreButton(button, { hasMore: page.hasMore, loading: false });
+  }
+}
+
 function listenForPaymentRequests() {
   stopDeposits?.();
   stopWithdrawals?.();
-  stopDeposits = onSnapshot(query(collection(db, "depositRequests"), orderBy("createdAt", "desc"), limit(100)), snapshot => {
-    state.deposits = sortNewest(snapshot.docs.map(item => ({ id: item.id, ...item.data() })));
+  stopDeposits = onSnapshot(query(collection(db, "depositRequests"), orderBy("createdAt", "desc"), limit(PAYMENT_PAGE_SIZE + 1)), snapshot => {
+    const visibleDocs = snapshot.docs.slice(0, PAYMENT_PAGE_SIZE);
+    state.deposits = sortNewest(appendUnique(visibleDocs.map(item => ({ id: item.id, ...item.data() })), state.deposits));
+    if (!state.pages.deposits.cursor) {
+      state.pages.deposits.cursor = visibleDocs.at(-1) || null;
+      state.pages.deposits.hasMore = snapshot.docs.length > PAYMENT_PAGE_SIZE;
+    }
+    updateLoadMoreButton(paymentLoadMoreButton("deposits"), { hasMore: state.pages.deposits.hasMore });
     render();
   }, error => console.error("Unable to listen for deposit requests", error));
-  stopWithdrawals = onSnapshot(query(collection(db, "withdrawalRequests"), orderBy("createdAt", "desc"), limit(100)), snapshot => {
-    state.withdrawals = sortNewest(snapshot.docs.map(item => ({ id: item.id, ...item.data() })));
+  stopWithdrawals = onSnapshot(query(collection(db, "withdrawalRequests"), orderBy("createdAt", "desc"), limit(PAYMENT_PAGE_SIZE + 1)), snapshot => {
+    const visibleDocs = snapshot.docs.slice(0, PAYMENT_PAGE_SIZE);
+    state.withdrawals = sortNewest(appendUnique(visibleDocs.map(item => ({ id: item.id, ...item.data() })), state.withdrawals));
+    if (!state.pages.withdrawals.cursor) {
+      state.pages.withdrawals.cursor = visibleDocs.at(-1) || null;
+      state.pages.withdrawals.hasMore = snapshot.docs.length > PAYMENT_PAGE_SIZE;
+    }
+    updateLoadMoreButton(paymentLoadMoreButton("withdrawals"), { hasMore: state.pages.withdrawals.hasMore });
     render();
   }, error => console.error("Unable to listen for withdrawal requests", error));
 }

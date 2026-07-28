@@ -1,8 +1,8 @@
 import "./platform-guard.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
-  addDoc, collection, deleteDoc, doc, getDoc, getDocs, query,
-  serverTimestamp, setDoc, updateDoc, where, writeBatch
+  addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query,
+  serverTimestamp, setDoc, startAfter, updateDoc, where, writeBatch
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import {
   deleteObject, getDownloadURL, ref as storageRef, uploadBytes
@@ -16,6 +16,7 @@ import { initializeWithdrawals } from "./withdrawals.js";
 import {
   canReviewOrder, createOrderReview, formatStars, hasReviewedOrder
 } from "./reviews.js";
+import { appendUnique, ensureLoadMoreButton, updateLoadMoreButton } from "./pagination-ui.js";
 
 const specialtyLabels = { design: "تصميم", web: "برمجة وتطوير", writing: "كتابة وترجمة", marketing: "تسويق رقمي" };
 const serviceStatus = {
@@ -31,8 +32,14 @@ const state = {
   editingServiceId: null,
   pendingDeliveryOrder: null, pendingReviewOrder: null,
   pendingConfirmAction: null,
-  avatarFile: null, avatarRemoved: false, avatarPreviewUrl: ""
+  avatarFile: null, avatarRemoved: false, avatarPreviewUrl: "",
+  pages: {
+    services: { cursor: null, hasMore: false, loading: false },
+    orders: { cursor: null, hasMore: false, loading: false },
+    notifications: { cursor: null, hasMore: false, loading: false }
+  }
 };
+const DASHBOARD_PAGE_SIZE = 25;
 const $ = id => document.getElementById(id);
 const elements = {
   loadingScreen: $("loadingScreen"), sidebar: $("sidebar"), sidebarOverlay: $("sidebarOverlay"),
@@ -1008,20 +1015,73 @@ function renderAccountPerformance() {
   if (note) note.textContent = `يعتمد المخطط على الطلبات الحقيقية خلال آخر 30 يوماً. لديك ${active} طلب قيد التنفيذ و${completed} طلب مكتمل.`;
 }
 
+const freelancerPageConfig = {
+  services: {
+    source: uid => collection(db, "services"),
+    constraints: uid => [where("ownerUid", "==", uid), orderBy("updatedAt", "desc")],
+    anchorId: "servicesTable",
+    render: renderServices
+  },
+  orders: {
+    source: uid => collection(db, "orders"),
+    constraints: uid => [where("freelancerUid", "==", uid), orderBy("createdAt", "desc")],
+    anchorId: "ordersTable",
+    render: () => { renderOrders(); renderAccountPerformance(); }
+  },
+  notifications: {
+    source: uid => collection(db, "notifications", uid, "items"),
+    constraints: () => [orderBy("createdAt", "desc")],
+    anchorId: "notificationsList",
+    render: renderNotifications
+  }
+};
+
+function freelancerLoadMoreButton(kind) {
+  const config = freelancerPageConfig[kind];
+  const element = $(config.anchorId);
+  const anchor = element?.closest(".table-wrap") || element;
+  return ensureLoadMoreButton({
+    anchor,
+    id: `${config.anchorId}LoadMore`,
+    onClick: () => loadFreelancerPage(kind, false)
+  });
+}
+
+async function loadFreelancerPage(kind, reset = false) {
+  const config = freelancerPageConfig[kind];
+  const page = state.pages[kind];
+  if (!config || page.loading || (!reset && !page.hasMore)) return;
+  page.loading = true;
+  const button = freelancerLoadMoreButton(kind);
+  updateLoadMoreButton(button, { hasMore: true, loading: true });
+  try {
+    const constraints = config.constraints(state.user.uid);
+    if (!reset && page.cursor) constraints.push(startAfter(page.cursor));
+    constraints.push(limit(DASHBOARD_PAGE_SIZE + 1));
+    const snapshot = await getDocs(query(config.source(state.user.uid), ...constraints));
+    const visibleDocs = snapshot.docs.slice(0, DASHBOARD_PAGE_SIZE);
+    const additions = visibleDocs.map(item => ({ id: item.id, ...item.data() }));
+    state[kind] = reset ? additions : appendUnique(state[kind], additions);
+    page.cursor = visibleDocs.at(-1) || null;
+    page.hasMore = snapshot.docs.length > DASHBOARD_PAGE_SIZE;
+    config.render();
+  } catch (error) {
+    console.error(`Unable to load freelancer ${kind}`, error);
+    showToast("تعذر تحميل سجلات إضافية. حاول مجدداً.");
+  } finally {
+    page.loading = false;
+    updateLoadMoreButton(button, { hasMore: page.hasMore, loading: false });
+  }
+}
+
 async function loadWorkspace() {
   const uid = state.user.uid;
-  const [servicesSnapshot, ordersSnapshot, notificationsSnapshot, reviewsSnapshot, categoriesSnapshot, portfolioSnapshot, legacyPortfolioSnapshot] = await Promise.all([
-    getDocs(query(collection(db, "services"), where("ownerUid", "==", uid))),
-    getDocs(query(collection(db, "orders"), where("freelancerUid", "==", uid))),
-    getDocs(collection(db, "notifications", uid, "items")),
+  const [reviewsSnapshot, categoriesSnapshot, portfolioSnapshot, legacyPortfolioSnapshot] = await Promise.all([
     getDocs(query(collection(db, "reviews"), where("reviewerUid", "==", uid))).catch(() => ({ docs: [] })),
     getDocs(query(collection(db, "serviceCategories"), where("active", "==", true))),
     getDocs(query(collection(db, PORTFOLIO_COLLECTION), where("ownerUid", "==", uid))),
     getDocs(query(collection(db, LEGACY_PORTFOLIO_COLLECTION), where("ownerUid", "==", uid))).catch(() => ({ docs: [] }))
   ]);
-  state.services = sortNewest(servicesSnapshot.docs.map(item => ({ id: item.id, ...item.data() })));
-  state.orders = sortNewest(ordersSnapshot.docs.map(item => ({ id: item.id, ...item.data() })), "createdAt");
-  state.notifications = sortNewest(notificationsSnapshot.docs.map(item => ({ id: item.id, ...item.data() })), "createdAt");
   state.reviews = sortNewest(reviewsSnapshot.docs.map(item => ({ id: item.id, ...item.data() })), "createdAt");
   state.categories = categoriesSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
   const portfolioItems = [
@@ -1033,12 +1093,13 @@ async function loadWorkspace() {
     "createdAt"
   );
   await hydratePortfolioImages();
+  await Promise.all([
+    loadFreelancerPage("services", true),
+    loadFreelancerPage("orders", true),
+    loadFreelancerPage("notifications", true)
+  ]);
   populateServiceCategories();
-  renderServices();
-  renderOrders();
-  renderNotifications();
   renderPortfolio();
-  renderAccountPerformance();
   fillProfile(state.user, state.profile);
 }
 

@@ -20,6 +20,7 @@ import { auth, db, functions, storage } from "./firebase.js";
 import { sendOfficialEmail } from "./email-client.js";
 import { seedDefaultBadges } from "./piklance-access.js";
 import { applyAdminAccess, canAccessSection, firstAllowedSection, hasPermission, initializeAdminAccess } from "./admin-access.js";
+import { appendUnique, ensureLoadMoreButton, updateLoadMoreButton } from "./pagination-ui.js";
 
 const sectionMeta = {
   overview: ["مركز العمليات", "نظرة عامة"],
@@ -126,8 +127,72 @@ const state = {
   settings: null,
   metrics: null,
   selectedUser: null,
-  pendingDecision: null
+  pendingDecision: null,
+  collectionPages: {
+    users: { cursor: null, hasMore: false, loading: false },
+    chats: { cursor: null, hasMore: false, loading: false },
+    audit: { cursor: null, hasMore: false, loading: false }
+  }
 };
+
+const ADMIN_COLLECTION_PAGE_SIZE = 30;
+const adminCollectionConfig = {
+  users: { collectionName: "users", orderField: "createdAt", anchorId: "usersTable" },
+  chats: { collectionName: "chats", orderField: "lastUpdated", anchorId: "chatsTable" },
+  audit: { collectionName: "adminAuditLogs", orderField: "createdAt", anchorId: "auditTimeline" }
+};
+
+function renderAdminCollection(kind) {
+  if (kind === "users") {
+    populateSpecialties();
+    renderVerifications();
+    renderUsers();
+    renderRanks();
+    renderPromotions();
+  } else if (kind === "chats") {
+    renderChats();
+  } else {
+    renderAudit();
+  }
+}
+
+function adminCollectionButton(kind) {
+  const config = adminCollectionConfig[kind];
+  const anchorElement = document.getElementById(config.anchorId);
+  const anchor = anchorElement?.closest(".table-wrap") || anchorElement;
+  return ensureLoadMoreButton({
+    anchor,
+    id: `${config.anchorId}LoadMore`,
+    onClick: () => loadAdminCollectionPage(kind, false)
+  });
+}
+
+async function loadAdminCollectionPage(kind, reset = false) {
+  const config = adminCollectionConfig[kind];
+  const page = state.collectionPages[kind];
+  if (!config || page.loading || (!reset && !page.hasMore)) return;
+  page.loading = true;
+  const button = adminCollectionButton(kind);
+  updateLoadMoreButton(button, { hasMore: true, loading: true });
+  try {
+    const constraints = [orderBy(config.orderField, "desc")];
+    if (!reset && page.cursor) constraints.push(startAfter(page.cursor));
+    constraints.push(limit(ADMIN_COLLECTION_PAGE_SIZE + 1));
+    const snapshot = await getDocs(query(collection(db, config.collectionName), ...constraints));
+    const visibleDocs = snapshot.docs.slice(0, ADMIN_COLLECTION_PAGE_SIZE);
+    const additions = visibleDocs.map(item => ({ id: item.id, ...item.data() }));
+    state[kind] = reset ? additions : appendUnique(state[kind], additions);
+    page.cursor = visibleDocs.at(-1) || null;
+    page.hasMore = snapshot.docs.length > ADMIN_COLLECTION_PAGE_SIZE;
+    renderAdminCollection(kind);
+  } catch (error) {
+    console.error(`Unable to load more admin ${kind}`, error);
+    showToast("تعذر تحميل سجلات إضافية. حاول مجدداً.");
+  } finally {
+    page.loading = false;
+    updateLoadMoreButton(button, { hasMore: page.hasMore, loading: false });
+  }
+}
 
 const elements = {
   loading: document.getElementById("adminLoading"),
@@ -1221,10 +1286,11 @@ function settledSnapshot(result, label, fallback = { docs: [] }) {
 async function loadUsersForCurrentPermission(needsUsers) {
   if (!needsUsers) return { docs: [] };
   if (hasPermission("users.view") || hasPermission("verifications.view")) {
-    return getDocs(query(collection(db, "users"), orderBy("createdAt", "desc"), limit(100)));
+    return getDocs(query(collection(db, "users"), orderBy("createdAt", "desc"), limit(ADMIN_COLLECTION_PAGE_SIZE + 1)));
   }
   const result = await httpsCallable(functions, "getAdminUserSummaries")();
   return {
+    canPaginate: false,
     docs: (Array.isArray(result.data?.users) ? result.data.users : []).map(user => ({
       id: user.id,
       data: () => {
@@ -1233,6 +1299,17 @@ async function loadUsersForCurrentPermission(needsUsers) {
       }
     }))
   };
+}
+
+function applyInitialAdminSnapshot(kind, snapshot) {
+  const page = state.collectionPages[kind];
+  const visibleDocs = snapshot.canPaginate === false
+    ? snapshot.docs
+    : snapshot.docs.slice(0, ADMIN_COLLECTION_PAGE_SIZE);
+  state[kind] = visibleDocs.map(item => ({ id: item.id, ...item.data() }));
+  page.cursor = snapshot.canPaginate === false ? null : visibleDocs.at(-1) || null;
+  page.hasMore = snapshot.canPaginate !== false && snapshot.docs.length > ADMIN_COLLECTION_PAGE_SIZE;
+  updateLoadMoreButton(adminCollectionButton(kind), { hasMore: page.hasMore });
 }
 
 async function loadData() {
@@ -1244,8 +1321,8 @@ async function loadData() {
     const results = await Promise.allSettled([
       loadUsersForCurrentPermission(needsUsers),
       hasPermission("finance.view") ? getDocs(query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(100))) : empty,
-      (hasPermission("overview.view") || hasPermission("conversations.view")) ? getDocs(query(collection(db, "chats"), orderBy("lastUpdated", "desc"), limit(100))) : empty,
-      (hasPermission("overview.view") || hasPermission("audit.view")) ? getDocs(query(collection(db, "adminAuditLogs"), orderBy("createdAt", "desc"), limit(100))) : empty,
+      (hasPermission("overview.view") || hasPermission("conversations.view")) ? getDocs(query(collection(db, "chats"), orderBy("lastUpdated", "desc"), limit(ADMIN_COLLECTION_PAGE_SIZE + 1))) : empty,
+      (hasPermission("overview.view") || hasPermission("audit.view")) ? getDocs(query(collection(db, "adminAuditLogs"), orderBy("createdAt", "desc"), limit(ADMIN_COLLECTION_PAGE_SIZE + 1))) : empty,
       getDoc(doc(db, "platformSettings", "general")),
       hasPermission("promotions.manage") ? fetchPromoCodesPage(null, true) : { docs: [], cursor: null, total: 0, activeTotal: 0 },
       hasPermission("promotions.manage") ? getDocs(collection(db, "badges")) : empty,
@@ -1266,10 +1343,10 @@ async function loadData() {
     const referralsSnapshot = settledSnapshot(results[7], "referrals");
     const benefitsSnapshot = settledSnapshot(results[8], "benefits");
     state.metrics = results[9].status === "fulfilled" ? results[9].value : null;
-    state.users = usersSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     state.orders = ordersSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
-    state.chats = chatsSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
-    state.audit = auditSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    applyInitialAdminSnapshot("users", usersSnapshot);
+    applyInitialAdminSnapshot("chats", chatsSnapshot);
+    applyInitialAdminSnapshot("audit", auditSnapshot);
     applyPromoCodesPage(promoCodesPage, true);
     state.badges = badgesSnapshot.docs.map(item => ({ id: item.id, ...item.data() })).filter(item => item.active !== false);
     state.referrals = referralsSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));

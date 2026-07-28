@@ -39,6 +39,9 @@ jobs:
       - name: Run security regression audit
         run: node scripts/security-audit.mjs
 
+      - name: Check pagination architecture
+        run: node scripts/test-pagination-architecture.mjs
+
       - name: Check browser JavaScript syntax
         shell: bash
         run: |

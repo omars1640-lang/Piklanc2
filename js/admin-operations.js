@@ -10,12 +10,20 @@ import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/fireba
 import { auth, db, functions, storage } from "./firebase.js";
 import { sendOfficialEmail } from "./email-client.js";
 import { applyAdminAccess, hasPermission, initializeAdminAccess } from "./admin-access.js";
+import { appendUnique, ensureLoadMoreButton, updateLoadMoreButton } from "./pagination-ui.js";
 
 const state = {
   admin: null, services: [], tickets: [], orders: [], articles: [], faqs: [], categories: [],
   selectedTicket: null, replies: [], verificationCount: 0, pendingServiceReview: null, pendingConfirmAction: null,
   articleCursor: null, articleHasMore: false, articleTotal: 0, articleLoading: false,
-  articleSaving: false, articleOperationId: "", loadedSections: new Set(), counts: {}, financeMetrics: null
+  articleSaving: false, articleOperationId: "", loadedSections: new Set(), counts: {}, financeMetrics: null,
+  operationPages: {
+    services: { cursor: null, hasMore: false, loading: false },
+    tickets: { cursor: null, hasMore: false, loading: false },
+    orders: { cursor: null, hasMore: false, loading: false },
+    faqs: { cursor: null, hasMore: false, loading: false },
+    categories: { cursor: null, hasMore: false, loading: false }
+  }
 };
 const $ = id => document.getElementById(id);
 const toDate = value => value?.toDate?.() || (value ? new Date(value) : null);
@@ -28,6 +36,57 @@ const categoryLabels = { technical: "تقنية", account: "الحساب", payme
 const faqSectionLabels = { buyer: "للمشترين", freelancer: "للمستقلين", payment: "الدفع والسحب", technical: "أسئلة تقنية", general: "أسئلة عامة" };
 const ADMIN_PAGE_SIZE = 20;
 const money = value => `${Number(value || 0).toLocaleString("en-US")} ل.س`;
+
+const operationPageConfig = {
+  services: { collectionName: "services", orderField: "updatedAt", anchorId: "adminServicesTable", render: renderServices },
+  tickets: { collectionName: "supportTickets", orderField: "updatedAt", anchorId: "adminTicketsTable", render: renderTickets },
+  orders: { collectionName: "orders", orderField: "createdAt", anchorId: "financeOrdersTable", render: renderFinance },
+  faqs: { collectionName: "faqItems", orderField: "order", direction: "asc", anchorId: "faqsList", render: renderContent },
+  categories: { collectionName: "serviceCategories", orderField: "order", direction: "asc", anchorId: "categoriesList", render: renderContent }
+};
+
+function operationLoadMoreButton(kind) {
+  const config = operationPageConfig[kind];
+  const element = $(config.anchorId);
+  const anchor = element?.closest(".table-wrap") || element;
+  return ensureLoadMoreButton({
+    anchor,
+    id: `${config.anchorId}LoadMore`,
+    onClick: () => loadOperationPage(kind, false)
+  });
+}
+
+async function loadOperationPage(kind, reset = false) {
+  const config = operationPageConfig[kind];
+  const page = state.operationPages[kind];
+  if (!config || page.loading || (!reset && !page.hasMore)) return;
+  page.loading = true;
+  const button = operationLoadMoreButton(kind);
+  updateLoadMoreButton(button, { hasMore: true, loading: true });
+  try {
+    const constraints = [orderBy(config.orderField, config.direction || "desc")];
+    if (!reset && page.cursor) constraints.push(startAfter(page.cursor));
+    constraints.push(limit(ADMIN_PAGE_SIZE + 1));
+    const snapshot = await getDocs(query(collection(db, config.collectionName), ...constraints));
+    const visibleDocs = snapshot.docs.slice(0, ADMIN_PAGE_SIZE);
+    const additions = visibleDocs.map(item => ({ id: item.id, ...item.data() }));
+    state[kind] = reset ? additions : appendUnique(state[kind], additions);
+    if (config.direction === "asc") {
+      state[kind].sort((a, b) => Number(a[config.orderField] || 0) - Number(b[config.orderField] || 0));
+    } else {
+      sortNewest(state[kind], config.orderField);
+    }
+    page.cursor = visibleDocs.at(-1) || null;
+    page.hasMore = snapshot.docs.length > ADMIN_PAGE_SIZE;
+    config.render();
+  } catch (error) {
+    console.error(`Unable to load more ${kind}`, error);
+    toast("تعذر تحميل سجلات إضافية. تحقق من الاتصال وحاول مجدداً.");
+  } finally {
+    page.loading = false;
+    updateLoadMoreButton(button, { hasMore: page.hasMore, loading: false });
+  }
+}
 
 function initializeFinancePeriod() {
   const now = new Date();
@@ -1008,19 +1067,16 @@ function bindAsyncForm(id, handler, errorMessage) {
 }
 
 async function loadOperations(section = document.querySelector(".nav-link.active")?.dataset.section || "all") {
-  const empty = { docs: [] };
   const wants = name => section === "all" || section === name;
-  const [services, tickets, orders, faqs, categories] = await Promise.all([
-    wants("marketplace") && (hasPermission("services.view") || hasPermission("services.moderate")) ? safeSnapshot("الخدمات", getDocs(query(collection(db, "services"), orderBy("updatedAt", "desc"), limit(50)))) : empty,
-    wants("support") && (hasPermission("support.view") || hasPermission("support.reply")) ? safeSnapshot("الدعم", getDocs(query(collection(db, "supportTickets"), orderBy("updatedAt", "desc"), limit(50)))) : empty,
-    wants("finance") && hasPermission("finance.view") ? safeSnapshot("الطلبات", getDocs(query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(50)))) : empty,
-    wants("content") && (hasPermission("content.view") || hasPermission("content.manage")) ? safeSnapshot("الأسئلة الشائعة", getDocs(query(collection(db, "faqItems"), orderBy("order"), limit(50)))) : empty,
-    wants("content") && (hasPermission("content.view") || hasPermission("content.manage")) ? safeSnapshot("التصنيفات", getDocs(query(collection(db, "serviceCategories"), orderBy("order"), limit(50)))) : empty
-  ]);
-  if (wants("marketplace")) { state.services = sortNewest(services.docs.map(item => ({ id: item.id, ...item.data() }))); renderServices(); }
-  if (wants("support")) { state.tickets = sortNewest(tickets.docs.map(item => ({ id: item.id, ...item.data() }))); renderTickets(); }
+  const pageLoads = [];
+  if (wants("marketplace") && (hasPermission("services.view") || hasPermission("services.moderate"))) pageLoads.push(loadOperationPage("services", true));
+  if (wants("support") && (hasPermission("support.view") || hasPermission("support.reply"))) pageLoads.push(loadOperationPage("tickets", true));
+  if (wants("finance") && hasPermission("finance.view")) pageLoads.push(loadOperationPage("orders", true));
+  if (wants("content") && (hasPermission("content.view") || hasPermission("content.manage"))) {
+    pageLoads.push(loadOperationPage("faqs", true), loadOperationPage("categories", true));
+  }
+  await Promise.all(pageLoads);
   if (wants("finance")) {
-    state.orders = sortNewest(orders.docs.map(item => ({ id: item.id, ...item.data() })));
     await loadFinanceMetrics();
     renderFinance();
   }
@@ -1028,8 +1084,6 @@ async function loadOperations(section = document.querySelector(".nav-link.active
     if (hasPermission("content.manage")) {
       await callArticleFunction("migrateArticlesForScale", {}).catch(error => console.warn("Unable to migrate legacy articles", error));
     }
-    state.faqs = faqs.docs.map(item => ({ id: item.id, ...item.data() })).sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
-    state.categories = categories.docs.map(item => ({ id: item.id, ...item.data() })).sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
     await loadArticlesPage(true);
     renderContent();
   }

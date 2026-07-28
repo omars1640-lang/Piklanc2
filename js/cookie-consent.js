@@ -2,6 +2,20 @@ import { applyMetaPixelConsent } from "./meta-pixel.js";
 
 const STORAGE_KEY = "piklance_cookie_consent";
 
+function ensureConsentStyles() {
+  const existing = document.querySelector('link[data-cookie-consent-styles]');
+  if (existing) return Promise.resolve();
+  const stylesheet = document.createElement("link");
+  stylesheet.rel = "stylesheet";
+  stylesheet.href = new URL("../css/cookie-consent.css?v=20260729", import.meta.url).href;
+  stylesheet.dataset.cookieConsentStyles = "true";
+  document.head.appendChild(stylesheet);
+  return new Promise(resolve => {
+    stylesheet.addEventListener("load", resolve, { once: true });
+    stylesheet.addEventListener("error", resolve, { once: true });
+  });
+}
+
 function savePreference(value) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     value,
@@ -60,7 +74,8 @@ function buildPanel() {
   return panel;
 }
 
-function initializeConsent() {
+async function initializeConsent() {
+  await ensureConsentStyles();
   const panel = buildPanel();
   const preference = getPreference();
   if (preference) {

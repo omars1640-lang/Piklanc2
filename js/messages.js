@@ -4,11 +4,15 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
+  limit,
+  limitToLast,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
   setDoc,
+  startAfter,
   updateDoc,
   where
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
@@ -60,6 +64,15 @@ let selectedFiles = [];
 let activeFilter = "all";
 let unsubscribeChats = null;
 let unsubscribeMessages = null;
+let conversationCursor = null;
+let conversationsHasMore = false;
+let conversationsLoadingMore = false;
+let messageDocs = [];
+let messagesHasMore = false;
+let messagesLoadingOlder = false;
+let messagesPaginationStarted = false;
+const MESSAGE_PAGE_SIZE = 50;
+const CONVERSATION_PAGE_SIZE = 30;
 
 const initialParams = new URLSearchParams(location.search);
 const hasRequestedConversation = initialParams.has("withUid") || initialParams.has("chat");
@@ -325,6 +338,15 @@ function renderConversationList() {
     button.addEventListener("click", () => openConversation(chat.id));
     elements.conversationList.appendChild(button);
   });
+  if (conversationsHasMore) {
+    const more = document.createElement("button");
+    more.type = "button";
+    more.className = "secondary-button conversation-load-more";
+    more.textContent = conversationsLoadingMore ? "جاري التحميل..." : "تحميل محادثات أقدم";
+    more.disabled = conversationsLoadingMore;
+    more.addEventListener("click", loadOlderConversations);
+    elements.conversationList.appendChild(more);
+  }
 }
 
 function renderConversationDetails(chat) {
@@ -412,8 +434,8 @@ function renderAttachment(message) {
   return link;
 }
 
-function markMessagesRead(snapshot) {
-  snapshot.docs
+function markMessagesRead(docs) {
+  docs
     .filter(messageDoc => {
       const message = messageDoc.data();
       return message.senderUid !== currentUser.uid && !message.readBy?.includes(currentUser.uid);
@@ -426,17 +448,38 @@ function markMessagesRead(snapshot) {
     });
 }
 
-function renderMessages(snapshot) {
+function messageTimestamp(messageDoc) {
+  return toDate(messageDoc.data().timestamp)?.getTime() || 0;
+}
+
+function mergeMessageDocs(docs) {
+  const messages = new Map(messageDocs.map(item => [item.id, item]));
+  docs.forEach(item => messages.set(item.id, item));
+  messageDocs = [...messages.values()].sort((a, b) => messageTimestamp(a) - messageTimestamp(b));
+}
+
+function olderMessagesButton() {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "secondary-button older-messages-button";
+  button.textContent = messagesLoadingOlder ? "جاري تحميل الرسائل..." : "تحميل رسائل أقدم";
+  button.disabled = messagesLoadingOlder;
+  button.addEventListener("click", loadOlderMessages);
+  return button;
+}
+
+function renderMessages({ hasNewMessages = false } = {}) {
   const shouldStickToBottom = elements.stream.scrollHeight - elements.stream.scrollTop - elements.stream.clientHeight < 120;
   elements.stream.replaceChildren();
 
-  if (snapshot.empty) {
+  if (!messageDocs.length) {
     setStreamState("ابدأ المحادثة برسالة واضحة عن المطلوب والمدة والميزانية.");
     return;
   }
 
+  if (messagesHasMore) elements.stream.appendChild(olderMessagesButton());
   let currentDay = "";
-  snapshot.forEach(messageDoc => {
+  messageDocs.forEach(messageDoc => {
     try {
       const message = messageDoc.data();
       const date = toDate(message.timestamp) || new Date();
@@ -477,19 +520,56 @@ function renderMessages(snapshot) {
     }
   });
 
-  if (shouldStickToBottom || snapshot.docChanges().some(change => change.type === "added")) {
+  if (shouldStickToBottom || hasNewMessages) {
     requestAnimationFrame(() => {
       elements.stream.scrollTop = elements.stream.scrollHeight;
     });
   }
-  markMessagesRead(snapshot);
+  markMessagesRead(messageDocs);
+}
+
+async function loadOlderMessages() {
+  if (!activeChat || messagesLoadingOlder || !messagesHasMore || !messageDocs.length) return;
+  messagesLoadingOlder = true;
+  messagesPaginationStarted = true;
+  renderMessages();
+  try {
+    const oldest = messageDocs[0];
+    const snapshot = await getDocs(query(
+      collection(db, "chats", activeChat.id, "messages"),
+      orderBy("timestamp", "desc"),
+      startAfter(oldest),
+      limit(MESSAGE_PAGE_SIZE + 1)
+    ));
+    const visibleDocs = snapshot.docs.slice(0, MESSAGE_PAGE_SIZE);
+    mergeMessageDocs(visibleDocs);
+    messagesHasMore = snapshot.docs.length > MESSAGE_PAGE_SIZE;
+  } catch (error) {
+    console.error("Unable to load older messages", error);
+    showToast("تعذر تحميل الرسائل الأقدم.");
+  } finally {
+    messagesLoadingOlder = false;
+    renderMessages();
+  }
 }
 
 function subscribeToMessages(chatId) {
   unsubscribeMessages?.();
+  messageDocs = [];
+  messagesHasMore = false;
+  messagesLoadingOlder = false;
+  messagesPaginationStarted = false;
   setStreamState("جاري تحميل الرسائل...");
-  const messagesQuery = query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "asc"));
-  unsubscribeMessages = onSnapshot(messagesQuery, renderMessages, error => {
+  const messagesQuery = query(
+    collection(db, "chats", chatId, "messages"),
+    orderBy("timestamp", "asc"),
+    limitToLast(MESSAGE_PAGE_SIZE)
+  );
+  unsubscribeMessages = onSnapshot(messagesQuery, snapshot => {
+    mergeMessageDocs(snapshot.docs);
+    if (!messagesPaginationStarted) messagesHasMore = snapshot.docs.length === MESSAGE_PAGE_SIZE;
+    renderMessages({ hasNewMessages: snapshot.docChanges().some(change => change.type === "added") });
+  }, error => {
     console.error("Message subscription failed", error);
     setStreamState(`تعذر تحميل الرسائل (${error.code || "unknown"}). تحقق من الصلاحيات أو الاتصال.`);
   });
@@ -516,9 +596,23 @@ async function openConversation(chatId) {
 
 function subscribeToConversations() {
   unsubscribeChats?.();
-  const chatsQuery = query(collection(db, "chats"), where("participantUids", "array-contains", currentUser.uid));
+  conversationCursor = null;
+  conversationsHasMore = false;
+  const chatsQuery = query(
+    collection(db, "chats"),
+    where("participantUids", "array-contains", currentUser.uid),
+    orderBy("lastUpdated", "desc"),
+    limit(CONVERSATION_PAGE_SIZE + 1)
+  );
   unsubscribeChats = onSnapshot(chatsQuery, snapshot => {
-    conversations = sortByUpdatedAt(snapshot.docs.map(chatDoc => ({ id: chatDoc.id, ...chatDoc.data() })));
+    const visibleDocs = snapshot.docs.slice(0, CONVERSATION_PAGE_SIZE);
+    const latest = visibleDocs.map(chatDoc => ({ id: chatDoc.id, ...chatDoc.data() }));
+    const latestIds = new Set(latest.map(chat => chat.id));
+    conversations = sortByUpdatedAt([...latest, ...conversations.filter(chat => !latestIds.has(chat.id))]);
+    if (!conversationCursor) {
+      conversationCursor = visibleDocs.at(-1) || null;
+      conversationsHasMore = snapshot.docs.length > CONVERSATION_PAGE_SIZE;
+    }
     if (activeChat) {
       activeChat = conversations.find(chat => chat.id === activeChat.id) || activeChat;
       renderConversationDetails(activeChat);
@@ -543,6 +637,33 @@ function subscribeToConversations() {
     empty.append(icon, title, detail);
     elements.conversationList.appendChild(empty);
   });
+}
+
+async function loadOlderConversations() {
+  if (!conversationCursor || !conversationsHasMore || conversationsLoadingMore) return;
+  conversationsLoadingMore = true;
+  renderConversationList();
+  try {
+    const snapshot = await getDocs(query(
+      collection(db, "chats"),
+      where("participantUids", "array-contains", currentUser.uid),
+      orderBy("lastUpdated", "desc"),
+      startAfter(conversationCursor),
+      limit(CONVERSATION_PAGE_SIZE + 1)
+    ));
+    const visibleDocs = snapshot.docs.slice(0, CONVERSATION_PAGE_SIZE);
+    const additions = visibleDocs.map(chatDoc => ({ id: chatDoc.id, ...chatDoc.data() }));
+    const existingIds = new Set(conversations.map(chat => chat.id));
+    conversations = sortByUpdatedAt([...conversations, ...additions.filter(chat => !existingIds.has(chat.id))]);
+    conversationCursor = visibleDocs.at(-1) || conversationCursor;
+    conversationsHasMore = snapshot.docs.length > CONVERSATION_PAGE_SIZE;
+  } catch (error) {
+    console.error("Unable to load older conversations", error);
+    showToast("تعذر تحميل المحادثات الأقدم.");
+  } finally {
+    conversationsLoadingMore = false;
+    renderConversationList();
+  }
 }
 
 function validateFile(file) {

@@ -1,9 +1,10 @@
 import {
-  collection, getDocs, query, where
+  collection, documentId, getDocs, limit, orderBy, query, startAfter, where
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
 import { db, storage } from "./firebase.js";
 import { resolveProfileAvatar } from "./avatar-utils.js";
+import { appendUnique } from "./pagination-ui.js";
 
 const categoryAliases = {
   design: "design", code: "code", web: "code", programming: "code",
@@ -21,8 +22,12 @@ const categoryLabels = {
 };
 
 const PAGE_SIZE = 9;
+const FETCH_SIZE = 27;
 const requestedPage = Math.max(1, Number.parseInt(new URLSearchParams(location.search).get("page") || "1", 10) || 1);
-const state = { services: [], categories: [], currentPage: requestedPage, filtered: [] };
+const state = {
+  services: [], categories: [], currentPage: requestedPage, filtered: [],
+  cursor: null, hasMore: false, loading: false
+};
 const $ = id => document.getElementById(id);
 
 function categoryFilterValue(value) {
@@ -108,8 +113,8 @@ function pageButton(label, page, options = {}) {
 function renderPagination(totalItems) {
   const pagination = $("servicesPagination");
   const pageCount = Math.ceil(totalItems / PAGE_SIZE);
-  pagination.hidden = pageCount <= 1;
-  if (pageCount <= 1) {
+  pagination.hidden = pageCount <= 1 && !state.hasMore;
+  if (pageCount <= 1 && !state.hasMore) {
     pagination.replaceChildren();
     return;
   }
@@ -118,7 +123,17 @@ function renderPagination(totalItems) {
   for (let page = 1; page <= pageCount; page += 1) {
     buttons.push(pageButton(String(page), page, { active: page === state.currentPage }));
   }
-  buttons.push(pageButton("›", state.currentPage + 1, { disabled: state.currentPage === pageCount, label: "الصفحة التالية" }));
+  buttons.push(pageButton("›", state.currentPage + 1, { disabled: state.currentPage === pageCount && !state.hasMore, label: "الصفحة التالية" }));
+  if (state.hasMore) {
+    const more = document.createElement("button");
+    more.type = "button";
+    more.className = "page-link";
+    more.textContent = state.loading ? "..." : "المزيد";
+    more.disabled = state.loading;
+    more.setAttribute("aria-label", "تحميل خدمات إضافية");
+    more.addEventListener("click", () => loadServices(false));
+    buttons.push(more);
+  }
   pagination.replaceChildren(...buttons);
 }
 
@@ -138,8 +153,12 @@ function render(items) {
   renderPagination(items.length);
 }
 
-function goToPage(page) {
-  const pageCount = Math.max(1, Math.ceil(state.filtered.length / PAGE_SIZE));
+async function goToPage(page) {
+  let pageCount = Math.max(1, Math.ceil(state.filtered.length / PAGE_SIZE));
+  if (page > pageCount && state.hasMore) {
+    await loadServices(false);
+    pageCount = Math.max(1, Math.ceil(state.filtered.length / PAGE_SIZE));
+  }
   const nextPage = Math.min(Math.max(1, page), pageCount);
   if (nextPage === state.currentPage) return;
   state.currentPage = nextPage;
@@ -176,21 +195,43 @@ function applyFilters({ resetPage = false } = {}) {
   render(filtered);
 }
 
-async function loadServices() {
+async function loadProfiles(profileIds) {
+  const profiles = new Map();
+  for (let index = 0; index < profileIds.length; index += 30) {
+    const ids = profileIds.slice(index, index + 30);
+    if (!ids.length) continue;
+    const snapshot = await getDocs(query(collection(db, "publicProfiles"), where(documentId(), "in", ids)));
+    await Promise.all(snapshot.docs.map(async item => {
+      const profile = item.data();
+      profiles.set(item.id, { ...profile, avatar: await resolveProfileAvatar(item.id, profile) });
+    }));
+  }
+  return profiles;
+}
+
+async function loadServices(reset = true) {
+  if (state.loading || (!reset && !state.hasMore)) return;
+  state.loading = true;
+  renderPagination(state.filtered.length);
   try {
-    const [snapshot, categoriesSnapshot] = await Promise.all([
-      getDocs(query(collection(db, "services"), where("status", "==", "published"))),
-      getDocs(query(collection(db, "serviceCategories"), where("active", "==", true)))
-    ]);
-    state.categories = categoriesSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
-    const categorySelect = $("categoryFilter");
-    const options = new Map([...categorySelect.options].slice(1).map(option => [option.value, option.textContent]));
-    state.categories.forEach(item => {
-      const label = String(item.name || item.label || "").trim();
-      if (label) options.set(categoryFilterValue(item.slug || label), label);
-    });
-    categorySelect.replaceChildren(new Option("كل الفئات", "all"), ...[...options].map(([value, label]) => new Option(label, value)));
-    const services = await Promise.all(snapshot.docs.map(async item => {
+    const constraints = [where("status", "==", "published"), orderBy("createdAt", "desc")];
+    if (!reset && state.cursor) constraints.push(startAfter(state.cursor));
+    constraints.push(limit(FETCH_SIZE + 1));
+    const requests = [getDocs(query(collection(db, "services"), ...constraints))];
+    if (reset) requests.push(getDocs(query(collection(db, "serviceCategories"), where("active", "==", true))));
+    const [snapshot, categoriesSnapshot] = await Promise.all(requests);
+    if (categoriesSnapshot) {
+      state.categories = categoriesSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+      const categorySelect = $("categoryFilter");
+      const options = new Map([...categorySelect.options].slice(1).map(option => [option.value, option.textContent]));
+      state.categories.forEach(item => {
+        const label = String(item.name || item.label || "").trim();
+        if (label) options.set(categoryFilterValue(item.slug || label), label);
+      });
+      categorySelect.replaceChildren(new Option("كل الفئات", "all"), ...[...options].map(([value, label]) => new Option(label, value)));
+    }
+    const visibleDocs = snapshot.docs.slice(0, FETCH_SIZE);
+    const services = await Promise.all(visibleDocs.map(async item => {
       const service = { id: item.id, ...item.data() };
       if (!service.imageUrl && service.imagePath) {
         service.imageUrl = await getDownloadURL(ref(storage, service.imagePath)).catch(() => "");
@@ -198,23 +239,22 @@ async function loadServices() {
       return service;
     }));
     const profileIds = [...new Set(services.map(item => item.ownerUid).filter(Boolean))];
-    const profiles = new Map();
-    if (profileIds.length) {
-      const publicSnapshot = await getDocs(collection(db, "publicProfiles"));
-      await Promise.all(publicSnapshot.docs.map(async item => {
-        const profile = item.data();
-        profiles.set(item.id, { ...profile, avatar: await resolveProfileAvatar(item.id, profile) });
-      }));
-    }
-    state.services = services.map(service => ({
+    const profiles = await loadProfiles(profileIds);
+    const additions = services.map(service => ({
       ...service,
       ownerName: profiles.get(service.ownerUid)?.name || service.ownerName,
       ownerAvatar: profiles.get(service.ownerUid)?.avatar || ""
     }));
+    state.services = reset ? additions : appendUnique(state.services, additions);
+    state.cursor = visibleDocs.at(-1) || null;
+    state.hasMore = snapshot.docs.length > FETCH_SIZE;
     applyFilters();
   } catch (error) {
     console.error("Unable to load marketplace services", error);
     $("servicesContainer").innerHTML = '<div class="marketplace-empty"><strong>تعذر تحميل الخدمات</strong><p>تحقق من الاتصال وحاول تحديث الصفحة.</p></div>';
+  } finally {
+    state.loading = false;
+    renderPagination(state.filtered.length);
   }
 }
 
@@ -227,10 +267,20 @@ const searchParams = new URLSearchParams(location.search);
 const requestedCategory = (searchParams.get("cat") || searchParams.get("category") || "").trim().toLowerCase();
 const requestedSearch = new URLSearchParams(location.search).get("q");
 if (requestedSearch) $("searchInput").value = requestedSearch.slice(0, 100);
-loadServices().then(() => {
+
+async function initializeMarketplace() {
+  await loadServices(true);
+  let batches = 1;
+  while (state.hasMore && Math.ceil(state.services.length / PAGE_SIZE) < requestedPage && batches < 10) {
+    await loadServices(false);
+    batches += 1;
+  }
   const linkedCategory = categoryFilterValue(requestedCategory);
   if (linkedCategory && [...$("categoryFilter").options].some(option => option.value === linkedCategory)) {
     $("categoryFilter").value = linkedCategory;
-    applyFilters({ resetPage: true });
   }
-});
+  state.currentPage = requestedPage;
+  applyFilters();
+}
+
+initializeMarketplace();
