@@ -176,6 +176,10 @@
 
     .info-list { list-style:none; }
     .info-list li { display:flex; align-items:center; gap:0.8rem; margin-bottom:1rem; }
+    .info-list-icon { width:24px; height:24px; flex:0 0 24px; object-fit:contain; }
+    .theme-info-icon.dark { display:none; }
+    html[data-theme="dark"] .theme-info-icon.light { display:none; }
+    html[data-theme="dark"] .theme-info-icon.dark { display:block; }
     .social-links { display:flex; gap:1rem; margin-top:1.5rem; }
     .social-link {
       width:40px; height:40px; background:rgba(255,255,255,0.15); border-radius:50%;
@@ -184,9 +188,6 @@
     }
     .social-link:hover { background:rgba(255,255,255,0.3); transform:translateY(-2px); }
     .social-link img { width:20px; height:20px; object-fit:contain; }
-    .social-icon.dark { display:none; }
-    html[data-theme="dark"] .social-icon.light { display:none; }
-    html[data-theme="dark"] .social-icon.dark { display:block; }
 
     /* Map */
     .map-section { margin:2rem 0; }
@@ -348,22 +349,31 @@
           <h3>نتطلع لسماعك!</h3>
           <p>فريق الدعم جاهز لمساعدتك. يمكنك أيضاً التواصل عبر وسائل التواصل الاجتماعي.</p>
           <ul class="info-list">
-            <li>⏱️ متوسط الرد: أقل من ساعتين</li>
-            <li>📱 واتساب: +963 951 603 690</li>
-            <li>🌐 تابعنا للحصول على آخر التحديثات</li>
+            <li>
+              <img class="info-list-icon theme-info-icon light" src="assets/icons/light/contact-response-time.svg" alt="" aria-hidden="true">
+              <img class="info-list-icon theme-info-icon dark" src="assets/icons/dark/contact-response-time.svg" alt="" aria-hidden="true">
+              <span>متوسط الرد: أقل من ساعتين</span>
+            </li>
+            <li>
+              <img class="info-list-icon theme-info-icon light" src="assets/icons/light/contact-info-whatsapp.svg" alt="" aria-hidden="true">
+              <img class="info-list-icon theme-info-icon dark" src="assets/icons/dark/contact-info-whatsapp.svg" alt="" aria-hidden="true">
+              <span>واتساب: <bdi dir="ltr">+963 951 603 690</bdi></span>
+            </li>
+            <li>
+              <img class="info-list-icon theme-info-icon light" src="assets/icons/light/contact-follow-updates.svg" alt="" aria-hidden="true">
+              <img class="info-list-icon theme-info-icon dark" src="assets/icons/dark/contact-follow-updates.svg" alt="" aria-hidden="true">
+              <span>تابعنا للحصول على آخر التحديثات</span>
+            </li>
           </ul>
           <div class="social-links">
             <a href="https://www.facebook.com/share/1Hpw9d5dPv/" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="فيسبوك">
-              <img class="social-icon light" src="assets/icons/light/social-facebook.svg" alt="" aria-hidden="true">
-              <img class="social-icon dark" src="assets/icons/dark/social-facebook.svg" alt="" aria-hidden="true">
+              <img class="social-icon" src="assets/icons/light/social-facebook.svg" alt="" aria-hidden="true">
             </a>
             <a href="https://www.instagram.com/piklance?igsh=MW9tZTBzcHR1YWZ2dQ==" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="إنستاغرام">
-              <img class="social-icon light" src="assets/icons/light/social-instagram.svg" alt="" aria-hidden="true">
-              <img class="social-icon dark" src="assets/icons/dark/social-instagram.svg" alt="" aria-hidden="true">
+              <img class="social-icon" src="assets/icons/light/social-instagram.svg" alt="" aria-hidden="true">
             </a>
             <a href="https://wa.link/07lhno" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="واتساب">
-              <img class="social-icon light" src="assets/icons/light/social-whatsapp.svg" alt="" aria-hidden="true">
-              <img class="social-icon dark" src="assets/icons/dark/social-whatsapp.svg" alt="" aria-hidden="true">
+              <img class="social-icon" src="assets/icons/light/social-whatsapp.svg" alt="" aria-hidden="true">
             </a>
           </div>
         </div>
