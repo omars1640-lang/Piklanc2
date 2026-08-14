@@ -1,7 +1,7 @@
 import "./platform-guard.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
-  addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query,
+  addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query,
   serverTimestamp, setDoc, startAfter, updateDoc, where, writeBatch
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import {
@@ -40,6 +40,7 @@ const state = {
   }
 };
 const DASHBOARD_PAGE_SIZE = 25;
+const pendingServiceWatchers = new Map();
 const $ = id => document.getElementById(id);
 const elements = {
   loadingScreen: $("loadingScreen"), sidebar: $("sidebar"), sidebarOverlay: $("sidebarOverlay"),
@@ -209,6 +210,38 @@ function renderServices() {
   const pendingServices = state.services.filter(service => ["pending", "rejected"].includes(service.status)).length;
   $("servicesNavCount").textContent = pendingServices;
   $("servicesNavCount").hidden = pendingServices === 0;
+  syncPendingServiceWatchers();
+}
+
+function syncPendingServiceWatchers() {
+  const pendingIds = new Set(state.services.filter(service => service.status === "pending").map(service => service.id));
+
+  pendingServiceWatchers.forEach((stop, serviceId) => {
+    if (pendingIds.has(serviceId)) return;
+    stop();
+    pendingServiceWatchers.delete(serviceId);
+  });
+
+  pendingIds.forEach(serviceId => {
+    if (pendingServiceWatchers.has(serviceId)) return;
+    const stop = onSnapshot(doc(db, "services", serviceId), snapshot => {
+      if (!snapshot.exists()) return;
+      const current = state.services.find(service => service.id === serviceId);
+      if (!current) return;
+      upsertLocalService({ ...current, ...snapshot.data(), id: serviceId });
+    }, error => {
+      console.warn("Unable to synchronize pending service", serviceId, error);
+    });
+    pendingServiceWatchers.set(serviceId, stop);
+  });
+}
+
+function upsertLocalService(service) {
+  state.services = sortNewest([
+    service,
+    ...state.services.filter(item => item.id !== service.id)
+  ]);
+  renderServices();
 }
 
 function renderOrders() {
@@ -510,8 +543,10 @@ async function handleServiceSubmit(event) {
       updatedAt: serverTimestamp()
     };
     let serviceRef;
+    let savedService;
     if (editingServiceId) {
       serviceRef = doc(db, "services", editingServiceId);
+      const currentService = state.services.find(item => item.id === editingServiceId) || { id: editingServiceId };
       delete data.ownerUid;
       delete data.ownerName;
       if (imageFile) {
@@ -523,8 +558,15 @@ async function handleServiceSubmit(event) {
         data.imagePath = path;
       }
       await updateDoc(serviceRef, data);
-      const oldPath = state.services.find(item => item.id === editingServiceId)?.imagePath;
+      const oldPath = currentService.imagePath;
       if (oldPath && data.imagePath && oldPath !== data.imagePath) await deleteObject(storageRef(storage, oldPath)).catch(() => {});
+      savedService = {
+        ...currentService,
+        ...data,
+        id: editingServiceId,
+        status: "pending",
+        updatedAt: new Date()
+      };
     } else {
       serviceRef = await addDoc(collection(db, "services"), { ...data, currencyVersion: "SYP_NEW_2026", createdAt: serverTimestamp() });
       const reviewUpdate = { status: "pending", updatedAt: serverTimestamp() };
@@ -537,9 +579,18 @@ async function handleServiceSubmit(event) {
         reviewUpdate.imagePath = path;
       }
       await updateDoc(serviceRef, reviewUpdate);
+      savedService = {
+        ...data,
+        ...reviewUpdate,
+        id: serviceRef.id,
+        status: "pending",
+        currencyVersion: "SYP_NEW_2026",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
     }
     closeServiceModal();
-    await loadWorkspace();
+    upsertLocalService(savedService);
     showToast(editingServiceId ? "تم إرسال التعديلات إلى الإدارة للمراجعة." : "تم إرسال الخدمة إلى الإدارة للمراجعة.");
   } catch (error) {
     console.error("Service creation failed", error);
