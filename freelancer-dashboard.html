@@ -242,7 +242,14 @@
         <div class="panel">
           <div class="toolbar">
             <div class="search-field"><span>⌕</span><input id="serviceSearch" type="search" placeholder="ابحث في خدماتك..."></div>
-            <select id="serviceFilter"><option value="all">كل الخدمات</option><option value="draft">المسودات</option></select>
+            <select id="serviceFilter">
+              <option value="all">كل الخدمات</option>
+              <option value="published">المنشورة – قابلة للتعديل</option>
+              <option value="pending">قيد مراجعة الإدارة</option>
+              <option value="draft">المسودات</option>
+              <option value="rejected">المرفوضة – قابلة للتعديل</option>
+              <option value="paused">المتوقفة – قابلة للتعديل</option>
+            </select>
           </div>
           <div class="responsive-table">
             <table>
