@@ -356,9 +356,6 @@
     let resubmissionUser = null;
     let resubmissionProfile = null;
     const incomingRegistrationCode = registrationCodeFromUrl();
-    if (!isResubmission && !incomingRegistrationCode) {
-      location.replace("coming-soon.html");
-    }
     if (incomingRegistrationCode) {
       document.getElementById("registrationCode").value = incomingRegistrationCode;
       rememberEarlyAccess(incomingRegistrationCode);
@@ -445,7 +442,7 @@
     async function validateRegistrationCodeBeforeSubmit() {
       if (isResubmission) return;
       const code = normalizeAccessCode(document.getElementById("registrationCode")?.value || "");
-      if (!code) throw Object.assign(new Error("missing-access-code"), { code: "missing-access-code" });
+      if (!code) return;
       const entry = await getAccessCode(code);
       if (!entry?.usable || !["early_access", "referral"].includes(entry.type)) {
         throw Object.assign(new Error("invalid-access-code"), { code: "invalid-access-code" });
