@@ -42,7 +42,7 @@ export const platformReady = (async () => {
     onSnapshot(doc(db, "platformSettings", "general"), async settings => {
       const configuration = settings.exists() ? settings.data() : {};
       const maintenanceMode = configuration.maintenanceMode === true;
-      const prelaunchMode = configuration.prelaunchMode !== false;
+      const prelaunchMode = configuration.prelaunchMode === true;
 
       let profileData = null;
       if (maintenanceMode || prelaunchMode) {
@@ -96,7 +96,7 @@ export const platformReady = (async () => {
       }
     }, error => {
       console.warn("Platform access status could not be checked", error);
-      const fallbackDecision = platformAccessDecision({ page, maintenanceMode: false, prelaunchMode: true });
+      const fallbackDecision = platformAccessDecision({ page, maintenanceMode: false, prelaunchMode: false });
       if (fallbackDecision === "allow") {
         revealPage();
         return finish(true);

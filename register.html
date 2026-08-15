@@ -46,20 +46,61 @@
     .logo span { color: #6c5ce7; }
     h2 { text-align: center; margin-bottom: .45rem; font-size: 1.55rem; }
     .subtitle { margin-bottom: 1.3rem; color: #747184; text-align: center; font-size: .92rem; line-height: 1.8; }
-    .type-selector { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+    .type-selector { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
     .type-btn {
-      flex: 1;
-      padding: 1rem;
+      position: relative;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: .9rem;
+      min-height: 116px;
+      padding: 1.05rem;
       border: 2px solid #e2e8f0;
-      border-radius: 13px;
+      border-radius: 17px;
       color: #302b42;
       background: #fff;
-      text-align: center;
+      text-align: right;
       cursor: pointer;
-      font-weight: 800;
-      transition: .2s;
+      transition: border-color .2s ease, background .2s ease, box-shadow .2s ease, transform .2s ease;
     }
-    .type-btn.active, .type-btn:hover { border-color: #6c5ce7; background: #f3f0ff; color: #5a4bd1; }
+    .type-btn:hover { border-color: #b9b0f2; transform: translateY(-2px); }
+    .type-btn:focus-visible { outline: 3px solid rgba(108,92,231,.22); outline-offset: 3px; }
+    .type-btn.active { border-color: #6c5ce7; background: #f5f2ff; box-shadow: 0 10px 26px rgba(108,92,231,.14); }
+    .type-btn.freelancer.active { border-color: #7657dc; background: linear-gradient(135deg, #f5f1ff, #fbfaff); }
+    .type-icon {
+      width: 50px;
+      height: 50px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      color: #fff;
+      background: linear-gradient(135deg, #6c5ce7, #8b7cf6);
+      box-shadow: 0 7px 18px rgba(108,92,231,.22);
+    }
+    .type-btn.buyer .type-icon { background: linear-gradient(135deg, #168f91, #38b9ad); box-shadow: 0 7px 18px rgba(22,143,145,.2); }
+    .type-icon svg { width: 27px; height: 27px; stroke: currentColor; }
+    .type-copy { display: grid; gap: .25rem; }
+    .type-title { color: #28233a; font-size: 1rem; font-weight: 800; }
+    .type-description { color: #716d7d; font-size: .79rem; font-weight: 600; line-height: 1.65; }
+    .type-check {
+      position: absolute;
+      top: .7rem;
+      left: .7rem;
+      width: 23px;
+      height: 23px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #fff;
+      background: #6c5ce7;
+      font-size: .8rem;
+      font-weight: 800;
+      opacity: 0;
+      transform: scale(.75);
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    .type-btn.buyer .type-check { background: #168f91; }
+    .type-btn.active .type-check { opacity: 1; transform: scale(1); }
     .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
     .form-group { margin-bottom: 1rem; }
     .form-group.full { grid-column: 1 / -1; }
@@ -188,7 +229,11 @@
     html[data-theme="dark"] .type-btn,
     html[data-theme="dark"] .btn-outline { border-color: #3b3749; background: #272534; color: #f7f5fb; }
     html[data-theme="dark"] .type-btn.active,
-    html[data-theme="dark"] .type-btn:hover { border-color: #8b7cf6; background: rgba(108,92,231,.15); color: #bdb4ff; }
+    html[data-theme="dark"] .type-btn:hover { border-color: #8b7cf6; }
+    html[data-theme="dark"] .type-btn.active { border-color: #8b7cf6; background: rgba(108,92,231,.16); box-shadow: 0 10px 28px rgba(0,0,0,.2); }
+    html[data-theme="dark"] .type-btn.buyer.active { border-color: #38b9ad; background: rgba(22,143,145,.14); }
+    html[data-theme="dark"] .type-title { color: #f7f5fb; }
+    html[data-theme="dark"] .type-description { color: #b8b3c3; }
     html[data-theme="dark"] .access-code-card,
     html[data-theme="dark"] .security-note,
     html[data-theme="dark"] .check-row,
@@ -197,7 +242,8 @@
     @media (max-width: 680px) {
       body { padding: 1rem; align-items: flex-start; }
       .register-box { padding: 1.35rem; }
-      .type-selector, .actions-row { flex-direction: column; }
+      .type-selector { grid-template-columns: 1fr; }
+      .actions-row { flex-direction: column; }
       .form-grid { grid-template-columns: 1fr; }
     }
   </style>
@@ -219,8 +265,20 @@
 
     <div id="typeSelection">
       <div class="type-selector">
-        <button class="type-btn active" type="button" onclick="selectType('buyer')">حساب عميل</button>
-        <button class="type-btn" type="button" onclick="selectType('freelancer')">حساب مستقل</button>
+        <button class="type-btn buyer active" type="button" aria-pressed="true" onclick="selectType('buyer')">
+          <span class="type-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+          </span>
+          <span class="type-copy"><span class="type-title">حساب عميل</span><span class="type-description">أبحث عن مستقلين وخدمات لإنجاز مشاريعي</span></span>
+          <span class="type-check" aria-hidden="true">✓</span>
+        </button>
+        <button class="type-btn freelancer" type="button" aria-pressed="false" onclick="selectType('freelancer')">
+          <span class="type-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18M10 12v2h4v-2"/></svg>
+          </span>
+          <span class="type-copy"><span class="type-title">حساب مستقل</span><span class="type-description">أعرض خدماتي ومهاراتي وأبدأ العمل والربح</span></span>
+          <span class="type-check" aria-hidden="true">✓</span>
+        </button>
       </div>
     </div>
 
@@ -356,9 +414,6 @@
     let resubmissionUser = null;
     let resubmissionProfile = null;
     const incomingRegistrationCode = registrationCodeFromUrl();
-    if (!isResubmission && !incomingRegistrationCode) {
-      location.replace("coming-soon.html");
-    }
     if (incomingRegistrationCode) {
       document.getElementById("registrationCode").value = incomingRegistrationCode;
       rememberEarlyAccess(incomingRegistrationCode);
@@ -445,7 +500,7 @@
     async function validateRegistrationCodeBeforeSubmit() {
       if (isResubmission) return;
       const code = normalizeAccessCode(document.getElementById("registrationCode")?.value || "");
-      if (!code) throw Object.assign(new Error("missing-access-code"), { code: "missing-access-code" });
+      if (!code) return;
       const entry = await getAccessCode(code);
       if (!entry?.usable || !["early_access", "referral"].includes(entry.type)) {
         throw Object.assign(new Error("invalid-access-code"), { code: "invalid-access-code" });
@@ -535,8 +590,11 @@
     window.selectType = function(type) {
       document.getElementById("buyerForm").classList.toggle("hidden", type !== "buyer");
       document.getElementById("freelancerForm").classList.toggle("hidden", type !== "freelancer");
-      document.querySelectorAll(".type-btn").forEach(button => button.classList.remove("active"));
-      document.querySelector(`.type-btn[onclick*="${type}"]`)?.classList.add("active");
+      document.querySelectorAll(".type-btn").forEach(button => {
+        const active = button.getAttribute("onclick")?.includes(`'${type}'`);
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(Boolean(active)));
+      });
     };
 
     window.registerBuyer = async function() {
