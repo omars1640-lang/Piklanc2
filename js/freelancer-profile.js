@@ -1,5 +1,5 @@
 import {
-  collection, doc, getDoc, getDocs, query, where
+  collection, doc, getDoc, getDocs, limit, orderBy, query, startAfter, where
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { getDownloadURL, ref } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
 import { db, storage } from "./firebase.js";
@@ -9,8 +9,18 @@ import { formatStars } from "./reviews.js";
 const uid = new URLSearchParams(location.search).get("uid") || "";
 const PORTFOLIO_COLLECTION = "freelancerPortfolio";
 const LEGACY_PORTFOLIO_COLLECTION = "portfolioItems";
+const PROFILE_PAGE_SIZE = 12;
+const LEGACY_PORTFOLIO_LIMIT = 50;
 const $ = id => document.getElementById(id);
 const toDate = value => value?.toDate?.() || (value ? new Date(value) : null);
+const pageState = () => ({ items: [], cursor: null, hasMore: false, loading: false });
+const state = {
+  profile: null,
+  legacyPortfolio: [],
+  services: pageState(),
+  portfolio: pageState(),
+  reviews: pageState()
+};
 const specialtyLabels = {
   design: "مصمم جرافيك", web: "مطور برمجيات وويب", writing: "كاتب ومحرر",
   marketing: "مسوق رقمي", audio: "متخصص صوتيات", video: "منتج فيديو"
@@ -176,16 +186,20 @@ function renderReviewCard(review) {
 }
 
 function renderReviews(reviews) {
-  const count = reviews.length;
-  const average = count ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / count : 0;
+  const loadedCount = reviews.length;
+  const storedCount = Number(state.profile?.reviewsCount || 0);
+  const count = Math.max(loadedCount, storedCount);
+  const loadedAverage = loadedCount ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / loadedCount : 0;
+  const storedAverage = Number(state.profile?.rating);
+  const average = Number.isFinite(storedAverage) && storedCount ? storedAverage : loadedAverage;
   const rounded = Math.max(0, Math.min(5, Math.round(average)));
-  $("reviewsCount").textContent = count;
+  $("reviewsCount").textContent = state.reviews.hasMore && count === loadedCount ? `${loadedCount}+` : count;
   $("ratingStat").textContent = average.toFixed(1);
   $("reviewAverage").textContent = average.toFixed(1);
   $("reviewStars").textContent = `${"★".repeat(rounded)}${"☆".repeat(5 - rounded)}`;
   $("reviewTotal").textContent = count;
   $("reviewsList").replaceChildren(...reviews.map(renderReviewCard));
-  $("reviewsEmpty").hidden = count > 0;
+  $("reviewsEmpty").hidden = loadedCount > 0;
   $("ratingBars").replaceChildren(...[5, 4, 3, 2, 1].map(stars => {
     const row = document.createElement("div");
     row.className = "rating-row";
@@ -195,16 +209,50 @@ function renderReviews(reviews) {
     track.className = "rating-track";
     const fill = document.createElement("span");
     const ratingCount = reviews.filter(review => Number(review.rating) === stars).length;
-    fill.style.width = `${count ? Math.round(ratingCount / count * 100) : 0}%`;
+    fill.style.width = `${loadedCount ? Math.round(ratingCount / loadedCount * 100) : 0}%`;
     track.appendChild(fill);
     const total = document.createElement("b");
     total.textContent = ratingCount;
     row.append(label, track, total);
     return row;
   }));
+  updateLoadMoreButton("reviewsLoadMore", state.reviews, "تحميل تقييمات إضافية");
 }
 
-function renderProfile(profile, services, portfolio, reviews = []) {
+function combinedPortfolio() {
+  const items = [...state.portfolio.items, ...state.legacyPortfolio];
+  const unique = new Map(items.map(item => [`${item.sourceCollection || PORTFOLIO_COLLECTION}:${item.id}`, item]));
+  return [...unique.values()].sort((a, b) => (toDate(b.createdAt)?.getTime() || 0) - (toDate(a.createdAt)?.getTime() || 0));
+}
+
+function renderServicesSection() {
+  const services = state.services.items;
+  $("servicesCount").textContent = state.services.hasMore ? `${services.length}+` : services.length;
+  $("servicesGrid").replaceChildren(...services.map(serviceCard));
+  $("servicesEmpty").hidden = services.length > 0;
+  updateLoadMoreButton("servicesLoadMore", state.services, "تحميل خدمات إضافية");
+}
+
+function renderPortfolioSection() {
+  const portfolio = combinedPortfolio();
+  $("portfolioCount").textContent = state.portfolio.hasMore ? `${portfolio.length}+` : portfolio.length;
+  $("featuredPortfolio").replaceChildren(...portfolio.slice(0, 3).map(item => portfolioCard(item, true)));
+  $("portfolioGrid").replaceChildren(...portfolio.map(item => portfolioCard(item)));
+  $("featuredEmpty").hidden = portfolio.length > 0;
+  $("portfolioEmpty").hidden = portfolio.length > 0;
+  updateLoadMoreButton("portfolioLoadMore", state.portfolio, "تحميل أعمال إضافية");
+}
+
+function updateLoadMoreButton(id, page, label) {
+  const button = $(id);
+  if (!button) return;
+  button.hidden = !page.hasMore;
+  button.disabled = page.loading;
+  button.textContent = page.loading ? "جاري التحميل..." : label;
+}
+
+function renderProfile(profile) {
+  const reviews = state.reviews.items;
   const specialty = specialtyLabels[profile.specialty] || profile.headline || "مستقل للخدمات الرقمية";
   const skills = Array.isArray(profile.skills) && profile.skills.length ? profile.skills : [specialty];
   const completed = Number(profile.completedServices || profile.rank?.completedServices || 0);
@@ -235,16 +283,8 @@ function renderProfile(profile, services, portfolio, reviews = []) {
   const about = document.createElement("p");
   about.textContent = profile.about || "مستقل موثّق على PikLance. ستظهر هنا نبذة الملف عند إضافتها من إعدادات الحساب.";
   $("profileAbout").replaceChildren(about);
-  $("portfolioCount").textContent = portfolio.length;
-  $("servicesCount").textContent = services.length;
-  $("reviewsCount").textContent = reviews.length || Number(profile.reviewsCount || 0);
-  $("servicesGrid").replaceChildren(...services.map(serviceCard));
-  $("servicesEmpty").hidden = services.length > 0;
-
-  $("featuredPortfolio").replaceChildren(...portfolio.slice(0, 3).map(item => portfolioCard(item, true)));
-  $("portfolioGrid").replaceChildren(...portfolio.map(item => portfolioCard(item)));
-  $("featuredEmpty").hidden = portfolio.length > 0;
-  $("portfolioEmpty").hidden = portfolio.length > 0;
+  renderServicesSection();
+  renderPortfolioSection();
   renderReviews(reviews);
   const careerItems = Array.isArray(profile.careerItems) ? profile.careerItems.filter(item => item?.title).slice(0, 8) : [];
   $("experienceList").replaceChildren(...(careerItems.length ? careerItems.map(careerCard) : [careerCard({
@@ -264,50 +304,124 @@ function showNotFound() {
   document.querySelector("main").innerHTML = '<section style="padding:150px 24px;text-align:center"><h1>الملف غير موجود</h1><p>قد يكون الحساب غير نشط أو الرابط غير صحيح.</p><a href="freelancers.html">العودة إلى المستقلين</a></section>';
 }
 
+function profileContentQuery(kind, cursor = null) {
+  const configurations = {
+    services: {
+      collectionName: "services",
+      constraints: [where("ownerUid", "==", uid), where("status", "==", "published")]
+    },
+    portfolio: {
+      collectionName: PORTFOLIO_COLLECTION,
+      constraints: [where("ownerUid", "==", uid), where("published", "==", true)]
+    },
+    reviews: {
+      collectionName: "reviews",
+      constraints: [
+        where("targetUid", "==", uid),
+        where("targetType", "==", "freelancer"),
+        where("status", "==", "published")
+      ]
+    }
+  };
+  const configuration = configurations[kind];
+  const constraints = [...configuration.constraints, orderBy("createdAt", "desc")];
+  if (cursor) constraints.push(startAfter(cursor));
+  constraints.push(limit(PROFILE_PAGE_SIZE + 1));
+  return query(collection(db, configuration.collectionName), ...constraints);
+}
+
+function applyPageSnapshot(kind, snapshot, reset = false) {
+  const page = state[kind];
+  const visibleDocs = snapshot.docs.slice(0, PROFILE_PAGE_SIZE);
+  const additions = visibleDocs.map(item => ({
+    id: item.id,
+    ...(kind === "portfolio" ? { sourceCollection: PORTFOLIO_COLLECTION } : {}),
+    ...item.data()
+  }));
+  const existing = reset ? [] : page.items;
+  const additionsById = new Map(additions.map(item => [item.id, item]));
+  page.items = [...existing.filter(item => !additionsById.has(item.id)), ...additions];
+  page.cursor = visibleDocs.at(-1) || page.cursor;
+  page.hasMore = snapshot.docs.length > PROFILE_PAGE_SIZE;
+}
+
+async function hydratePortfolioImages(items) {
+  await Promise.all(items.map(async item => {
+    const mediaPath = item.mediaPath || item.imagePath;
+    if ((item.mediaUrl || item.imageUrl) || !mediaPath) return;
+    const url = await getDownloadURL(ref(storage, mediaPath)).catch(() => "");
+    item.mediaUrl = url;
+    if (!item.mediaType || item.mediaType === "image") item.imageUrl = url;
+  }));
+}
+
+async function loadMoreProfileItems(kind) {
+  const page = state[kind];
+  if (page.loading || !page.hasMore || !page.cursor) return;
+  page.loading = true;
+  if (kind === "services") renderServicesSection();
+  if (kind === "portfolio") renderPortfolioSection();
+  if (kind === "reviews") renderReviews(state.reviews.items);
+  try {
+    const snapshot = await getDocs(profileContentQuery(kind, page.cursor));
+    applyPageSnapshot(kind, snapshot);
+    if (kind === "portfolio") await hydratePortfolioImages(state.portfolio.items);
+  } catch (error) {
+    console.error(`Unable to load more profile ${kind}`, error);
+    showToast("تعذر تحميل عناصر إضافية. حاول مجدداً.");
+  } finally {
+    page.loading = false;
+    if (kind === "services") renderServicesSection();
+    if (kind === "portfolio") renderPortfolioSection();
+    if (kind === "reviews") renderReviews(state.reviews.items);
+  }
+}
+
 async function loadProfile() {
   if (!uid) {
     showNotFound();
     return;
   }
   try {
-    const [profileSnapshot, servicesSnapshot, portfolioSnapshot, legacyPortfolioSnapshot, reviewsSnapshot] = await Promise.all([
-      getDoc(doc(db, "publicProfiles", uid)),
-      getDocs(query(collection(db, "services"), where("status", "==", "published"))),
-      getDocs(query(collection(db, PORTFOLIO_COLLECTION), where("published", "==", true))),
-      getDocs(query(collection(db, LEGACY_PORTFOLIO_COLLECTION), where("published", "==", true))).catch(() => ({ docs: [] })),
-      getDocs(query(collection(db, "reviews"), where("status", "==", "published"))).catch(() => ({ docs: [] }))
-    ]);
+    const profileSnapshot = await getDoc(doc(db, "publicProfiles", uid));
     if (!profileSnapshot.exists()) {
       showNotFound();
       return;
     }
     const profile = profileSnapshot.data();
-    profile.avatar = await resolveProfileAvatar(uid, profile);
-    const services = servicesSnapshot.docs
-      .map(item => ({ id: item.id, ...item.data() }))
-      .filter(item => item.ownerUid === uid);
-    const portfolio = [
-      ...portfolioSnapshot.docs.map(item => ({ id: item.id, ...item.data() })),
-      ...legacyPortfolioSnapshot.docs.map(item => ({ id: item.id, ...item.data() }))
-    ]
-      .filter(item => item.ownerUid === uid && item.published === true)
-      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-    const reviews = reviewsSnapshot.docs
-      .map(item => ({ id: item.id, ...item.data() }))
-      .filter(item => item.targetUid === uid && item.targetType === "freelancer")
-      .sort((a, b) => (toDate(b.createdAt)?.getTime() || 0) - (toDate(a.createdAt)?.getTime() || 0));
-    await Promise.all(portfolio.map(async item => {
-      const mediaPath = item.mediaPath || item.imagePath;
-      if ((item.mediaUrl || item.imageUrl) || !mediaPath) return;
-      const url = await getDownloadURL(ref(storage, mediaPath)).catch(() => "");
-      item.mediaUrl = url;
-      if (!item.mediaType || item.mediaType === "image") item.imageUrl = url;
-    }));
-    if (profile.accountType !== "freelancer" || (profile.status !== "active" && !services.length)) {
+    if (profile.accountType !== "freelancer") {
       showNotFound();
       return;
     }
-    renderProfile(profile, services, portfolio, reviews);
+    const avatarPromise = resolveProfileAvatar(uid, profile);
+    const [servicesSnapshot, portfolioSnapshot, legacyPortfolioSnapshot, reviewsSnapshot] = await Promise.all([
+      getDocs(profileContentQuery("services")),
+      getDocs(profileContentQuery("portfolio")),
+      getDocs(query(
+        collection(db, LEGACY_PORTFOLIO_COLLECTION),
+        where("ownerUid", "==", uid),
+        where("published", "==", true),
+        orderBy("createdAt", "desc"),
+        limit(LEGACY_PORTFOLIO_LIMIT)
+      )).catch(() => ({ docs: [] })),
+      getDocs(profileContentQuery("reviews")).catch(() => ({ docs: [] }))
+    ]);
+    applyPageSnapshot("services", servicesSnapshot, true);
+    applyPageSnapshot("portfolio", portfolioSnapshot, true);
+    applyPageSnapshot("reviews", reviewsSnapshot, true);
+    state.profile = profile;
+    state.legacyPortfolio = legacyPortfolioSnapshot.docs.map(item => ({
+      id: item.id,
+      sourceCollection: LEGACY_PORTFOLIO_COLLECTION,
+      ...item.data()
+    }));
+    profile.avatar = await avatarPromise;
+    await hydratePortfolioImages(combinedPortfolio());
+    if (profile.status !== "active" && !state.services.items.length) {
+      showNotFound();
+      return;
+    }
+    renderProfile(profile);
     $("pageLoader").classList.add("hidden");
   } catch (error) {
     console.error("Unable to load freelancer profile", error);
@@ -323,6 +437,9 @@ function showTab(tabName) {
 document.querySelectorAll(".profile-tabs button").forEach(button => button.addEventListener("click", () => showTab(button.dataset.tab)));
 document.querySelectorAll("[data-tab-target]").forEach(button => button.addEventListener("click", () => showTab(button.dataset.tabTarget)));
 document.querySelectorAll("[data-close-portfolio]").forEach(control => control.addEventListener("click", closePortfolioModal));
+$("servicesLoadMore").addEventListener("click", () => loadMoreProfileItems("services"));
+$("portfolioLoadMore").addEventListener("click", () => loadMoreProfileItems("portfolio"));
+$("reviewsLoadMore").addEventListener("click", () => loadMoreProfileItems("reviews"));
 $("shareButton").addEventListener("click", async () => {
   try {
     if (navigator.share) await navigator.share({ title: document.title, url: location.href });
