@@ -18,6 +18,7 @@ import {
   canReviewOrder, createOrderReview, formatStars, hasReviewedOrder
 } from "./reviews.js";
 import { appendUnique, ensureLoadMoreButton, updateLoadMoreButton } from "./pagination-ui.js";
+import { initializeAccountDeletion } from "./account-deletion.js";
 
 const state = {
   user: null, profile: null, orders: [], favorites: [], tickets: [], notifications: [], reviews: [], receivedReviews: [],
@@ -628,6 +629,7 @@ onAuthStateChanged(auth, async user => {
     renderProfile();
     await loadWorkspace();
     await initializeBuyerWallet(user, showToast);
+    initializeAccountDeletion(user, showToast);
     showSection(sectionTitles[location.hash.slice(1)] ? location.hash.slice(1) : "overview");
     $("dashboardLoading").classList.add("hidden");
   } catch (error) {

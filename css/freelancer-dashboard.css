@@ -362,6 +362,10 @@ td { padding: 13px 12px; border-bottom: 1px solid var(--border); font-size: 12px
 .form-actions { display: flex; align-items: center; justify-content: flex-end; gap: 13px; margin-top: 7px; }.form-message { color: var(--green); font-size: 12px; }
 .settings-list { padding: 0 19px; }.settings-list label { padding: 17px 2px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--border); }.settings-list label:last-child { border: 0; }.settings-list span { display: grid; }.settings-list strong { font-size: 13.2px; }.settings-list small { color: var(--muted); font-size: 10.8px; }
 .referral-card { margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 18px; background: linear-gradient(135deg, var(--panel), var(--primary-soft)); }.referral-card h2 { margin: 0 0 6px; font-size: 20px; }.referral-card span { display: block; color: var(--muted); font-size: 13px; line-height: 1.8; }.referral-code-box { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px dashed var(--primary); border-radius: 14px; background: var(--panel); }.referral-code-box strong { min-width: 150px; direction: ltr; text-align: center; color: var(--primary); letter-spacing: 1px; font-size: 18px; }
+.account-danger-zone { margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-color: rgba(220,53,69,.3); background: linear-gradient(135deg, var(--panel), rgba(220,53,69,.07)); }
+.account-danger-zone strong { color: var(--danger); font-size: 15px; }.account-danger-zone p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.danger-button { color: var(--danger) !important; border-color: rgba(220,53,69,.35) !important; }.danger-action { background: var(--danger) !important; }.danger-action:disabled { cursor: not-allowed; opacity: .5; }
+.account-deletion-dialog label small { direction: ltr; text-align: right; color: var(--danger); font-weight: 600; }.account-deletion-message { min-height: 22px; display: block; color: var(--danger); font-size: 12px; line-height: 1.7; }
 input[role="switch"] { width: 38px; min-height: 21px; height: 21px; padding: 0; appearance: none; border-radius: 20px; background: #ccd2dc; cursor: pointer; position: relative; }.settings-list input[role="switch"]::after { content:""; position:absolute; width:15px; height:15px; top:2px; right:2px; border-radius:50%; background:#fff; transition:.2s; }.settings-list input[role="switch"]:checked { background:var(--primary); }.settings-list input[role="switch"]:checked::after { transform:translateX(-17px); }
 
 .modal { position: fixed; inset: 0; z-index: 3000; display: none; place-items: center; padding: 20px; }
@@ -408,4 +412,5 @@ input[role="switch"] { width: 38px; min-height: 21px; height: 21px; padding: 0; 
   .portfolio-dashboard-grid { grid-template-columns: 1fr; padding: 0; }
   .finance-breakdown { grid-template-columns: 1fr; }.finance-breakdown p { border-left: 0; border-bottom: 1px solid rgba(255,255,255,.12); }
   .account-menu { padding: 0; }.icon-button { width: 34px; }
+  .account-danger-zone { align-items: stretch; flex-direction: column; }.account-danger-zone button { width: 100%; }
 }

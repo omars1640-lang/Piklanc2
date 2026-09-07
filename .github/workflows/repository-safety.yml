@@ -45,6 +45,9 @@ jobs:
       - name: Check refactor safety contracts
         run: node scripts/test-refactor-safety.mjs
 
+      - name: Check account deletion contract
+        run: node scripts/test-account-deletion-architecture.mjs
+
       - name: Check browser JavaScript syntax
         shell: bash
         run: |

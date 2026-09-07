@@ -17,6 +17,7 @@ import {
   canReviewOrder, createOrderReview, formatStars, hasReviewedOrder
 } from "./reviews.js";
 import { appendUnique, ensureLoadMoreButton, updateLoadMoreButton } from "./pagination-ui.js";
+import { initializeAccountDeletion } from "./account-deletion.js";
 
 const specialtyLabels = { design: "تصميم", web: "برمجة وتطوير", writing: "كتابة وترجمة", marketing: "تسويق رقمي" };
 const serviceStatus = {
@@ -1236,6 +1237,7 @@ onAuthStateChanged(auth, async user => {
     await migrateLocalServices();
     await loadWorkspace();
     await initializeWithdrawals(user, state.profile, showToast);
+    initializeAccountDeletion(user, showToast);
     showSection(location.hash.slice(1) || "overview");
     elements.loadingScreen.classList.add("hidden");
   } catch (error) {
