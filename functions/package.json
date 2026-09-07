@@ -16,6 +16,7 @@
   },
   "overrides": {
     "fast-xml-parser": "5.10.1",
+    "qs": "6.16.0",
     "uuid": "11.1.1"
   }
 }
