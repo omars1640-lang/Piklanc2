@@ -135,8 +135,34 @@
           </div>
           <div class="form-footer"><span id="accountMessage"></span><button class="primary-button" type="submit">حفظ التعديلات</button></div>
         </form>
+        <div class="panel account-danger-zone">
+          <div><strong>حذف الحساب نهائياً</strong><p>يمحو ملفك وبياناتك الشخصية وخدماتك ورسائلك وملفاتك. تبقى سجلات العمليات المالية مؤرشفة باسم صاحب العلاقة للمراجعة.</p></div>
+          <button class="secondary-button danger-button" id="deleteAccountButton" type="button">حذف الحساب</button>
+        </div>
       </section>
     </main>
+  </div>
+
+  <div class="dashboard-modal" id="accountDeletionModal" aria-hidden="true">
+    <div class="dashboard-modal-backdrop" data-close-account-deletion></div>
+    <form class="dashboard-modal-dialog account-deletion-dialog" id="accountDeletionForm" role="dialog" aria-modal="true" aria-labelledby="accountDeletionTitle">
+      <button class="dashboard-modal-close" type="button" data-close-account-deletion aria-label="إغلاق">×</button>
+      <p>إجراء نهائي</p>
+      <h2 id="accountDeletionTitle">حذف الحساب وبياناته الشخصية</h2>
+      <span>لن تتمكن من استعادة الحساب بعد الحذف. تبقى سجلات العمليات المالية المغلقة باسم صاحب العلاقة للمراجعة، ولا يمكن الحذف بوجود رصيد أو طلب مالي مفتوح.</span>
+      <label>اكتب بريدك الإلكتروني للتأكيد
+        <small id="deleteAccountEmailHint"></small>
+        <input id="deleteAccountConfirmation" type="email" dir="ltr" autocomplete="off" required>
+      </label>
+      <label>كلمة المرور الحالية
+        <input id="deleteAccountPassword" type="password" autocomplete="current-password" required>
+      </label>
+      <strong class="account-deletion-message" id="deleteAccountMessage" role="status"></strong>
+      <div class="dashboard-modal-actions">
+        <button class="secondary-button" type="button" data-close-account-deletion>إلغاء</button>
+        <button class="primary-button danger-action" id="deleteAccountSubmit" type="submit" disabled>حذف الحساب نهائياً</button>
+      </div>
+    </form>
   </div>
 
   <div class="dashboard-modal" id="orderApproveModal" aria-hidden="true">

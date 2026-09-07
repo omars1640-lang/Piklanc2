@@ -437,8 +437,34 @@
           <label><span><strong>تنبيهات الرسائل</strong><small>إظهار علامة عند وصول رسائل جديدة.</small></span><input type="checkbox" role="switch" checked disabled></label>
           <label><span><strong>تنبيهات المشاريع</strong><small>ستتوفر عند تشغيل نظام الطلبات.</small></span><input type="checkbox" role="switch" disabled></label>
         </div>
+        <div class="panel account-danger-zone">
+          <div><strong>حذف الحساب نهائياً</strong><p>يمحو ملفك وخدماتك وأعمالك ورسائلك وملفاتك الشخصية. تبقى سجلات العمليات المالية مؤرشفة باسم صاحب العلاقة للمراجعة.</p></div>
+          <button class="button button-secondary danger-button" id="deleteAccountButton" type="button">حذف الحساب</button>
+        </div>
       </section>
     </main>
+  </div>
+
+  <div class="modal" id="accountDeletionModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-account-deletion></div>
+    <form class="modal-dialog account-deletion-dialog" id="accountDeletionForm" role="dialog" aria-modal="true" aria-labelledby="accountDeletionTitle">
+      <button class="modal-close" type="button" data-close-account-deletion aria-label="إغلاق">×</button>
+      <p class="eyebrow">إجراء نهائي</p>
+      <h2 id="accountDeletionTitle">حذف الحساب وبياناته الشخصية</h2>
+      <p class="modal-description">لن تتمكن من استعادة الحساب بعد الحذف. تبقى سجلات العمليات المالية المغلقة باسم صاحب العلاقة للمراجعة، ولا يمكن الحذف بوجود رصيد أو طلب مالي مفتوح.</p>
+      <label>اكتب بريدك الإلكتروني للتأكيد
+        <small id="deleteAccountEmailHint"></small>
+        <input id="deleteAccountConfirmation" type="email" dir="ltr" autocomplete="off" required>
+      </label>
+      <label>كلمة المرور الحالية
+        <input id="deleteAccountPassword" type="password" autocomplete="current-password" required>
+      </label>
+      <strong class="account-deletion-message" id="deleteAccountMessage" role="status"></strong>
+      <div class="modal-actions">
+        <button class="button button-secondary" type="button" data-close-account-deletion>إلغاء</button>
+        <button class="button button-primary danger-action" id="deleteAccountSubmit" type="submit" disabled>حذف الحساب نهائياً</button>
+      </div>
+    </form>
   </div>
 
   <div class="modal" id="serviceModal" aria-hidden="true">
