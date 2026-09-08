@@ -3,7 +3,7 @@ const { getAuth } = require("firebase-admin/auth");
 const { FieldPath } = require("firebase-admin/firestore");
 const { onCall } = require("firebase-functions/v2/https");
 const {
-  FieldValue, HttpsError, REGION, cleanText, db, storageBucket
+  FieldValue, HttpsError, REGION, cleanText, db, requireAdmin, storageBucket
 } = require("./helpers");
 
 const PAGE_SIZE = 200;
@@ -229,25 +229,15 @@ async function deletePrivateAccountData(uid, email, deletedUid, accountName, dep
   ]);
 }
 
-exports.deleteOwnAccount = onCall({
-  region: REGION,
-  enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true",
-  timeoutSeconds: 540,
-  memory: "1GiB"
-}, async request => {
-  const uid = assertRecentAuthentication(request.auth);
-  const tokenEmail = cleanText(request.auth.token.email, 160).trim().toLowerCase();
-  const confirmedEmail = cleanText(request.data?.confirmationEmail, 160).trim().toLowerCase();
-  if (!tokenEmail || confirmedEmail !== tokenEmail) {
+async function deleteAccount(uid, confirmationEmail) {
+  const { user, deposits, withdrawals } = await deletionPreflight(uid);
+  const storedEmail = cleanText(user.email, 160).trim().toLowerCase();
+  if (!storedEmail || confirmationEmail !== storedEmail) {
     throw new HttpsError("invalid-argument", "اكتب البريد الإلكتروني المرتبط بالحساب للتأكيد.");
   }
-
-  const { user, deposits, withdrawals } = await deletionPreflight(uid);
-  const storedEmail = cleanText(user.email || tokenEmail, 160).trim().toLowerCase();
-  if (storedEmail !== tokenEmail) throw new HttpsError("permission-denied", "بيانات الحساب لا تطابق جلسة تسجيل الدخول.");
   const accountName = cleanText(user.name || user.fullName || "صاحب حساب محذوف", 120);
   const deletedUid = `deleted-${randomUUID()}`;
-  await deletePrivateAccountData(uid, tokenEmail, deletedUid, accountName, deposits, withdrawals);
+  await deletePrivateAccountData(uid, storedEmail, deletedUid, accountName, deposits, withdrawals);
   await Promise.all([
     deleteStoragePrefix(`identity/${uid}/`),
     deleteStoragePrefix(`profile-images/${uid}/`),
@@ -261,7 +251,57 @@ exports.deleteOwnAccount = onCall({
     db.recursiveDelete(db.doc(`publicProfiles/${uid}`)),
     db.recursiveDelete(db.doc(`users/${uid}`))
   ]);
-  await getAuth().deleteUser(uid);
+  await getAuth().deleteUser(uid).catch(error => {
+    if (error.code !== "auth/user-not-found") throw error;
+  });
+  return { accountName, deletedUid };
+}
+
+exports.deleteOwnAccount = onCall({
+  region: REGION,
+  enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true",
+  timeoutSeconds: 540,
+  memory: "1GiB"
+}, async request => {
+  const uid = assertRecentAuthentication(request.auth);
+  const tokenEmail = cleanText(request.auth.token.email, 160).trim().toLowerCase();
+  const confirmedEmail = cleanText(request.data?.confirmationEmail, 160).trim().toLowerCase();
+  if (!tokenEmail || confirmedEmail !== tokenEmail) {
+    throw new HttpsError("invalid-argument", "اكتب البريد الإلكتروني المرتبط بالحساب للتأكيد.");
+  }
+
+  await deleteAccount(uid, tokenEmail);
+  return { ok: true };
+});
+
+exports.deleteUserAccountByAdmin = onCall({
+  region: REGION,
+  enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true",
+  timeoutSeconds: 540,
+  memory: "1GiB"
+}, async request => {
+  assertRecentAuthentication(request.auth);
+  const admin = await requireAdmin(request, "users.manage");
+  const userId = cleanText(request.data?.userId, 128);
+  const confirmationEmail = cleanText(request.data?.confirmationEmail, 160).trim().toLowerCase();
+  const reason = cleanText(request.data?.reason, 500);
+  if (!/^[A-Za-z0-9_-]{6,128}$/.test(userId) || !confirmationEmail || reason.length < 3) {
+    throw new HttpsError("invalid-argument", "معرف المستخدم وبريد التأكيد وسبب الحذف مطلوبة.");
+  }
+  if (userId === admin.id) throw new HttpsError("failed-precondition", "لا يمكنك حذف حسابك الإداري الحالي.");
+
+  const { accountName, deletedUid } = await deleteAccount(userId, confirmationEmail);
+  await db.collection("adminAuditLogs").add({
+    action: "delete_user",
+    actorUid: admin.id,
+    actorName: admin.name || admin.email || "الإدارة",
+    actorEmail: admin.email || "",
+    targetUid: deletedUid,
+    targetName: accountName,
+    reason,
+    accountDeletedAt: FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp()
+  });
   return { ok: true };
 });
 

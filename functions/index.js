@@ -51,3 +51,4 @@ exports.subscribeLaunch = publicEndpoints.subscribeLaunch;
 exports.createSupportTicket = publicEndpoints.createSupportTicket;
 exports.createOrderReview = reviews.createOrderReview;
 exports.deleteOwnAccount = accountDeletion.deleteOwnAccount;
+exports.deleteUserAccountByAdmin = accountDeletion.deleteUserAccountByAdmin;

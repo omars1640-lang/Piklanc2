@@ -1,4 +1,6 @@
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+import {
+  EmailAuthProvider, onAuthStateChanged, reauthenticateWithCredential, signOut
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
   collection,
   deleteField,
@@ -102,6 +104,7 @@ const actionLabels = {
   reject_user: "رفض طلب مستخدم",
   suspend_user: "إيقاف حساب مستخدم",
   activate_user: "إعادة تفعيل مستخدم",
+  delete_user: "حذف حساب مستخدم",
   update_freelancer_rank: "تحديث رتبة مستقل",
   create_promo_codes: "إنشاء أكواد",
   assign_badge: "إسناد شارة",
@@ -1049,6 +1052,7 @@ function renderUsers() {
     actions.appendChild(button("تفاصيل", "table-button", () => openUserModal(user.id)));
     if (hasPermission("users.manage") && user.status === "active" && user.id !== state.admin.id) actions.appendChild(button("إيقاف", "table-button reject", () => openDecision(user.id, "suspend_user")));
     if (hasPermission("users.manage") && ["suspended", "rejected"].includes(user.status)) actions.appendChild(button("تفعيل", "table-button approve", () => openDecision(user.id, "activate_user")));
+    if (hasPermission("users.manage") && user.role !== "admin" && user.id !== state.admin.id) actions.appendChild(button("حذف", "table-button reject", () => openDecision(user.id, "delete_user")));
     const values = [
       userCell(user),
       badge(accountTypeLabel(user.accountType), "type-badge"),
@@ -1493,6 +1497,9 @@ function openUserModal(userId) {
   } else if (hasPermission("users.manage") && ["suspended", "rejected"].includes(user.status)) {
     elements.modalActions.appendChild(button("إعادة التفعيل", "primary-button", () => { closeUserModal(); openDecision(user.id, "activate_user"); }));
   }
+  if (hasPermission("users.manage") && user.role !== "admin" && user.id !== state.admin.id) {
+    elements.modalActions.appendChild(button("حذف الحساب نهائياً", "danger-button", () => { closeUserModal(); openDecision(user.id, "delete_user"); }));
+  }
   elements.userModal.classList.add("open");
   elements.userModal.setAttribute("aria-hidden", "false");
 }
@@ -1513,12 +1520,19 @@ function openDecision(userId, action) {
     approve_user: ["قبول وتفعيل الحساب", `سيتم تفعيل حساب ${user.name} وإتاحة ميزات المستقل له.`, false, "قبول الحساب", "primary-button"],
     reject_user: ["رفض طلب التوثيق", `سيتم رفض طلب ${user.name}. اكتب سبباً واضحاً ليظهر في سجل الإدارة.`, true, "رفض الطلب", "danger-button"],
     suspend_user: ["إيقاف الحساب", `سيفقد ${user.name} الوصول إلى الميزات التي تتطلب حساباً نشطاً.`, true, "إيقاف الحساب", "danger-button"],
-    activate_user: ["إعادة تفعيل الحساب", `سيعود حساب ${user.name} إلى الحالة النشطة.`, false, "تفعيل الحساب", "primary-button"]
+    activate_user: ["إعادة تفعيل الحساب", `سيعود حساب ${user.name} إلى الحالة النشطة.`, false, "تفعيل الحساب", "primary-button"],
+    delete_user: ["حذف الحساب نهائياً", `سيُحذف حساب ${user.name} وبياناته الشخصية نهائياً. تبقى السجلات المالية المغلقة باسم صاحب العلاقة، ولا يمكن الحذف بوجود رصيد أو عملية مفتوحة.`, true, "حذف الحساب نهائياً", "danger-button"]
   }[action];
   document.getElementById("decisionTitle").textContent = config[0];
   document.getElementById("decisionDescription").textContent = config[1];
   document.getElementById("decisionReasonWrap").hidden = !config[2];
   document.getElementById("decisionReason").value = "";
+  const emailWrap = document.getElementById("decisionEmailWrap");
+  emailWrap.hidden = action !== "delete_user";
+  document.getElementById("decisionEmailHint").textContent = action === "delete_user" ? user.email || "" : "";
+  document.getElementById("decisionEmailConfirmation").value = "";
+  document.getElementById("decisionAdminPasswordWrap").hidden = action !== "delete_user";
+  document.getElementById("decisionAdminPassword").value = "";
   const confirm = document.getElementById("decisionConfirm");
   confirm.textContent = config[3];
   confirm.className = config[4];
@@ -1654,9 +1668,20 @@ async function executeDecision(event) {
   const decision = state.pendingDecision;
   if (!decision) return;
   const reason = document.getElementById("decisionReason").value.trim();
-  if (["reject_user", "suspend_user"].includes(decision.action) && !reason) {
+  if (["reject_user", "suspend_user", "delete_user"].includes(decision.action) && !reason) {
     showToast("اكتب سبب القرار قبل المتابعة.");
     return;
+  }
+  if (decision.action === "delete_user") {
+    const confirmationEmail = document.getElementById("decisionEmailConfirmation").value.trim().toLowerCase();
+    if (!decision.user.email || confirmationEmail !== decision.user.email.toLowerCase()) {
+      showToast("اكتب بريد المستخدم بشكل مطابق لتأكيد الحذف.");
+      return;
+    }
+    if (!document.getElementById("decisionAdminPassword").value) {
+      showToast("أدخل كلمة مرور حساب الإدارة لتأكيد الحذف.");
+      return;
+    }
   }
   document.getElementById("decisionConfirm").disabled = true;
   try {
@@ -1685,10 +1710,29 @@ async function executeDecision(event) {
       await loadData();
       return;
     }
+    if (decision.action === "delete_user") {
+      const credential = EmailAuthProvider.credential(state.admin.email, document.getElementById("decisionAdminPassword").value);
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await auth.currentUser.getIdToken(true);
+      await httpsCallable(functions, "deleteUserAccountByAdmin", { timeout: 540000 })({
+        userId: decision.user.id,
+        confirmationEmail: document.getElementById("decisionEmailConfirmation").value.trim(),
+        reason
+      });
+      closeDecision();
+      showToast("تم حذف الحساب وبياناته الشخصية مع حفظ السجلات المالية.");
+      await loadData();
+      return;
+    }
     throw new Error("unsupported-admin-decision");
   } catch (error) {
     console.error("Admin decision failed", error);
-    showToast("تعذر تنفيذ القرار. تحقق من الصلاحيات والاتصال.");
+    if (["auth/invalid-credential", "auth/wrong-password"].includes(error.code)) {
+      showToast("كلمة مرور حساب الإدارة غير صحيحة.");
+      return;
+    }
+    const message = String(error.message || "").replace(/^Firebase:\s*/i, "").replace(/\s*\([^)]*\)\.?$/, "").trim();
+    showToast(message || "تعذر تنفيذ القرار. تحقق من الصلاحيات والاتصال.");
   } finally {
     document.getElementById("decisionConfirm").disabled = false;
   }

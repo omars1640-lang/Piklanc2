@@ -327,7 +327,7 @@
       <div class="data-panel">
         <div class="data-toolbar">
           <label class="search-field"><span>⌕</span><input id="auditSearch" type="search" placeholder="بحث بالإجراء أو المسؤول أو المستخدم"></label>
-          <select id="auditActionFilter"><option value="all">كل الإجراءات</option><option value="approve_user">قبول مستخدم</option><option value="reject_user">رفض مستخدم</option><option value="suspend_user">إيقاف حساب</option><option value="activate_user">تفعيل حساب</option><option value="update_settings">تعديل الإعدادات</option></select>
+          <select id="auditActionFilter"><option value="all">كل الإجراءات</option><option value="approve_user">قبول مستخدم</option><option value="reject_user">رفض مستخدم</option><option value="suspend_user">إيقاف حساب</option><option value="activate_user">تفعيل حساب</option><option value="delete_user">حذف حساب</option><option value="update_settings">تعديل الإعدادات</option></select>
         </div>
         <div class="audit-timeline" id="auditTimeline"></div>
         <div class="empty-state" id="auditEmpty" hidden><span>≡</span><strong>لا توجد إجراءات مسجلة بعد</strong></div>
@@ -407,6 +407,8 @@
       <div class="modal-body">
         <p id="decisionDescription"></p>
         <label id="decisionReasonWrap"><span>السبب أو الملاحظة</span><textarea id="decisionReason" maxlength="500" rows="4"></textarea></label>
+        <label id="decisionEmailWrap" hidden><span>اكتب بريد المستخدم للتأكيد: <strong id="decisionEmailHint" dir="ltr"></strong></span><input id="decisionEmailConfirmation" type="email" dir="ltr" autocomplete="off"></label>
+        <label id="decisionAdminPasswordWrap" hidden><span>كلمة مرور حساب الإدارة</span><input id="decisionAdminPassword" type="password" autocomplete="current-password"></label>
       </div>
       <footer><button class="secondary-button" type="button" data-close-decision>إلغاء</button><button class="danger-button" id="decisionConfirm" type="submit">تأكيد</button></footer>
     </form>
