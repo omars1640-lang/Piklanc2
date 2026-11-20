@@ -119,6 +119,9 @@ export async function initializeWithdrawals(user, profile, toast) {
     if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size < 1 || file.size > 5 * 1024 * 1024) {
       event.target.value = "";
       $("withdrawMessage").textContent = "صورة QR يجب أن تكون JPG أو PNG أو WebP وأقل من 5MB.";
+      if (state.qrPreviewUrl) URL.revokeObjectURL(state.qrPreviewUrl);
+      state.qrPreviewUrl = "";
+      $("withdrawQrPreview").hidden = !setSafeImageSource($("withdrawQrPreview"), state.payout.qrUrl || "");
       return;
     }
     if (state.qrPreviewUrl) URL.revokeObjectURL(state.qrPreviewUrl);
