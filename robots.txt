@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard.html
+Disallow: /freelancer-dashboard.html
+Disallow: /profile.html
+Disallow: /messages.html
+Disallow: /wallet.html
+Disallow: /upload.html
+Disallow: /login.html
+Disallow: /register.html
+Disallow: /pending-review.html
+Disallow: /coming-soon.html
+Disallow: /maintenance.html
+Disallow: /404.html
+
+Sitemap: https://piklance.com/sitemap.xml

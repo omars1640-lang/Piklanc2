@@ -13,6 +13,12 @@
   "hosting": {
     "site": "piklance-c2651",
     "public": ".",
+    "rewrites": [
+      {
+        "source": "/sitemap{,-pages,-services,-articles}.xml",
+        "function": { "functionId": "publicSitemap", "region": "europe-west1" }
+      }
+    ],
     "headers": [
       {
         "source": "**",
