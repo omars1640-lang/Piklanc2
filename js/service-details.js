@@ -165,6 +165,13 @@ function renderService() {
   const profileName = sellerProfile?.name || service.ownerName || "مستقل PikLance";
   const specialty = sellerProfile?.specialty || service.category || "خدمات رقمية";
   document.title = `${service.title} - PikLance`;
+  let descriptionMeta = document.querySelector('meta[name="description"]');
+  if (!descriptionMeta) {
+    descriptionMeta = document.createElement("meta");
+    descriptionMeta.name = "description";
+    document.head.append(descriptionMeta);
+  }
+  descriptionMeta.content = String(service.description || "").replace(/\s+/g, " ").trim().slice(0, 180);
   $("breadcrumbCategory").textContent = service.category || "خدمات رقمية";
   $("serviceCategory").textContent = service.category || "خدمات رقمية";
   $("serviceTitle").textContent = service.title;
@@ -235,6 +242,9 @@ function renderService() {
 }
 
 function showNotFound() {
+  let robots = document.querySelector('meta[name="robots"]');
+  if (!robots) { robots = document.createElement("meta"); robots.name = "robots"; document.head.append(robots); }
+  robots.content = "noindex, follow";
   document.title = "الخدمة غير موجودة - PikLance";
   document.querySelector("main").innerHTML = '<section class="container" style="padding:150px 24px;text-align:center"><h1>الخدمة غير موجودة</h1><p>قد تكون الخدمة حُذفت أو لم تحصل على موافقة الإدارة بعد.</p><a href="services.html">العودة إلى الخدمات</a></section>';
 }
@@ -273,7 +283,8 @@ async function loadService() {
     renderService();
   } catch (error) {
     console.error("Unable to load service", error);
-    showNotFound();
+    // Preserve usable server-rendered content; a failed network request is not a deleted service.
+    showToast("تعذر تحديث بيانات الخدمة حالياً. يرجى إعادة المحاولة.");
   }
 }
 

@@ -13,6 +13,7 @@ const publicEndpoints = require("./lib/public-endpoints");
 const reviews = require("./lib/reviews");
 const accountDeletion = require("./lib/account-deletion");
 const sitemap = require("./lib/sitemap");
+const publicPages = require("./lib/public-pages");
 
 exports.submitDepositRequest = wallet.submitDepositRequest;
 exports.reviewDepositRequest = wallet.reviewDepositRequest;
@@ -54,3 +55,4 @@ exports.createOrderReview = reviews.createOrderReview;
 exports.deleteOwnAccount = accountDeletion.deleteOwnAccount;
 exports.deleteUserAccountByAdmin = accountDeletion.deleteUserAccountByAdmin;
 exports.publicSitemap = sitemap.publicSitemap;
+exports.publicPage = publicPages.publicPage;

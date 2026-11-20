@@ -4,6 +4,7 @@ import { auth, db } from "./firebase.js";
 import { ALWAYS_ALLOWED_PAGES, platformAccessDecision } from "./access-policy.js";
 
 const page = location.pathname.split("/").pop() || "index.html";
+const serverMode = document.documentElement.dataset.platformMode;
 
 function revealPage() {
   document.documentElement.setAttribute("data-platform-access", "ready");
@@ -39,6 +40,11 @@ export const platformReady = (async () => {
     let firstCheck = true;
     let redirecting = false;
     const finish = value => { if (firstCheck) { firstCheck = false; resolve(value); } };
+    // The server already checked the live public settings; don't hide its rendered content while waiting for Firestore.
+    if (serverMode === "open") {
+      revealPage();
+      finish(true);
+    }
     onSnapshot(doc(db, "platformSettings", "general"), async settings => {
       const configuration = settings.exists() ? settings.data() : {};
       const maintenanceMode = configuration.maintenanceMode === true;
@@ -96,6 +102,12 @@ export const platformReady = (async () => {
       }
     }, error => {
       console.warn("Platform access status could not be checked", error);
+      if (serverMode === "maintenance" || serverMode === "prelaunch") {
+        const destination = serverMode === "maintenance" ? "maintenance" : "coming-soon";
+        location.replace(`/${destination}.html?returnUrl=${encodeURIComponent(location.pathname + location.search + location.hash)}`);
+        finish(false);
+        return;
+      }
       const fallbackDecision = platformAccessDecision({ page, maintenanceMode: false, prelaunchMode: false });
       if (fallbackDecision === "allow") {
         revealPage();
