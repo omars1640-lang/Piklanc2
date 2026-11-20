@@ -2,14 +2,9 @@ const { createHash } = require("node:crypto");
 const { onRequest } = require("firebase-functions/v2/https");
 const { db, REGION } = require("./helpers");
 
-const ORIGIN = "https://piklance.com";
+const { ORIGIN, PAGE_DESCRIPTIONS } = require("./public-page-config");
 const NAMESPACE = "http://www.sitemaps.org/schemas/sitemap/0.9";
-const STATIC_PAGES = [
-  "/", "/services.html", "/freelancers.html", "/blog.html", "/about.html",
-  "/how-it-works.html", "/faq.html", "/contact.html", "/support.html",
-  "/legal.html", "/terms.html", "/privacy.html", "/cookie-policy.html",
-  "/refund-policy.html", "/dispute-policy.html", "/prohibited-services.html"
-];
+const STATIC_PAGES = Object.keys(PAGE_DESCRIPTIONS);
 const COLLECTIONS = {
   "/sitemap-services.xml": { collection: "services", page: "/service-details.html" },
   "/sitemap-articles.xml": { collection: "articles", page: "/article.html" }

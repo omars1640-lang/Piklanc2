@@ -132,6 +132,15 @@ function renderArticle(article) {
   $("articlePage").hidden = false;
 }
 
+function showArticleUnavailable(message) {
+  $("articlePage").hidden = true;
+  $("articleState").hidden = false;
+  $("articleState").textContent = message;
+  let robots = document.querySelector('meta[name="robots"]');
+  if (!robots) { robots = document.createElement("meta"); robots.name = "robots"; document.head.append(robots); }
+  robots.content = "noindex, follow";
+}
+
 function setLikeState(liked) {
   state.liked = liked;
   ["likeArticle", "likeArticleMobile"].forEach(id => {
@@ -272,14 +281,17 @@ $("articleConfirmModal").addEventListener("click", event => { if (event.target =
 document.addEventListener("keydown", event => { if (event.key === "Escape") closeArticleConfirm(); });
 
 if (!articleId) {
-  $("articleState").textContent = "المقال غير موجود.";
+  showArticleUnavailable("المقال غير موجود.");
 } else {
   try {
     const snapshot = await getDoc(doc(db, "articles", articleId));
     if (!snapshot.exists() || snapshot.data().status !== "published") {
-      $("articleState").textContent = "المقال غير موجود أو لم يعد منشوراً.";
+      showArticleUnavailable("المقال غير موجود أو لم يعد منشوراً.");
     } else {
-      const bodySnapshot = await getDoc(doc(db, "articleBodies", articleId)).catch(() => null);
+      const bodySnapshot = await getDoc(doc(db, "articleBodies", articleId)).catch(error => {
+        if (!snapshot.data().body) throw error;
+        return null;
+      });
       state.article = { id: snapshot.id, ...snapshot.data(), body: bodySnapshot?.exists() ? bodySnapshot.data().body : (snapshot.data().body || "") };
       renderArticle(state.article);
       const count = Number(state.article.likesCount || 0).toLocaleString("en-US");
@@ -300,7 +312,8 @@ if (!articleId) {
     }
   } catch (error) {
     console.error("Unable to load article", error);
-    $("articleState").textContent = "تعذر تحميل المقال حالياً.";
+    if ($("articlePage").hidden) $("articleState").textContent = "تعذر تحميل المقال حالياً. يرجى إعادة المحاولة.";
+    else toast("تعذر تحديث المقال حالياً. يمكنك متابعة القراءة.");
   }
 }
 
@@ -310,7 +323,7 @@ onAuthStateChanged(auth, async user => {
   if (user) {
     const profile = await getDoc(doc(db, "users", user.uid));
     if (profile.exists()) state.profile = profile.data();
-    onSnapshot(doc(db, "articles", articleId, "likes", user.uid), like => {
+    if (articleId) onSnapshot(doc(db, "articles", articleId, "likes", user.uid), like => {
       state.likeIds = like.exists() ? [user.uid] : [];
       setLikeState(like.exists());
     });
