@@ -6,6 +6,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: "35 3 * * 1"
 
 permissions:
   contents: read
@@ -47,6 +49,9 @@ jobs:
 
       - name: Check account deletion contract
         run: node scripts/test-account-deletion-architecture.mjs
+
+      - name: Check image URL safety
+        run: node scripts/test-safe-image-urls.mjs
 
       - name: Check browser JavaScript syntax
         shell: bash

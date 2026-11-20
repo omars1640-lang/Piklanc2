@@ -8,7 +8,8 @@ const SMTP_USER = defineSecret("SMTP_USER");
 const SMTP_PASS = defineSecret("SMTP_PASS");
 
 function validRecipient(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+  const email = String(value || "").trim();
+  return email.length <= 160 && /^[^\s@<>()\[\],;:"\\]+@[^\s@<>()\[\],;:"\\]+\.[^\s@<>()\[\],;:"\\]+$/.test(email);
 }
 
 function escapeHtml(value) {
@@ -100,6 +101,10 @@ exports.sendQueuedEmail = onDocumentCreated({
   if (!snapshot) return;
   const mail = snapshot.data();
   if (mail.status === "sent") return;
+  if (!validRecipient(mail.to)) {
+    await snapshot.ref.update({ status: "invalid_recipient", updatedAt: FieldValue.serverTimestamp() });
+    return;
+  }
   const user = SMTP_USER.value();
   const pass = SMTP_PASS.value();
   if (!user || !pass) {
@@ -111,13 +116,15 @@ exports.sendQueuedEmail = onDocumentCreated({
     host: "smtp.gmail.com",
     port: 465,
     secure: true,
+    disableFileAccess: true,
+    disableUrlAccess: true,
     auth: { user, pass }
   });
   try {
     const result = await transport.sendMail({
       from: mail.from || "PikLance <info@piklance.com>",
       replyTo: mail.replyTo || "info@piklance.com",
-      to: mail.to,
+      to: { address: String(mail.to).trim(), name: "" },
       subject: mail.subject,
       text: mail.text,
       html: mail.html || undefined
@@ -138,6 +145,8 @@ exports.sendQueuedEmail = onDocumentCreated({
     throw error;
   }
 });
+
+exports._test = { validRecipient, escapeHtml };
 
 exports.sendOfficialEmail = onDocumentCreated({
   document: "supportTickets/{ticketId}/replies/{replyId}",

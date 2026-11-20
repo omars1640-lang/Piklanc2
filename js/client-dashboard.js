@@ -9,6 +9,7 @@ import {
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
 import { auth, db, functions, storage } from "./firebase.js";
 import { cacheBustUrl } from "./avatar-utils.js";
+import { setSafeImageSource } from "./safe-image-url.js";
 import {
   approveEscrowOrder, disputeEscrowOrder,
   formatMoney, orderStatusLabels
@@ -234,7 +235,10 @@ function renderAvatars(url, name) {
     target.replaceChildren();
     if (url) {
       const image = document.createElement("img");
-      image.src = url;
+      if (!setSafeImageSource(image, url, url === state.avatarPreviewUrl)) {
+        target.textContent = initial;
+        return;
+      }
       image.alt = `صورة ${name}`;
       image.addEventListener("error", () => { target.replaceChildren(document.createTextNode(initial)); });
       target.appendChild(image);

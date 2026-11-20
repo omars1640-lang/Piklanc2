@@ -858,7 +858,7 @@ service cloud.firestore {
       allow read: if hasAdminPermission("services.view") || hasAdminPermission("services.moderate")
         || resource.data.published == true
         || (signedIn() && resource.data.ownerUid == request.auth.uid);
-      allow create: if signedIn()
+      allow create: if isAccountType("freelancer")
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.title is string
         && request.resource.data.title.size() >= 3
@@ -874,7 +874,7 @@ service cloud.firestore {
         && request.resource.data.published is bool;
       allow update: if hasAdminPermission("services.moderate")
         || (
-          signedIn()
+          isAccountType("freelancer")
           && resource.data.ownerUid == request.auth.uid
           && request.resource.data.ownerUid == request.auth.uid
           && request.resource.data.title is string
@@ -891,14 +891,14 @@ service cloud.firestore {
           && request.resource.data.published is bool
         );
       allow delete: if hasAdminPermission("services.moderate")
-        || (signedIn() && resource.data.ownerUid == request.auth.uid);
+        || (isAccountType("freelancer") && resource.data.ownerUid == request.auth.uid);
     }
 
     match /portfolioItems/{itemId} {
       allow read: if hasAdminPermission("services.view") || hasAdminPermission("services.moderate")
         || resource.data.published == true
         || (signedIn() && resource.data.ownerUid == request.auth.uid);
-      allow create: if signedIn()
+      allow create: if isAccountType("freelancer")
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.title is string
         && request.resource.data.title.size() >= 3
@@ -914,7 +914,7 @@ service cloud.firestore {
         && request.resource.data.published is bool;
       allow update: if hasAdminPermission("services.moderate")
         || (
-          signedIn()
+          isAccountType("freelancer")
           && resource.data.ownerUid == request.auth.uid
           && request.resource.data.ownerUid == request.auth.uid
           && request.resource.data.title is string
@@ -931,7 +931,7 @@ service cloud.firestore {
           && request.resource.data.published is bool
         );
       allow delete: if hasAdminPermission("services.moderate")
-        || (signedIn() && resource.data.ownerUid == request.auth.uid);
+        || (isAccountType("freelancer") && resource.data.ownerUid == request.auth.uid);
     }
 
     match /serviceCategories/{categoryId} {
