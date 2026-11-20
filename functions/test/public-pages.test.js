@@ -215,7 +215,9 @@ test("deployment templates are current, routes bypass static precedence, and pri
     assert.ok(!rewrite.source.includes(file));
   }
   const csp = config.hosting.headers[0].headers.find(header => header.key === "Content-Security-Policy").value;
-  assert.ok(csp.includes("https://apis.google.com"));
+  const scriptSources = new Set(csp.split(";").find(rule => rule.trim().startsWith("script-src ")).trim().split(/\s+/).slice(1));
+  assert.ok(scriptSources.has("https://apis.google.com"));
+  assert.ok(!scriptSources.has("https://apis.google.com.evil.example"));
   assert.ok(csp.includes("frame-ancestors 'none'"));
   assert.ok(csp.includes("object-src 'none'"));
   assert.ok(!csp.includes("script-src *"));
