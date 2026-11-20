@@ -36,6 +36,11 @@ requirePattern("functions/lib/email.js", /\["piklance\.com", "www\.piklance\.com
 requirePattern("js/admin-dashboard.js", /function safeCsvCell[\s\S]{0,240}const neutralized =/, "CSV exports must neutralize spreadsheet formulas");
 requirePattern("maintenance.html", /parsed\.origin===location\.origin/, "maintenance return URLs must remain same-origin");
 requirePattern("firestore.rules", /request\.resource\.data\.name == userAfter\(userId\)\.name/, "public display names must be bound to the private owner profile");
+for (const collection of ["freelancerPortfolio", "portfolioItems"]) {
+  const block = read("firestore.rules").split(`match /${collection}/{itemId} {`)[1]?.split("\n    match /")[0] || "";
+  if ((block.match(/isAccountType\("freelancer"\)/g) || []).length !== 3) failures.push(`${collection}: portfolio writes must require an active verified freelancer`);
+}
+requirePattern("storage.rules", /function activePortfolioOwner[\s\S]{0,180}return activeUser\(\)/, "portfolio uploads must require a verified active account");
 forbidPattern("js/messages.js", /innerHTML\s*=\s*`[^`]*\$\{error\./s, "runtime errors must not be injected into HTML");
 
 for (const file of ["js/admin-dashboard.js", "js/admin-operations.js"]) {

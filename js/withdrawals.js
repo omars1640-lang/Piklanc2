@@ -2,8 +2,9 @@ import { collection, doc, getDoc, getDocs, query, where } from "https://www.gsta
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js";
 import { getDownloadURL, ref as storageRef, uploadBytes } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
 import { db, functions, storage } from "./firebase.js";
+import { setSafeImageSource } from "./safe-image-url.js";
 
-const state = { user: null, profile: null, wallet: {}, payout: {}, withdrawals: [], toast: () => {} };
+const state = { user: null, profile: null, wallet: {}, payout: {}, withdrawals: [], qrPreviewUrl: "", toast: () => {} };
 const $ = id => document.getElementById(id);
 const money = value => `${Number(value || 0).toLocaleString("en-US")} ل.س`;
 const toDate = value => value?.toDate?.() || (value ? new Date(value) : null);
@@ -18,8 +19,7 @@ function render() {
   $("withdrawWalletNumber").value = state.payout.walletNumber || "";
   const preview = $("withdrawQrPreview");
   if (state.payout.qrUrl) {
-    preview.src = state.payout.qrUrl;
-    preview.hidden = false;
+    preview.hidden = !setSafeImageSource(preview, state.payout.qrUrl);
   } else preview.hidden = true;
 
   const rows = state.withdrawals.map(item => {
@@ -52,6 +52,8 @@ async function refresh() {
   state.withdrawals = requestsSnapshot.docs.map(item => ({ id: item.id, ...item.data() }))
     .sort((a, b) => (toDate(b.createdAt)?.getTime() || 0) - (toDate(a.createdAt)?.getTime() || 0));
   render();
+  if (state.qrPreviewUrl) URL.revokeObjectURL(state.qrPreviewUrl);
+  state.qrPreviewUrl = "";
 }
 
 async function submit(event) {
@@ -114,8 +116,18 @@ export async function initializeWithdrawals(user, profile, toast) {
   $("withdrawQrFile")?.addEventListener("change", event => {
     const file = event.target.files?.[0];
     if (!file) return;
-    $("withdrawQrPreview").src = URL.createObjectURL(file);
-    $("withdrawQrPreview").hidden = false;
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size < 1 || file.size > 5 * 1024 * 1024) {
+      event.target.value = "";
+      $("withdrawMessage").textContent = "صورة QR يجب أن تكون JPG أو PNG أو WebP وأقل من 5MB.";
+      if (state.qrPreviewUrl) URL.revokeObjectURL(state.qrPreviewUrl);
+      state.qrPreviewUrl = "";
+      $("withdrawQrPreview").hidden = !setSafeImageSource($("withdrawQrPreview"), state.payout.qrUrl || "");
+      return;
+    }
+    if (state.qrPreviewUrl) URL.revokeObjectURL(state.qrPreviewUrl);
+    state.qrPreviewUrl = URL.createObjectURL(file);
+    $("withdrawQrPreview").hidden = !setSafeImageSource($("withdrawQrPreview"), state.qrPreviewUrl, true);
+    $("withdrawMessage").textContent = "";
   });
   await refresh();
 }

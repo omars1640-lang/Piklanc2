@@ -39,7 +39,7 @@ service firebase.storage {
 
     function activePortfolioOwner(userId) {
       let user = firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
-      return signedIn()
+      return activeUser()
         && request.auth.uid == userId
         && user.status == "active"
         && user.accountType == "freelancer";

@@ -9,6 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
 import { auth, db, storage } from "./firebase.js";
 import { cacheBustUrl } from "./avatar-utils.js";
+import { setSafeImageSource } from "./safe-image-url.js";
 import {
   deliverEscrowOrder, orderStatusLabels
 } from "./escrow.js";
@@ -759,7 +760,10 @@ function renderAvatars(url, name) {
     target.replaceChildren();
     if (url) {
       const image = document.createElement("img");
-      image.src = url;
+      if (!setSafeImageSource(image, url, url === state.avatarPreviewUrl)) {
+        target.textContent = initial;
+        return;
+      }
       image.alt = `صورة ${name}`;
       image.addEventListener("error", () => { target.replaceChildren(document.createTextNode(initial)); });
       target.appendChild(image);
