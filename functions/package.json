@@ -11,7 +11,7 @@
     "test": "node --test test/articles.test.js test/finance-reports.test.js test/helpers.test.js test/account-deletion.test.js test/sitemap.test.js test/public-pages.test.js test/platform-guard.test.js test/email.test.js && node ../scripts/test-content-architecture.mjs"
   },
   "dependencies": {
-    "firebase-admin": "^13.4.0",
+    "firebase-admin": "^14.5.1",
     "firebase-functions": "^6.4.0",
     "nodemailer": "^10.6.1"
   },
